@@ -1,0 +1,10 @@
+{
+  "modoTeste": true,
+  "mostrarStatus": true,
+  "mostrarControles": true,
+  "mostrarRelogio": true,
+  "tituloPainel": "Prefeitura de Ribas do Rio Pardo",
+  "subtituloPainel": "Painel Institucional",
+  "wallpaperInicial": "assets/wallpaper.jpg",
+  "tempoMinimoSplash": 4000
+}

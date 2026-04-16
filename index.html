@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <!-- Define o conjunto de caracteres -->
+  <meta charset="UTF-8" />
+
+  <!-- Faz a página se adaptar ao tamanho da tela -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Título da aba do navegador -->
+  <title>Painel TV Prefeitura</title>
+
+  <!-- Liga o arquivo de estilos -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="app">
+    <!--
+      SPLASH SCREEN
+      Tela inicial exibida enquanto o sistema:
+      - carrega configurações
+      - carrega a playlist
+      - prepara a primeira mídia
+    -->
+    <section id="splashScreen">
+      <!-- Camada escura leve sobre o wallpaper -->
+      <div id="splashOverlay"></div>
+
+      <!-- Imagem institucional de fundo -->
+      <img id="splashWallpaper" alt="Wallpaper institucional" />
+    </section>
+
+    <!--
+      BARRA SUPERIOR
+      Exibe:
+      - nome da prefeitura
+      - subtítulo do painel
+      - relógio
+      - data
+    -->
+    <header id="topBar">
+      <div id="brandArea">
+        <div id="brandText">
+          <h1 id="tituloPainel">Prefeitura de Ribas do Rio Pardo</h1>
+          <p id="subtituloPainel">Painel Institucional</p>
+        </div>
+      </div>
+
+      <div id="clockArea">
+        <div id="clockTime">00:00:00</div>
+        <div id="clockDate">00/00/0000</div>
+      </div>
+    </header>
+
+    <!--
+      ÁREA PRINCIPAL DE MÍDIA
+      - videoPlayer: toca o vídeo atual
+      - videoPreload: pré-carrega o próximo vídeo
+      - imagePlayer: exibe imagens
+    -->
+    <section id="mediaArea">
+      <video id="videoPlayer" autoplay muted playsinline preload="auto"></video>
+      <video id="videoPreload" muted playsinline preload="auto" style="display: none;"></video>
+      <img id="imagePlayer" alt="Conteúdo do painel" />
+    </section>
+
+    <!--
+      STATUS
+      Caixa usada para mensagens de apoio em modo teste:
+      - carregando vídeo
+      - playlist atualizada
+      - erro de mídia
+    -->
+    <div id="status">Carregando conteúdo...</div>
+
+    <!--
+      BOTÃO QUE MOSTRA/ESCONDE O BLOCO DE CONTROLES
+      Útil para testes e manutenção
+    -->
+    <button id="toggleControls" title="Mostrar ou esconder controles">
+      Controles
+    </button>
+
+    <!--
+      PAINEL DE CONTROLES
+      Fica disponível em modo teste/manutenção
+    -->
+    <div id="controls">
+      <button id="btnPrev">⏮ Anterior</button>
+      <button id="btnPlay">▶ Play</button>
+      <button id="btnPause">⏸ Pause</button>
+      <button id="btnNext">⏭ Próximo</button>
+      <button id="btnMute">🔇 / 🔊 Som</button>
+    </div>
+  </main>
+
+  <!-- Liga o JavaScript principal -->
+  <script src="script.js"></script>
+</body>
+</html>

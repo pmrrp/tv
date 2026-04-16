@@ -1,0 +1,59 @@
+﻿[
+    {
+        "tipo":  "video",
+        "arquivo":  "midia/video_1.mp4"
+    },
+    {
+        "tipo":  "video",
+        "arquivo":  "midia/video_3_final.mp4"
+    },
+    {
+        "tipo":  "video",
+        "arquivo":  "midia/video_4_finalizado.mp4"
+    },
+    {
+        "tipo":  "imagem",
+        "arquivo":  "midia/whatsapp_image_2026-04-07_at_103055.jpeg",
+        "duracao":  8
+    },
+    {
+        "tipo":  "imagem",
+        "arquivo":  "midia/whatsapp_image_2026-04-13_at_081323_1.jpeg",
+        "duracao":  8
+    },
+    {
+        "tipo":  "imagem",
+        "arquivo":  "midia/whatsapp_image_2026-04-15_at_075030.jpeg",
+        "duracao":  8
+    },
+    {
+        "tipo":  "imagem",
+        "arquivo":  "midia/whatsapp_image_2026-04-15_at_075102.jpeg",
+        "duracao":  8
+    },
+    {
+        "tipo":  "imagem",
+        "arquivo":  "midia/whatsapp_image_2026-04-15_at_080038.jpeg",
+        "duracao":  8
+    },
+    {
+        "tipo":  "imagem",
+        "arquivo":  "midia/whatsapp_image_2026-04-15_at_080038_1.jpeg",
+        "duracao":  8
+    },
+    {
+        "tipo":  "imagem",
+        "arquivo":  "midia/whatsapp_image_2026-04-15_at_081010.jpeg",
+        "duracao":  8
+    },
+    {
+        "tipo":  "imagem",
+        "arquivo":  "midia/whatsapp_image_2026-04-15_at_081039.jpeg",
+        "duracao":  8
+    },
+    {
+        "tipo":  "imagem",
+        "arquivo":  "midia/whatsapp_image_2026-04-15_at_081039_1.jpeg",
+        "duracao":  8
+    }
+]

@@ -1,0 +1,282 @@
+/* =========================================================
+   RESET BÁSICO
+   Remove margens e espaçamentos padrão do navegador
+   ========================================================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   BASE DA PÁGINA
+   Faz a aplicação ocupar a tela inteira
+   ========================================================= */
+html, body {
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+  color: #fff;
+}
+
+/* Container principal da aplicação */
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+}
+
+/* =========================================================
+   SPLASH SCREEN
+   Tela inicial enquanto a primeira mídia é preparada
+   ========================================================= */
+#splashScreen {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+  background: #000;
+
+  /* Começa invisível e entra com fade in */
+  opacity: 0;
+  animation: splashFadeIn 1s ease forwards;
+
+  /* Também permite fade out ao sair */
+  transition: opacity 0.8s ease;
+}
+
+/* Quando adicionamos a classe hidden, a splash desaparece */
+#splashScreen.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Imagem de fundo da splash */
+#splashWallpaper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+
+  /* Pequena animação de “respiração” */
+  transform: scale(1);
+  animation: splashBreathing 4s ease-in-out infinite;
+}
+
+/* Camada escura leve sobre o wallpaper */
+#splashOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* Fade in ao entrar */
+@keyframes splashFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Efeito sutil de pulsar / respirar */
+@keyframes splashBreathing {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.025);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* =========================================================
+   BARRA SUPERIOR
+   Nome da prefeitura + relógio/data
+   ========================================================= */
+#topBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 20;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 14px 20px;
+
+  /* Efeito elegante de fundo escurecido */
+  backdrop-filter: blur(6px);
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.85),
+    rgba(0, 0, 0, 0.3)
+  );
+
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+/* Texto institucional */
+#brandText h1 {
+  font-size: 26px;
+  letter-spacing: 0.5px;
+  font-weight: bold;
+}
+
+#brandText p {
+  font-size: 15px;
+  opacity: 0.85;
+  margin-top: 4px;
+}
+
+/* Relógio */
+#clockArea {
+  text-align: right;
+}
+
+#clockTime {
+  font-size: 30px;
+  font-weight: bold;
+}
+
+#clockDate {
+  font-size: 13px;
+  opacity: 0.85;
+  margin-top: 4px;
+}
+
+/* =========================================================
+   ÁREA PRINCIPAL DE MÍDIA
+   ========================================================= */
+#mediaArea {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/*
+  Vídeo e imagem ocupam toda a tela.
+  A troca visual é feita usando opacity + transition
+  para gerar fade suave entre mídias.
+*/
+#videoPlayer,
+#imagePlayer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+
+  opacity: 0;
+  transition: opacity 0.6s ease-in-out;
+}
+
+/* =========================================================
+   STATUS
+   Caixa auxiliar para testes e feedback temporário
+   ========================================================= */
+#status {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 30;
+
+  color: #fff;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+/* =========================================================
+   BOTÃO E PAINEL DE CONTROLES
+   ========================================================= */
+#toggleControls {
+  position: absolute;
+  top: 90px;
+  right: 16px;
+  z-index: 40;
+
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+
+  background: rgba(255, 255, 255, 0.9);
+  color: #111;
+  font-size: 14px;
+  cursor: pointer;
+
+  transition: opacity 0.3s ease;
+}
+
+/* Painel dos botões */
+#controls {
+  position: absolute;
+  top: 135px;
+  right: 16px;
+  z-index: 40;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px;
+  border-radius: 10px;
+
+  transition: opacity 0.3s ease;
+}
+
+/* Classe usada quando o painel deve ficar escondido */
+#controls.hidden {
+  display: none;
+}
+
+/* Estilo dos botões internos */
+#controls button {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+
+  background: rgba(255, 255, 255, 0.95);
+  color: #111;
+  font-size: 14px;
+  cursor: pointer;
+  min-width: 130px;
+}
+
+#controls button:hover,
+#toggleControls:hover {
+  opacity: 0.9;
+}
+
+/* =========================================================
+   CLASSES UTILITÁRIAS
+   ========================================================= */
+
+/* Esconde visualmente controles temporariamente */
+.controls-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Esconde o cursor */
+.cursor-hidden {
+  cursor: none !important;
+}
+
+/* Classe genérica para esconder elementos */
+.hidden {
+  display: none !important;
+}
