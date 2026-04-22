@@ -895,6 +895,7 @@ document.addEventListener("keydown", (event) => {
     // Primeiro OK/Play também libera som
     somHabilitadoPeloUsuario = true;
     videoPlayer.muted = false;
+    atualizarBotaoSom();
 
     return;
   }
