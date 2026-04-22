@@ -1,6 +1,5 @@
 /* =========================================================
    RESET BÁSICO
-   Remove margens e espaçamentos padrão do navegador
    ========================================================= */
 * {
   margin: 0;
@@ -9,8 +8,7 @@
 }
 
 /* =========================================================
-   BASE DA PÁGINA
-   Faz a aplicação ocupar a tela inteira
+   BASE DA APLICAÇÃO
    ========================================================= */
 html,
 body {
@@ -18,7 +16,6 @@ body {
   height: 100%;
   overflow: hidden;
 
-  /* Fundo institucional escuro */
   background:
     radial-gradient(circle at top right, rgba(19, 71, 148, 0.18), transparent 35%),
     radial-gradient(circle at bottom left, rgba(0, 151, 178, 0.12), transparent 35%),
@@ -28,17 +25,14 @@ body {
   color: #fff;
 }
 
-/* Container principal da aplicação */
 #app {
   position: relative;
   width: 100vw;
   height: 100vh;
-  background: transparent;
 }
 
 /* =========================================================
    SPLASH SCREEN
-   Tela inicial enquanto a primeira mídia é preparada
    ========================================================= */
 #splashScreen {
   position: absolute;
@@ -47,19 +41,16 @@ body {
   overflow: hidden;
   background: #000;
 
-  /* Começa invisível e só aparece quando recebe a classe .visible */
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.8s ease;
 }
 
-/* Splash visível */
 #splashScreen.visible {
   opacity: 1;
   pointer-events: auto;
 }
 
-/* Imagem principal da splash */
 #splashWallpaper {
   position: absolute;
   inset: 0;
@@ -67,23 +58,19 @@ body {
   height: 100%;
   object-fit: cover;
 
-  /* Efeito sutil de respiração */
-  transform: scale(1);
   animation: splashBreathing 5s ease-in-out infinite;
 }
 
-/* Camada escura sobre a imagem da splash */
 #splashOverlay {
   position: absolute;
   inset: 0;
   background:
     linear-gradient(to bottom,
-      rgba(0, 0, 0, 0.22),
-      rgba(0, 0, 0, 0.08),
-      rgba(0, 0, 0, 0.26));
+      rgba(0, 0, 0, 0.25),
+      rgba(0, 0, 0, 0.1),
+      rgba(0, 0, 0, 0.25));
 }
 
-/* Animação de respiração da splash */
 @keyframes splashBreathing {
   0% {
     transform: scale(1);
@@ -99,35 +86,14 @@ body {
 }
 
 /* =========================================================
-   TOPBAR ANTIGA
-   Desativada porque agora a identidade principal fica
-   na barra lateral
-   ========================================================= */
-#topBar {
-  display: none !important;
-}
-
-/* =========================================================
-   ÁREA PRINCIPAL DE MÍDIA
+   ÁREA DE MÍDIA
    ========================================================= */
 #mediaArea {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  background:
-    radial-gradient(circle at center, rgba(255, 255, 255, 0.02), transparent 45%);
 }
 
-/* =========================================================
-   MARCA D'ÁGUA AO FUNDO
-   =========================================================
-
-   O ideal é salvar um SVG/PNG transparente em:
-   assets/watermark-prefeitura.svg
-
-   Se o arquivo não existir, simplesmente não aparecerá nada.
-   ========================================================= */
+/* Marca d'água institucional */
 #mediaArea::after {
   content: "";
   position: absolute;
@@ -137,64 +103,47 @@ body {
 
   background-image: url("assets/watermark-prefeitura.svg");
   background-repeat: no-repeat;
-  background-position: center center;
-  background-size: min(52vw, 52vh);
-  opacity: 0.06;
+  background-position: center;
+  background-size: min(50vw, 50vh);
+  opacity: 0.05;
 }
 
-/*
-  Vídeo e imagem ocupam toda a tela.
-  O fade entre mídias é feito com opacity.
-*/
+/* Players */
 #videoPlayer,
 #imagePlayer {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+
   object-fit: contain;
-  background: transparent;
 
   opacity: 0;
-  transition: opacity 0.7s ease-in-out;
-  will-change: opacity;
+  transition: opacity 0.6s ease;
   z-index: 3;
 }
 
 /* =========================================================
    STATUS
-   Caixa auxiliar para testes e feedback temporário
    ========================================================= */
 #status {
   position: absolute;
-  left: 18px;
-  bottom: 18px;
-  z-index: 43;
+  left: 20px;
+  bottom: 20px;
+  z-index: 40;
 
-  color: #fff;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
 
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: 10px;
   font-size: 13px;
-  letter-spacing: 0.2px;
 
-  box-shadow:
-    0 6px 18px rgba(0, 0, 0, 0.28),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
 }
 
 /* =========================================================
-   BOTÃO HAMBÚRGUER ANTIGO
-   Desativado
-   ========================================================= */
-#toggleControls {
-  display: none !important;
-}
-
-/* =========================================================
-   BARRA LATERAL
+   SIDEBAR
    ========================================================= */
 #sidePanel {
   position: absolute;
@@ -202,102 +151,94 @@ body {
   right: 0;
   width: 260px;
   height: 100%;
-  z-index: 44;
+  z-index: 45;
 
   display: flex;
   flex-direction: column;
 
   background: #e6e6e6;
-  color: #1d2530;
+  color: #111;
 
-  box-shadow:
-    -10px 0 30px rgba(0, 0, 0, 0.16),
-    inset 1px 0 0 rgba(255, 255, 255, 0.35);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.2);
 
-  transition:
-    transform 0.35s ease,
-    opacity 0.35s ease;
+  transform: translateX(100%);
+  opacity: 0;
+  transition: all 0.35s ease;
 }
 
-/* Faixa azul superior, propositalmente fina */
+/* Sidebar aberta */
+#sidePanel.panel-open {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* Barra azul superior */
 .sidePanelTopBar {
-  width: 100%;
   height: 8px;
   background: #0f70c4;
-  flex-shrink: 0;
 }
 
-/* Corpo da barra lateral */
+/* Corpo */
 .sidePanelBody {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 14px 16px 8px 16px;
+  align-items: center;
+  gap: 18px;
 
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  padding: 20px 16px;
 }
 
 /* =========================================================
-   RELÓGIO NA BARRA LATERAL
+   RELÓGIO
    ========================================================= */
 .sidePanelClock {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   text-align: center;
-  gap: 2px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.10);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding-bottom: 12px;
+  width: 100%;
 }
 
 #sidebarClockTime {
-  font-size: 28px;
+  font-size: 31px;
   line-height: 1;
-  font-weight: 800;
+  font-weight: 900;
   color: #111827;
+  letter-spacing: 0.3px;
 }
 
 #sidebarClockDate {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.15;
-  font-weight: 700;
+  font-weight: 800;
   color: #4b5563;
 }
 
 /* =========================================================
-   CONTROLES DENTRO DA BARRA LATERAL
+   BOTÕES
    ========================================================= */
 #controls {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 10px;
-
-  background: transparent;
-  padding: 0;
-  border-radius: 0;
-  box-shadow: none;
+  align-items: center;
 }
 
-/* Caso algum script tente usar .hidden */
-#controls.hidden {
-  display: none;
-}
-
-/* Botões principais */
 #controls button {
   width: 100%;
-  max-width: 200px;
+  max-width: 210px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 
   border: none;
   border-radius: 16px;
   padding: 12px 14px;
 
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1.15;
   text-align: center;
   cursor: pointer;
@@ -316,153 +257,91 @@ body {
     filter 0.2s ease;
 }
 
-/* Botão principal destacado */
+#controls button i {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+#controls button span {
+  display: inline-block;
+}
+
+/* Botão principal */
 #btnPlayPause {
   background: #0f70c4;
   color: #fff;
 }
 
+/* Hover */
 #controls button:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0 8px 16px rgba(0, 0, 0, 0.14),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+  transform: translateY(-2px);
 }
 
-/* Clique físico / pressão */
+/* Feedback de clique */
 #controls button:active {
-  transform: scale(0.97);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.18),
-    inset 0 0 0 2px rgba(15, 112, 196, 0.20);
-}
-
-/* =========================================================
-   FEEDBACK VISUAL DOS BOTÕES
-   Esta classe é adicionada pelo JavaScript quando um botão
-   é acionado por clique ou pelo controle remoto
-   ========================================================= */
-#controls button.feedback {
-  animation: buttonPulse 0.28s ease;
-}
-
-@keyframes buttonPulse {
-  0% {
-    transform: scale(1);
-    filter: brightness(1);
-  }
-
-  50% {
-    transform: scale(0.96);
-    filter: brightness(1.05);
-  }
-
-  100% {
-    transform: scale(1);
-    filter: brightness(1);
-  }
+  transform: scale(0.95);
 }
 
 /* =========================================================
    TEXTO DE APOIO
    ========================================================= */
 .sidePanelHint {
-  margin-top: 2px;
-  padding-top: 8px;
   font-size: 11px;
-  line-height: 1.35;
-  color: #4b5563;
   text-align: center;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-.sidePanelHint p+p {
-  margin-top: 3px;
+  color: #666;
 }
 
 /* =========================================================
-   LOGO NO RODAPÉ DA BARRA
+   LOGO
    ========================================================= */
 .sidePanelLogoArea {
   margin-top: auto;
-  padding-top: 6px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  text-align: center;
 }
 
 #sidePanelLogo {
   width: 100%;
-  max-width: 185px;
+  max-width: 300px;
   height: auto;
   object-fit: contain;
   display: block;
 }
 
 /* =========================================================
-   FAIXA INFERIOR COM AS 4 CORES
+   FAIXA DE CORES
    ========================================================= */
 .sidePanelBottomColors {
-  width: 100%;
-  height: 8px;
   display: flex;
-  flex-shrink: 0;
+  height: 8px;
 }
 
 .colorStrip {
   flex: 1;
-  height: 100%;
 }
 
-.colorStrip.coral {
+.coral {
   background: #f06b68;
 }
 
-.colorStrip.yellow {
+.yellow {
   background: #ddb100;
 }
 
-.colorStrip.green {
+.green {
   background: #20b038;
 }
 
-.colorStrip.blue {
+.blue {
   background: #0f70c4;
 }
 
 /* =========================================================
-   ESTADOS DE EXIBIÇÃO DA BARRA LATERAL
+   UTILITÁRIOS
    ========================================================= */
-#sidePanel.controls-hidden {
-  transform: translateX(100%);
-  opacity: 0;
-  pointer-events: none;
-}
-
-#sidePanel.panel-open {
-  transform: translateX(0);
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* =========================================================
-   CLASSES UTILITÁRIAS
-   ========================================================= */
-
-/* Esconde visualmente elementos da interface */
-.controls-hidden {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(16px);
-}
-
-/* Esconde o cursor */
-.cursor-hidden {
-  cursor: none !important;
-}
-
-/* Classe genérica para esconder elementos */
 .hidden {
   display: none !important;
+}
+
+.cursor-hidden {
+  cursor: none;
 }

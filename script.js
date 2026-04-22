@@ -16,50 +16,43 @@ const videoPlayer = document.getElementById("videoPlayer");
 const videoPreload = document.getElementById("videoPreload");
 const imagePlayer = document.getElementById("imagePlayer");
 
-// Área principal de mídia
-const mediaArea = document.getElementById("mediaArea");
-
 // Caixa de status
 const statusBox = document.getElementById("status");
 
-// Splash screen inicial
+// Splash inicial
 const splashScreen = document.getElementById("splashScreen");
 const splashWallpaper = document.getElementById("splashWallpaper");
 
-// Botões de controle
-const btnPrev = document.getElementById("btnPrev");
-const btnPlayPause = document.getElementById("btnPlayPause");
-const btnNext = document.getElementById("btnNext");
-const btnMute = document.getElementById("btnMute");
-
 // Barra lateral
-const controls = document.getElementById("controls");
 const sidePanel = document.getElementById("sidePanel");
+const controls = document.getElementById("controls");
 
 // Relógio lateral
 const sidebarClockTime = document.getElementById("sidebarClockTime");
 const sidebarClockDate = document.getElementById("sidebarClockDate");
 
+// Botões
+const btnPlayPause = document.getElementById("btnPlayPause");
+const btnNext = document.getElementById("btnNext");
+const btnPrev = document.getElementById("btnPrev");
+const btnMute = document.getElementById("btnMute");
+const btnPlayPauseIcon = btnPlayPause ? btnPlayPause.querySelector("i") : null;
+const btnPlayPauseText = btnPlayPause ? btnPlayPause.querySelector("span") : null;
+
+const btnMuteIcon = btnMute ? btnMute.querySelector("i") : null;
+const btnMuteText = btnMute ? btnMute.querySelector("span") : null;
+
 /* =========================================================
    ESTADO DA APLICAÇÃO
-   =========================================================
-
-   Variáveis responsáveis por guardar:
-   - config carregada do JSON
-   - playlist carregada
-   - índice atual
-   - timers
-   - estado de transição
-   - preferência de som do usuário
    ========================================================= */
 
-// Configuração geral do painel
+// Configuração carregada do config.json
 let config = {};
 
-// Playlist atual carregada do playlist.json
+// Playlist carregada do playlist.json
 let playlist = [];
 
-// Índice do item atual da playlist
+// Índice da mídia atual
 let indiceAtual = 0;
 
 // Tipo da mídia atual ("video" ou "imagem")
@@ -70,13 +63,11 @@ let timerImagem = null;
 let timerStatus = null;
 let timerInterface = null;
 
-// Controle de transições
+// Estado geral do player
 let emTransicao = false;
 let primeiraInicializacaoConcluida = false;
 
 // Preferência de som do usuário
-// false = painel continua mutado
-// true = usuário liberou o som
 let somHabilitadoPeloUsuario = false;
 
 /* =========================================================
@@ -85,14 +76,13 @@ let somHabilitadoPeloUsuario = false;
 
 /**
  * Espera um tempo em milissegundos.
- * Útil para splash, fade e transições.
  */
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
- * Retorna a duração do fade entre mídias.
+ * Retorna a duração configurada do fade entre mídias.
  */
 function getFadeDuration() {
   return Number(config.duracaoFadeMidia) > 0
@@ -101,14 +91,14 @@ function getFadeDuration() {
 }
 
 /**
- * Adiciona um pequeno feedback visual ao botão clicado.
- * Isso ajuda o usuário a perceber que o comando foi recebido.
+ * Adiciona uma animação rápida de feedback visual em um botão.
+ * Útil para clique de mouse e para interação via controle remoto.
  */
 function aplicarFeedbackNoBotao(botao) {
   if (!botao) return;
 
   botao.classList.remove("feedback");
-  void botao.offsetWidth; // força reflow para reiniciar animação
+  void botao.offsetWidth; // reinicia a animação
   botao.classList.add("feedback");
 
   setTimeout(() => {
@@ -121,8 +111,8 @@ function aplicarFeedbackNoBotao(botao) {
    ========================================================= */
 
 /**
- * Mostra uma mensagem temporária na caixa de status.
- * Em modo teste, a mensagem fica mais tempo visível.
+ * Mostra mensagem temporária na caixa de status.
+ * Em modo teste, ela fica mais tempo visível.
  */
 function atualizarStatus(texto) {
   statusBox.textContent = texto;
@@ -142,7 +132,7 @@ function atualizarStatus(texto) {
    ========================================================= */
 
 /**
- * Carrega o arquivo config.json
+ * Carrega o config.json
  */
 async function carregarConfig() {
   const resposta = await fetch(`config.json?v=${Date.now()}`);
@@ -156,25 +146,25 @@ async function carregarConfig() {
 }
 
 /**
- * Aplica os valores da configuração à interface.
+ * Aplica a configuração carregada na interface.
  */
 function aplicarConfig() {
-  // Wallpaper da splash inicial
+  // Define a imagem da splash inicial
   if (config.wallpaperInicial) {
     splashWallpaper.src = config.wallpaperInicial;
   }
 
-  // Status
+  // Liga/desliga status
   if (!config.mostrarStatus) {
     statusBox.classList.add("hidden");
   } else {
     statusBox.classList.remove("hidden");
   }
 
-  // Barra lateral
+  // Liga/desliga barra lateral
   sidePanel.classList.toggle("hidden", !config.mostrarControles);
 
-  // Garante que a barra lateral comece recolhida
+  // Garante que a sidebar comece recolhida no início
   sidePanel.classList.add("controls-hidden");
   sidePanel.classList.remove("panel-open");
 }
@@ -184,7 +174,7 @@ function aplicarConfig() {
    ========================================================= */
 
 /**
- * Atualiza hora e data com o fuso de Campo Grande / MS
+ * Atualiza hora e data usando o fuso de Campo Grande / MS.
  */
 function iniciarRelogio() {
   function atualizarRelogio() {
@@ -217,7 +207,7 @@ function iniciarRelogio() {
    ========================================================= */
 
 /**
- * Carrega o arquivo playlist.json
+ * Carrega o playlist.json
  */
 async function carregarPlaylist() {
   const resposta = await fetch(`playlist.json?v=${Date.now()}`);
@@ -241,27 +231,27 @@ async function carregarPlaylist() {
    =========================================================
 
    Controla:
-   - mostrar/esconder cursor
-   - mostrar/esconder barra lateral
-   - reaparecer quando houver movimento/interação
+   - cursor
+   - exibição temporária da barra lateral
+   - reaparecimento da interface quando há interação
    ========================================================= */
 
 /**
- * Mostra o cursor
+ * Mostra o cursor.
  */
 function mostrarCursor() {
   document.body.classList.remove("cursor-hidden");
 }
 
 /**
- * Esconde o cursor
+ * Esconde o cursor.
  */
 function esconderCursor() {
   document.body.classList.add("cursor-hidden");
 }
 
 /**
- * Mostra temporariamente a barra lateral
+ * Mostra temporariamente a barra lateral.
  */
 function mostrarControlesTemporariamente() {
   sidePanel.classList.remove("controls-hidden");
@@ -269,7 +259,7 @@ function mostrarControlesTemporariamente() {
 }
 
 /**
- * Esconde temporariamente a barra lateral
+ * Esconde temporariamente a barra lateral.
  */
 function esconderControlesTemporariamente() {
   sidePanel.classList.add("controls-hidden");
@@ -277,12 +267,10 @@ function esconderControlesTemporariamente() {
 }
 
 /**
- * Reinicia o temporizador da interface.
- * Sempre que houver movimento/interação:
+ * Reinicia a interface:
  * - mostra cursor
- * - mostra a barra lateral
- * - espera alguns segundos
- * - esconde novamente
+ * - mostra barra lateral
+ * - depois de um tempo, recolhe de novo
  */
 function resetarInterface() {
   mostrarCursor();
@@ -302,7 +290,7 @@ function resetarInterface() {
   }, Number(config.tempoOcultarPainel) > 0 ? Number(config.tempoOcultarPainel) : 3500);
 }
 
-// Eventos que reativam a interface
+// Qualquer interação reativa a interface
 document.addEventListener("mousemove", resetarInterface);
 document.addEventListener("mousedown", resetarInterface);
 document.addEventListener("touchstart", resetarInterface);
@@ -312,7 +300,7 @@ document.addEventListener("touchstart", resetarInterface);
    ========================================================= */
 
 /**
- * Mostra o vídeo atual e esconde a imagem
+ * Mostra o vídeo atual e esconde a imagem.
  */
 function mostrarVideo() {
   videoPlayer.style.opacity = 1;
@@ -320,7 +308,7 @@ function mostrarVideo() {
 }
 
 /**
- * Mostra a imagem atual e esconde o vídeo
+ * Mostra a imagem atual e esconde o vídeo.
  */
 function mostrarImagem() {
   imagePlayer.style.opacity = 1;
@@ -328,7 +316,7 @@ function mostrarImagem() {
 }
 
 /**
- * Faz fade out das mídias antes da próxima entrar
+ * Faz fade out das mídias antes da próxima entrar.
  */
 async function fadeOutMidias() {
   videoPlayer.style.opacity = 0;
@@ -337,7 +325,7 @@ async function fadeOutMidias() {
 }
 
 /**
- * Limpa o estado das mídias antes da próxima reprodução
+ * Limpa o estado da mídia anterior.
  */
 function limparMidias() {
   clearTimeout(timerImagem);
@@ -351,13 +339,12 @@ function limparMidias() {
    PRÉ-CARREGAMENTO
    =========================================================
 
-   Objetivo:
-   tentar deixar a próxima mídia mais pronta para reduzir
-   travadinhas entre uma troca e outra.
+   Tentamos deixar a próxima mídia mais pronta
+   para reduzir travadas entre trocas.
    ========================================================= */
 
 /**
- * Pré-carrega o próximo vídeo da playlist, se o próximo item for vídeo
+ * Pré-carrega o próximo vídeo, se existir.
  */
 function preCarregarProximoVideo() {
   if (!playlist.length) return;
@@ -376,7 +363,7 @@ function preCarregarProximoVideo() {
 }
 
 /**
- * Pré-carrega a próxima imagem da playlist, se o próximo item for imagem
+ * Pré-carrega a próxima imagem, se existir.
  */
 function preCarregarProximaImagem() {
   if (!playlist.length) return;
@@ -391,7 +378,7 @@ function preCarregarProximaImagem() {
 }
 
 /**
- * Chama o pré-carregamento da próxima mídia
+ * Chama o pré-carregamento da próxima mídia.
  */
 function preCarregarProximaMidia() {
   preCarregarProximoVideo();
@@ -400,14 +387,10 @@ function preCarregarProximaMidia() {
 
 /* =========================================================
    SPLASH INICIAL
-   =========================================================
-
-   A splash existe apenas na abertura do sistema.
-   Não usamos mais splash no meio do loop.
    ========================================================= */
 
 /**
- * Mostra a splash inicial
+ * Mostra a splash.
  */
 function mostrarSplash() {
   splashScreen.classList.remove("hidden");
@@ -415,7 +398,7 @@ function mostrarSplash() {
 }
 
 /**
- * Esconde visualmente a splash
+ * Esconde visualmente a splash.
  */
 function esconderSplash() {
   splashScreen.classList.remove("visible");
@@ -425,23 +408,22 @@ function esconderSplash() {
    PREPARAÇÃO DA PRIMEIRA MÍDIA
    =========================================================
 
-   Aqui tentamos deixar a primeira mídia pronta enquanto
-   a splash está sendo exibida.
-
-   Versão segura:
-   - vídeo: espera loadeddata ou timeout
-   - imagem: carrega em memória
+   Enquanto a splash está na tela, o sistema tenta preparar
+   a primeira mídia para reduzir impacto visual na entrada.
    ========================================================= */
 
 /**
  * Prepara a primeira mídia da playlist.
+ *
+ * Estratégia segura:
+ * - se for vídeo: espera loadeddata ou timeout
+ * - se for imagem: carrega em memória
  */
 async function prepararPrimeiraMidiaDoCiclo() {
   if (!playlist.length) return;
 
   const primeiroItem = playlist[0];
 
-  // Se for vídeo, espera loadeddata ou timeout
   if (primeiroItem.tipo === "video") {
     return new Promise((resolve) => {
       videoPlayer.src = primeiroItem.arquivo;
@@ -461,7 +443,6 @@ async function prepararPrimeiraMidiaDoCiclo() {
     });
   }
 
-  // Se for imagem, tenta carregá-la em memória
   if (primeiroItem.tipo === "imagem") {
     return new Promise((resolve) => {
       const img = new Image();
@@ -476,13 +457,13 @@ async function prepararPrimeiraMidiaDoCiclo() {
    REPRODUÇÃO DA MÍDIA ATUAL
    =========================================================
 
-   Comportamento atual:
-   - se vídeo travar ou falhar, o sistema pula para o próximo
-   - isso é mais seguro para apresentação do que congelar a tela
+   Comportamento seguro:
+   - se o vídeo travar ou falhar, o sistema pula para o próximo
+   - isso é melhor para apresentação do que congelar a tela
    ========================================================= */
 
 /**
- * Toca a mídia atual da playlist.
+ * Reproduz a mídia atual da playlist.
  */
 async function tocarItemAtual() {
   if (!playlist.length || emTransicao) return;
@@ -491,9 +472,9 @@ async function tocarItemAtual() {
 
   const item = playlist[indiceAtual];
 
-  // Validação básica do item
+  // Valida o item atual
   if (!item || !item.tipo || !item.arquivo) {
-    atualizarStatus("Item inválido, pulando...");
+    atualizarStatus("Conteúdo inválido, avançando...");
     emTransicao = false;
     setTimeout(proximoItem, 1000);
     return;
@@ -507,7 +488,7 @@ async function tocarItemAtual() {
   limparMidias();
 
   tipoAtual = item.tipo;
-  atualizarStatus(`Reproduzindo: ${item.arquivo}`);
+  atualizarStatus(`Preparando conteúdo...`);
 
   /* ---------------------------------------------
      CASO: VÍDEO
@@ -526,9 +507,10 @@ async function tocarItemAtual() {
           preCarregarProximaMidia();
           emTransicao = false;
           primeiraInicializacaoConcluida = true;
+          atualizarTextoBotaoPlayPause();
         })
         .catch(() => {
-          atualizarStatus("Erro no vídeo, pulando...");
+          atualizarStatus("Falha ao abrir mídia, avançando...");
           emTransicao = false;
           setTimeout(proximoItem, 1000);
         });
@@ -556,10 +538,11 @@ async function tocarItemAtual() {
       preCarregarProximaMidia();
       emTransicao = false;
       primeiraInicializacaoConcluida = true;
+      atualizarTextoBotaoPlayPause();
     };
 
     img.onerror = () => {
-      atualizarStatus("Erro na imagem, pulando...");
+      atualizarStatus("Falha ao abrir mídia, avançando...");
       emTransicao = false;
       setTimeout(proximoItem, 1000);
     };
@@ -571,7 +554,7 @@ async function tocarItemAtual() {
      CASO: TIPO DESCONHECIDO
      --------------------------------------------- */
   else {
-    atualizarStatus("Tipo desconhecido, pulando...");
+    atualizarStatus("Tipo de mídia desconhecido, avançando...");
     emTransicao = false;
     setTimeout(proximoItem, 1000);
   }
@@ -583,7 +566,6 @@ async function tocarItemAtual() {
 
 /**
  * Vai para o próximo item da playlist.
- * Quando chega ao final, volta para o primeiro.
  */
 async function proximoItem() {
   if (!playlist.length || emTransicao) return;
@@ -593,7 +575,7 @@ async function proximoItem() {
 }
 
 /**
- * Volta para o item anterior
+ * Volta para o item anterior.
  */
 function itemAnterior() {
   if (!playlist.length || emTransicao) return;
@@ -607,24 +589,55 @@ function itemAnterior() {
    ========================================================= */
 
 /**
- * Alterna entre play e pause da mídia atual
+ * Atualiza o botão de play/pause conforme o estado atual da mídia.
+ */
+function atualizarTextoBotaoPlayPause() {
+  if (!btnPlayPause || !btnPlayPauseIcon || !btnPlayPauseText) return;
+
+  if (tipoAtual === "video") {
+    if (videoPlayer.paused) {
+      btnPlayPauseIcon.className = "fa-solid fa-play";
+      btnPlayPauseText.textContent = "Reproduzir";
+    } else {
+      btnPlayPauseIcon.className = "fa-solid fa-pause";
+      btnPlayPauseText.textContent = "Pausar";
+    }
+  } else if (tipoAtual === "imagem") {
+    if (timerImagem) {
+      btnPlayPauseIcon.className = "fa-solid fa-pause";
+      btnPlayPauseText.textContent = "Pausar";
+    } else {
+      btnPlayPauseIcon.className = "fa-solid fa-play";
+      btnPlayPauseText.textContent = "Reproduzir";
+    }
+  } else {
+    btnPlayPauseIcon.className = "fa-solid fa-play";
+    btnPlayPauseText.textContent = "Reproduzir";
+  }
+}
+
+/**
+ * Alterna entre play e pause da mídia atual.
  */
 function alternarPlayPause() {
   if (!playlist.length) return;
 
   if (tipoAtual === "video") {
     if (videoPlayer.paused) {
-      videoPlayer.play().catch(() => {
-        atualizarStatus("Não foi possível dar play no vídeo");
+      videoPlayer.play().then(() => {
+        atualizarTextoBotaoPlayPause();
+      }).catch(() => {
+        atualizarStatus("Não foi possível reproduzir este conteúdo.");
       });
     } else {
       videoPlayer.pause();
+      atualizarTextoBotaoPlayPause();
     }
   } else if (tipoAtual === "imagem") {
     if (timerImagem) {
       clearTimeout(timerImagem);
       timerImagem = null;
-      atualizarStatus("Imagem pausada");
+      atualizarStatus("Exibição pausada.");
     } else {
       const item = playlist[indiceAtual];
       const duracao = Number(item.duracao) > 0 ? Number(item.duracao) : 8;
@@ -633,19 +646,42 @@ function alternarPlayPause() {
         proximoItem();
       }, duracao * 1000);
 
-      atualizarStatus("Imagem retomada");
+      atualizarStatus("Exibição retomada.");
     }
+
+    atualizarTextoBotaoPlayPause();
   }
 }
 
 /**
- * Liga ou desliga o som manualmente
+ * Atualiza o botão de som conforme o estado atual.
+ */
+function atualizarBotaoSom() {
+  if (!btnMute || !btnMuteIcon || !btnMuteText) return;
+
+  if (somHabilitadoPeloUsuario) {
+    btnMuteIcon.className = "fa-solid fa-volume-high";
+    btnMuteText.textContent = "Som ligado";
+  } else {
+    btnMuteIcon.className = "fa-solid fa-volume-xmark";
+    btnMuteText.textContent = "Som desligado";
+  }
+}
+
+/**
+ * Liga ou desliga o som manualmente.
  */
 function alternarSom() {
   somHabilitadoPeloUsuario = !somHabilitadoPeloUsuario;
   videoPlayer.muted = !somHabilitadoPeloUsuario;
 
-  atualizarStatus(somHabilitadoPeloUsuario ? "Som ligado" : "Som desligado");
+  atualizarBotaoSom();
+
+  atualizarStatus(
+    somHabilitadoPeloUsuario
+      ? "Som ativado."
+      : "Som desativado."
+  );
 }
 
 /* =========================================================
@@ -665,7 +701,7 @@ function alternarSom() {
    ========================================================= */
 
 /**
- * Inicializa todo o sistema
+ * Inicializa todo o sistema.
  */
 async function iniciarSistema() {
   try {
@@ -680,10 +716,10 @@ async function iniciarSistema() {
     // Garante que a barra lateral comece escondida
     esconderControlesTemporariamente();
 
-    // Garante que o cursor também não apareça brigando com a splash
+    // Esconde o cursor para não brigar com a splash
     esconderCursor();
 
-    // Mostra splash inicial
+    // Mostra splash
     mostrarSplash();
 
     // Enquanto a splash aparece, prepara a primeira mídia
@@ -694,17 +730,18 @@ async function iniciarSistema() {
 
     // Estado inicial do som
     videoPlayer.muted = !somHabilitadoPeloUsuario;
+    atualizarBotaoSom();
 
-    // Inicia a primeira mídia ainda por baixo da splash
+    // Inicia a primeira mídia por baixo da splash
     tocarItemAtual();
 
-    // Dá um pequeno tempo para a primeira mídia entrar visualmente
+    // Pequeno tempo para a mídia já estar pronta visualmente
     await sleep(150);
 
     // Some com a splash
     esconderSplash();
 
-    // Aguarda o fade da splash
+    // Aguarda o fade terminar
     await sleep(800);
 
     // Remove a splash da tela
@@ -714,7 +751,7 @@ async function iniciarSistema() {
     resetarInterface();
   } catch (erro) {
     console.error(erro);
-    atualizarStatus("Erro ao iniciar sistema");
+    atualizarStatus("Erro ao iniciar o painel.");
   }
 }
 
@@ -723,31 +760,45 @@ async function iniciarSistema() {
    ========================================================= */
 
 /**
- * Ao terminar um vídeo, vai para o próximo item
+ * Ao terminar um vídeo, vai para o próximo item.
  */
 videoPlayer.addEventListener("ended", proximoItem);
 
 /**
- * Se der erro no vídeo, tenta pular
+ * Se der erro no vídeo, pula para o próximo.
  */
 videoPlayer.addEventListener("error", () => {
-  atualizarStatus("Erro ao carregar vídeo, pulando...");
+  atualizarStatus("Falha ao carregar mídia, avançando...");
   setTimeout(proximoItem, 1000);
 });
 
 /**
- * Se o vídeo travar no carregamento, pula para o próximo
+ * Se o vídeo travar no carregamento, pula para o próximo.
  */
 videoPlayer.addEventListener("stalled", () => {
-  atualizarStatus("Vídeo travou, tentando próximo...");
+  atualizarStatus("Conteúdo indisponível no momento, avançando...");
   setTimeout(proximoItem, 1000);
 });
 
 /**
- * Se entrar em buffering, mostra mensagem
+ * Se o vídeo entrar em buffering, mostra mensagem.
  */
 videoPlayer.addEventListener("waiting", () => {
-  atualizarStatus("Carregando vídeo...");
+  atualizarStatus("Preparando conteúdo...");
+});
+
+/**
+ * Quando o vídeo começa a tocar, atualiza texto do botão.
+ */
+videoPlayer.addEventListener("playing", () => {
+  atualizarTextoBotaoPlayPause();
+});
+
+/**
+ * Quando o vídeo pausa, atualiza texto do botão.
+ */
+videoPlayer.addEventListener("pause", () => {
+  atualizarTextoBotaoPlayPause();
 });
 
 /* =========================================================
@@ -781,7 +832,7 @@ btnMute.addEventListener("click", () => {
    A cada 30 segundos:
    - verifica se o playlist.json mudou
    - se mudou, atualiza playlist
-   - reinicia no primeiro item
+   - volta ao início
    ========================================================= */
 
 setInterval(async () => {
@@ -795,7 +846,7 @@ setInterval(async () => {
     if (JSON.stringify(novaPlaylist) !== JSON.stringify(playlist)) {
       playlist = novaPlaylist;
       indiceAtual = 0;
-      atualizarStatus("Playlist atualizada");
+      atualizarStatus("Conteúdo atualizado.");
       tocarItemAtual();
     }
   } catch (erro) {
@@ -831,17 +882,17 @@ document.addEventListener("keydown", (event) => {
     tecla === " " ||
     tecla === "Spacebar" ||
     tecla === "MediaPlayPause" ||
-    codigo === 13 ||   // Enter
-    codigo === 32 ||   // Espaço
-    codigo === 179 ||  // MediaPlayPause
-    codigo === 415;    // Play em algumas TVs
+    codigo === 13 ||
+    codigo === 32 ||
+    codigo === 179 ||
+    codigo === 415;
 
   if (ehPlayPause) {
     event.preventDefault();
     aplicarFeedbackNoBotao(btnPlayPause);
     alternarPlayPause();
 
-    // Primeiro OK/Play também libera o som
+    // Primeiro OK/Play também libera som
     somHabilitadoPeloUsuario = true;
     videoPlayer.muted = false;
 
@@ -907,7 +958,6 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
     aplicarFeedbackNoBotao(btnMute);
     alternarSom();
-    return;
   }
 });
 

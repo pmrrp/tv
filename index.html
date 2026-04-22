@@ -6,16 +6,26 @@
        CONFIGURAÇÕES BÁSICAS DA PÁGINA
        ====================================================== -->
 
-  <!-- Define o conjunto de caracteres da página -->
+  <!-- Define o conjunto de caracteres -->
   <meta charset="UTF-8" />
 
-  <!-- Faz a página se ajustar corretamente ao tamanho da tela -->
+  <!-- Faz a página se adaptar ao tamanho da tela -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Título exibido na aba do navegador -->
   <title>Painel TV Prefeitura</title>
 
+  <!--
+    FAVICON
+    Se você já tiver um ícone/brasão pronto, pode usar aqui.
+    Exemplos de nome:
+    - assets/favicon.png
+    - assets/favicon.svg
+  -->
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+
   <!-- Arquivo principal de estilos -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 
@@ -23,8 +33,8 @@
   <!--
     =========================================================
     APP PRINCIPAL
-    Container geral de toda a aplicação
-    Tudo do sistema fica dentro deste bloco
+    Container geral da aplicação
+    Tudo o que pertence ao painel fica dentro deste bloco
     =========================================================
   -->
   <main id="app">
@@ -34,21 +44,21 @@
       SPLASH SCREEN
       =======================================================
 
-      Tela inicial exibida enquanto o sistema:
-      - carrega o arquivo de configuração
-      - carrega a playlist
+      Tela inicial mostrada enquanto o sistema:
+      - carrega config.json
+      - carrega playlist.json
       - prepara a primeira mídia
-      - entrega uma abertura mais institucional e elegante
+      - entrega uma abertura mais institucional
 
       Observação:
-      Esta splash acontece apenas na entrada do sistema.
-      Não usamos mais splash no reinício do loop da playlist.
+      A splash acontece apenas na inicialização.
+      Não usamos mais splash no meio do loop.
     -->
     <section id="splashScreen">
-      <!-- Camada escura sobre o wallpaper para dar mais contraste -->
+      <!-- Camada escura sobre o wallpaper -->
       <div id="splashOverlay"></div>
 
-      <!-- Imagem institucional de fundo da splash -->
+      <!-- Imagem institucional da splash -->
       <img id="splashWallpaper" alt="Wallpaper institucional" />
     </section>
 
@@ -57,24 +67,24 @@
       ÁREA PRINCIPAL DE MÍDIA
       =======================================================
 
-      Elementos responsáveis pela exibição do conteúdo.
+      Elementos responsáveis pela exibição do conteúdo:
 
       videoPlayer:
-      - toca o vídeo atual da playlist
+      - reproduz o vídeo atual da playlist
 
       videoPreload:
       - pré-carrega o próximo vídeo
       - fica invisível
-      - ajuda a reduzir travamentos e atrasos entre mídias
+      - ajuda a reduzir travadas entre trocas
 
       imagePlayer:
       - exibe imagens da playlist
     -->
     <section id="mediaArea">
-      <!-- Player principal de vídeo -->
+      <!-- Vídeo principal -->
       <video id="videoPlayer" autoplay muted playsinline preload="auto"></video>
 
-      <!-- Player invisível usado apenas para pré-carregamento -->
+      <!-- Vídeo invisível para pré-carregamento -->
       <video id="videoPreload" muted playsinline preload="auto" style="display: none;"></video>
 
       <!-- Exibição de imagens -->
@@ -86,60 +96,101 @@
       STATUS
       =======================================================
 
-      Caixa auxiliar usada principalmente para testes e manutenção.
-
-      Exibe mensagens como:
+      Caixa usada para mensagens temporárias, por exemplo:
       - carregando vídeo
       - playlist atualizada
-      - erro ao carregar mídia
+      - erro de mídia
+      - preparando conteúdo
 
-      Em modo produção, pode ser ocultada pelo config.json.
+      Em produção, se quiser, pode ser desligada pelo config.json.
     -->
     <div id="status">Carregando conteúdo...</div>
 
     <!--
       =======================================================
-      BARRA LATERAL DE CONTROLES
+      BARRA LATERAL
       =======================================================
 
-      Painel lateral institucional.
-      Ele aparece automaticamente ao mover o mouse/controle
-      e recolhe após alguns segundos sem interação.
+      Painel lateral institucional exibido quando há interação:
+      - mouse
+      - clique
+      - touch
+      - controle remoto compatível
+
+      Ela contém:
+      - relógio/data
+      - botões de controle
+      - texto de apoio
+      - identidade visual da prefeitura
     -->
     <aside id="sidePanel" class="controls-hidden">
       <!-- Faixa azul superior -->
       <div class="sidePanelTopBar"></div>
 
-      <!-- Corpo da barra -->
+      <!-- Corpo da barra lateral -->
       <div class="sidePanelBody">
 
-        <!-- Relógio/data -->
+        <!--
+          Relógio e data
+          Ficam no topo da barra lateral
+        -->
         <div class="sidePanelClock">
           <div id="sidebarClockTime">00:00:00</div>
           <div id="sidebarClockDate">00/00/0000</div>
         </div>
 
-        <!-- Controles -->
+        <!--
+          Controles principais do painel
+
+          Botões:
+          - play/pause
+          - próximo
+          - anterior
+          - som
+        -->
         <div id="controls">
-          <button id="btnPlayPause">▶ Play / Pause</button>
-          <button id="btnNext">⏭ Próximo</button>
-          <button id="btnPrev">⏮ Anterior</button>
-          <button id="btnMute">🔇 / 🔊 Som</button>
+          <button id="btnPlayPause">
+            <i class="fa-solid fa-play"></i>
+            <span>Reproduzir</span>
+          </button>
+
+          <button id="btnNext">
+            <i class="fa-solid fa-forward-step"></i>
+            <span>Próximo</span>
+          </button>
+
+          <button id="btnPrev">
+            <i class="fa-solid fa-backward-step"></i>
+            <span>Anterior</span>
+          </button>
+
+          <button id="btnMute">
+            <i class="fa-solid fa-volume-xmark"></i>
+            <span>Som desligado</span>
+          </button>
         </div>
 
-        <!-- Dicas -->
+        <!--
+          Texto de apoio
+          Usado como orientação discreta ao usuário
+        -->
         <div class="sidePanelHint">
           <p>Mova o mouse para exibir os controles.</p>
           <p>Ao parar, a barra lateral recolhe automaticamente.</p>
         </div>
 
-        <!-- Identidade visual da prefeitura no rodapé da barra -->
+        <!--
+          Logo / identidade visual da prefeitura no rodapé da barra
+          Ideal usar SVG ou PNG com fundo transparente.
+        -->
         <div class="sidePanelLogoArea">
           <img id="sidePanelLogo" src="assets/logo-prefeitura.svg" alt="Identidade visual da Prefeitura" />
         </div>
       </div>
 
-      <!-- Faixa inferior com as 4 cores -->
+      <!--
+        Faixa inferior com as 4 cores institucionais
+      -->
       <div class="sidePanelBottomColors">
         <span class="colorStrip coral"></span>
         <span class="colorStrip yellow"></span>

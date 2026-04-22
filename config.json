@@ -6,7 +6,7 @@
   "tituloPainel": "Prefeitura de Ribas do Rio Pardo",
   "subtituloPainel": "Painel Institucional",
   "wallpaperInicial": "assets/wallpaper.jpg",
-  "tempoMinimoSplash": 10000,
+  "tempoMinimoSplash": 6000,
   "duracaoFadeMidia": 600,
   "tempoOcultarPainel": 3500
 }
