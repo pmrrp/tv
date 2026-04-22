@@ -1,100 +1,158 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
-  <!-- Define o conjunto de caracteres -->
+  <!-- ======================================================
+       CONFIGURAÇÕES BÁSICAS DA PÁGINA
+       ====================================================== -->
+
+  <!-- Define o conjunto de caracteres da página -->
   <meta charset="UTF-8" />
 
-  <!-- Faz a página se adaptar ao tamanho da tela -->
+  <!-- Faz a página se ajustar corretamente ao tamanho da tela -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Título da aba do navegador -->
+  <!-- Título exibido na aba do navegador -->
   <title>Painel TV Prefeitura</title>
 
-  <!-- Liga o arquivo de estilos -->
+  <!-- Arquivo principal de estilos -->
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
+  <!--
+    =========================================================
+    APP PRINCIPAL
+    Container geral de toda a aplicação
+    Tudo do sistema fica dentro deste bloco
+    =========================================================
+  -->
   <main id="app">
+
     <!--
+      =======================================================
       SPLASH SCREEN
+      =======================================================
+
       Tela inicial exibida enquanto o sistema:
-      - carrega configurações
+      - carrega o arquivo de configuração
       - carrega a playlist
       - prepara a primeira mídia
+      - entrega uma abertura mais institucional e elegante
+
+      Observação:
+      Esta splash acontece apenas na entrada do sistema.
+      Não usamos mais splash no reinício do loop da playlist.
     -->
     <section id="splashScreen">
-      <!-- Camada escura leve sobre o wallpaper -->
+      <!-- Camada escura sobre o wallpaper para dar mais contraste -->
       <div id="splashOverlay"></div>
 
-      <!-- Imagem institucional de fundo -->
+      <!-- Imagem institucional de fundo da splash -->
       <img id="splashWallpaper" alt="Wallpaper institucional" />
     </section>
 
     <!--
-      BARRA SUPERIOR
-      Exibe:
-      - nome da prefeitura
-      - subtítulo do painel
-      - relógio
-      - data
-    -->
-    <header id="topBar">
-      <div id="brandArea">
-        <div id="brandText">
-          <h1 id="tituloPainel">Prefeitura de Ribas do Rio Pardo</h1>
-          <p id="subtituloPainel">Painel Institucional</p>
-        </div>
-      </div>
-
-      <div id="clockArea">
-        <div id="clockTime">00:00:00</div>
-        <div id="clockDate">00/00/0000</div>
-      </div>
-    </header>
-
-    <!--
+      =======================================================
       ÁREA PRINCIPAL DE MÍDIA
-      - videoPlayer: toca o vídeo atual
-      - videoPreload: pré-carrega o próximo vídeo
-      - imagePlayer: exibe imagens
+      =======================================================
+
+      Elementos responsáveis pela exibição do conteúdo.
+
+      videoPlayer:
+      - toca o vídeo atual da playlist
+
+      videoPreload:
+      - pré-carrega o próximo vídeo
+      - fica invisível
+      - ajuda a reduzir travamentos e atrasos entre mídias
+
+      imagePlayer:
+      - exibe imagens da playlist
     -->
     <section id="mediaArea">
+      <!-- Player principal de vídeo -->
       <video id="videoPlayer" autoplay muted playsinline preload="auto"></video>
+
+      <!-- Player invisível usado apenas para pré-carregamento -->
       <video id="videoPreload" muted playsinline preload="auto" style="display: none;"></video>
+
+      <!-- Exibição de imagens -->
       <img id="imagePlayer" alt="Conteúdo do painel" />
     </section>
 
     <!--
+      =======================================================
       STATUS
-      Caixa usada para mensagens de apoio em modo teste:
+      =======================================================
+
+      Caixa auxiliar usada principalmente para testes e manutenção.
+
+      Exibe mensagens como:
       - carregando vídeo
       - playlist atualizada
-      - erro de mídia
+      - erro ao carregar mídia
+
+      Em modo produção, pode ser ocultada pelo config.json.
     -->
     <div id="status">Carregando conteúdo...</div>
 
     <!--
-      BOTÃO QUE MOSTRA/ESCONDE O BLOCO DE CONTROLES
-      Útil para testes e manutenção
-    -->
-    <button id="toggleControls" title="Mostrar ou esconder controles">
-      Controles
-    </button>
+      =======================================================
+      BARRA LATERAL DE CONTROLES
+      =======================================================
 
-    <!--
-      PAINEL DE CONTROLES
-      Fica disponível em modo teste/manutenção
+      Painel lateral institucional.
+      Ele aparece automaticamente ao mover o mouse/controle
+      e recolhe após alguns segundos sem interação.
     -->
-    <div id="controls">
-      <button id="btnPrev">⏮ Anterior</button>
-      <button id="btnPlay">▶ Play</button>
-      <button id="btnPause">⏸ Pause</button>
-      <button id="btnNext">⏭ Próximo</button>
-      <button id="btnMute">🔇 / 🔊 Som</button>
-    </div>
+    <aside id="sidePanel" class="controls-hidden">
+      <!-- Faixa azul superior -->
+      <div class="sidePanelTopBar"></div>
+
+      <!-- Corpo da barra -->
+      <div class="sidePanelBody">
+
+        <!-- Relógio/data -->
+        <div class="sidePanelClock">
+          <div id="sidebarClockTime">00:00:00</div>
+          <div id="sidebarClockDate">00/00/0000</div>
+        </div>
+
+        <!-- Controles -->
+        <div id="controls">
+          <button id="btnPlayPause">▶ Play / Pause</button>
+          <button id="btnNext">⏭ Próximo</button>
+          <button id="btnPrev">⏮ Anterior</button>
+          <button id="btnMute">🔇 / 🔊 Som</button>
+        </div>
+
+        <!-- Dicas -->
+        <div class="sidePanelHint">
+          <p>Mova o mouse para exibir os controles.</p>
+          <p>Ao parar, a barra lateral recolhe automaticamente.</p>
+        </div>
+
+        <!-- Identidade visual da prefeitura no rodapé da barra -->
+        <div class="sidePanelLogoArea">
+          <img id="sidePanelLogo" src="assets/logo-prefeitura.svg" alt="Identidade visual da Prefeitura" />
+        </div>
+      </div>
+
+      <!-- Faixa inferior com as 4 cores -->
+      <div class="sidePanelBottomColors">
+        <span class="colorStrip coral"></span>
+        <span class="colorStrip yellow"></span>
+        <span class="colorStrip green"></span>
+        <span class="colorStrip blue"></span>
+      </div>
+    </aside>
   </main>
 
-  <!-- Liga o JavaScript principal -->
+  <!-- ======================================================
+       JAVASCRIPT PRINCIPAL DO SISTEMA
+       ====================================================== -->
   <script src="script.js"></script>
 </body>
+
 </html>
