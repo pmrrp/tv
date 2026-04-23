@@ -25,10 +25,75 @@ body {
   color: #fff;
 }
 
+body.mobile-mode {
+  overflow: hidden;
+}
+
 #app {
   position: relative;
   width: 100vw;
   height: 100vh;
+}
+
+/* =========================================================
+   AVISO DE ORIENTAÇÃO
+   ========================================================= */
+#rotateNotice {
+  position: absolute;
+  inset: 0;
+  z-index: 120;
+  background: rgba(5, 8, 13, 0.96);
+  backdrop-filter: blur(10px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+#rotateNotice.hidden {
+  display: none !important;
+}
+
+.rotateNoticeContent {
+  width: min(92vw, 420px);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  padding: 24px 20px;
+  text-align: center;
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.rotateNoticeContent i {
+  font-size: 36px;
+  margin-bottom: 14px;
+  color: #ffffff;
+}
+
+.rotateNoticeContent h2 {
+  font-size: 22px;
+  line-height: 1.2;
+  margin-bottom: 10px;
+}
+
+.rotateNoticeContent p {
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: 0.9;
+  margin-bottom: 18px;
+}
+
+#btnDismissRotate {
+  border: none;
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #0f70c4;
+  color: #fff;
 }
 
 /* =========================================================
@@ -57,7 +122,6 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-
   animation: splashBreathing 5s ease-in-out infinite;
 }
 
@@ -67,7 +131,7 @@ body {
   background:
     linear-gradient(to bottom,
       rgba(0, 0, 0, 0.25),
-      rgba(0, 0, 0, 0.1),
+      rgba(0, 0, 0, 0.10),
       rgba(0, 0, 0, 0.25));
 }
 
@@ -93,7 +157,7 @@ body {
   inset: 0;
 }
 
-/* Marca d'água institucional */
+/* Marca d'água */
 #mediaArea::after {
   content: "";
   position: absolute;
@@ -108,14 +172,12 @@ body {
   opacity: 0.05;
 }
 
-/* Players */
 #videoPlayer,
 #imagePlayer {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-
   object-fit: contain;
 
   opacity: 0;
@@ -132,7 +194,7 @@ body {
   bottom: 20px;
   z-index: 40;
 
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.60);
   backdrop-filter: blur(8px);
 
   padding: 10px 14px;
@@ -163,55 +225,52 @@ body {
 
   transform: translateX(100%);
   opacity: 0;
-  transition: all 0.35s ease;
+  transition:
+    transform 0.35s ease,
+    opacity 0.35s ease;
 }
 
-/* Sidebar aberta */
 #sidePanel.panel-open {
   transform: translateX(0);
   opacity: 1;
 }
 
-/* Barra azul superior */
 .sidePanelTopBar {
-  height: 8px;
+  height: 4px;
   background: #0f70c4;
 }
 
-/* Corpo */
 .sidePanelBody {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 18px;
-
   padding: 20px 16px;
+  overflow-y: auto;
 }
 
-/* =========================================================
-   RELÓGIO
-   ========================================================= */
 .sidePanelClock {
-  text-align: center;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  padding-bottom: 12px;
   width: 100%;
+  text-align: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.10);
+  padding-bottom: 12px;
 }
 
 #sidebarClockTime {
   font-size: 31px;
-  line-height: 1;
   font-weight: 900;
+  line-height: 1;
   color: #111827;
   letter-spacing: 0.3px;
 }
 
 #sidebarClockDate {
   font-size: 14px;
-  line-height: 1.15;
   font-weight: 800;
+  line-height: 1.15;
   color: #4b5563;
+  margin-top: 6px;
 }
 
 /* =========================================================
@@ -222,6 +281,7 @@ body {
   flex-direction: column;
   gap: 10px;
   align-items: center;
+  width: 100%;
 }
 
 #controls button {
@@ -266,34 +326,48 @@ body {
   display: inline-block;
 }
 
-/* Botão principal */
 #btnPlayPause {
   background: #0f70c4;
   color: #fff;
 }
 
-/* Hover */
 #controls button:hover {
   transform: translateY(-2px);
 }
 
-/* Feedback de clique */
 #controls button:active {
   transform: scale(0.95);
 }
 
-/* =========================================================
-   TEXTO DE APOIO
-   ========================================================= */
+/* Feedback visual */
+#controls button.feedback {
+  animation: buttonPulse 0.28s ease;
+}
+
+@keyframes buttonPulse {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  50% {
+    transform: scale(0.96);
+    filter: brightness(1.05);
+  }
+
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
 .sidePanelHint {
   font-size: 11px;
   text-align: center;
   color: #666;
+  line-height: 1.4;
 }
 
-/* =========================================================
-   LOGO
-   ========================================================= */
 .sidePanelLogoArea {
   margin-top: auto;
   text-align: center;
@@ -301,18 +375,15 @@ body {
 
 #sidePanelLogo {
   width: 100%;
-  max-width: 300px;
+  max-width: 205px;
   height: auto;
   object-fit: contain;
   display: block;
 }
 
-/* =========================================================
-   FAIXA DE CORES
-   ========================================================= */
 .sidePanelBottomColors {
   display: flex;
-  height: 8px;
+  height: 4px;
 }
 
 .colorStrip {
@@ -336,7 +407,7 @@ body {
 }
 
 /* =========================================================
-   UTILITÁRIOS
+   UTILITÁRIAS
    ========================================================= */
 .hidden {
   display: none !important;
@@ -344,4 +415,201 @@ body {
 
 .cursor-hidden {
   cursor: none;
+}
+
+.controls-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* =========================================================
+   RESPONSIVIDADE - TABLET / MOBILE
+   ========================================================= */
+
+/*
+  Até 1024px:
+  O sistema entra em modo adaptado para tablets e celulares.
+*/
+@media (max-width: 1024px) {
+  #mediaArea::after {
+    background-size: min(60vw, 40vh);
+    opacity: 0.04;
+  }
+
+  #status {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    font-size: 12px;
+    padding: 9px 12px;
+  }
+
+  /*
+    Em telas menores, a barra lateral deixa de ser totalmente lateral
+    e vira um painel mais compacto sobreposto.
+  */
+  #sidePanel {
+    width: min(300px, 82vw);
+    max-width: 300px;
+  }
+
+  .sidePanelBody {
+    gap: 14px;
+    padding: 16px 14px;
+  }
+
+  #sidebarClockTime {
+    font-size: 26px;
+  }
+
+  #sidebarClockDate {
+    font-size: 13px;
+  }
+
+  #controls button {
+    max-width: 100%;
+    min-height: 46px;
+    font-size: 14px;
+    padding: 12px 12px;
+  }
+
+  #sidePanelLogo {
+    max-width: 175px;
+  }
+}
+
+/*
+  Modo retrato em telas menores:
+  mostramos aviso de rotação e simplificamos o layout.
+*/
+@media (max-width: 1024px) and (orientation: portrait) {
+  body.mobile-mode #rotateNotice {
+    display: flex;
+  }
+
+  body.mobile-mode #sidePanel {
+    width: 100%;
+    height: auto;
+    max-width: none;
+    top: auto;
+    bottom: 0;
+    right: 0;
+    left: 0;
+
+    transform: translateY(100%);
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+  }
+
+  body.mobile-mode #sidePanel.panel-open {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  body.mobile-mode .sidePanelTopBar {
+    height: 5px;
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+  }
+
+  body.mobile-mode .sidePanelBody {
+    padding: 14px 14px 10px;
+    gap: 12px;
+  }
+
+  body.mobile-mode .sidePanelClock {
+    padding-bottom: 8px;
+  }
+
+  body.mobile-mode #sidebarClockTime {
+    font-size: 22px;
+  }
+
+  body.mobile-mode #sidebarClockDate {
+    font-size: 12px;
+  }
+
+  body.mobile-mode .sidePanelHint {
+    display: none;
+  }
+
+  body.mobile-mode #sidePanelLogo {
+    max-width: 130px;
+  }
+
+  body.mobile-mode #controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  body.mobile-mode #controls button {
+    max-width: none;
+    width: 100%;
+    min-height: 48px;
+    font-size: 13px;
+    padding: 10px;
+  }
+
+  body.mobile-mode #controls button span {
+    font-size: 12px;
+  }
+
+  body.mobile-mode #btnPlayPause,
+  body.mobile-mode #btnFullscreen {
+    grid-column: span 2;
+  }
+}
+
+/*
+  Modo paisagem em telas menores:
+  experiência mais próxima da TV, porém compacta.
+*/
+@media (max-width: 1024px) and (orientation: landscape) {
+  body.mobile-mode #rotateNotice {
+    display: none !important;
+  }
+
+  body.mobile-mode #sidePanel {
+    width: min(240px, 34vw);
+  }
+
+  body.mobile-mode .sidePanelBody {
+    padding: 12px 12px 8px;
+    gap: 10px;
+  }
+
+  body.mobile-mode #sidebarClockTime {
+    font-size: 22px;
+  }
+
+  body.mobile-mode #sidebarClockDate {
+    font-size: 12px;
+  }
+
+  body.mobile-mode #controls button {
+    min-height: 42px;
+    font-size: 13px;
+    padding: 10px;
+  }
+
+  body.mobile-mode #controls button i {
+    font-size: 13px;
+  }
+
+  body.mobile-mode #controls button span {
+    font-size: 12px;
+  }
+
+  body.mobile-mode .sidePanelHint {
+    font-size: 10px;
+  }
+
+  body.mobile-mode #sidePanelLogo {
+    max-width: 135px;
+  }
+
+  body.mobile-mode #status {
+    font-size: 11px;
+  }
 }

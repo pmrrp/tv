@@ -5,27 +5,17 @@
   <!-- ======================================================
        CONFIGURAÇÕES BÁSICAS DA PÁGINA
        ====================================================== -->
-
-  <!-- Define o conjunto de caracteres -->
   <meta charset="UTF-8" />
-
-  <!-- Faz a página se adaptar ao tamanho da tela -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- Título exibido na aba do navegador -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Painel TV Prefeitura</title>
 
-  <!--
-    FAVICON
-    Se você já tiver um ícone/brasão pronto, pode usar aqui.
-    Exemplos de nome:
-    - assets/favicon.png
-    - assets/favicon.svg
-  -->
-  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="assets/favicon.png" />
 
-  <!-- Arquivo principal de estilos -->
+  <!-- Font Awesome para ícones -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+
+  <!-- Estilos principais -->
   <link rel="stylesheet" href="style.css" />
 </head>
 
@@ -33,32 +23,34 @@
   <!--
     =========================================================
     APP PRINCIPAL
-    Container geral da aplicação
-    Tudo o que pertence ao painel fica dentro deste bloco
     =========================================================
   -->
   <main id="app">
 
     <!--
       =======================================================
-      SPLASH SCREEN
+      AVISO DE ORIENTAÇÃO (MOBILE / TABLET)
       =======================================================
 
-      Tela inicial mostrada enquanto o sistema:
-      - carrega config.json
-      - carrega playlist.json
-      - prepara a primeira mídia
-      - entrega uma abertura mais institucional
+      Este bloco aparece em telas menores quando o dispositivo
+      está em modo retrato, sugerindo girar para paisagem.
+    -->
+    <section id="rotateNotice" class="hidden">
+      <div class="rotateNoticeContent">
+        <i class="fa-solid fa-rotate-right"></i>
+        <h2>Melhor visualização em modo horizontal</h2>
+        <p>Gire o dispositivo para paisagem para visualizar o painel com mais conforto.</p>
+        <button id="btnDismissRotate">Continuar assim mesmo</button>
+      </div>
+    </section>
 
-      Observação:
-      A splash acontece apenas na inicialização.
-      Não usamos mais splash no meio do loop.
+    <!--
+      =======================================================
+      SPLASH SCREEN
+      =======================================================
     -->
     <section id="splashScreen">
-      <!-- Camada escura sobre o wallpaper -->
       <div id="splashOverlay"></div>
-
-      <!-- Imagem institucional da splash -->
       <img id="splashWallpaper" alt="Wallpaper institucional" />
     </section>
 
@@ -66,28 +58,12 @@
       =======================================================
       ÁREA PRINCIPAL DE MÍDIA
       =======================================================
-
-      Elementos responsáveis pela exibição do conteúdo:
-
-      videoPlayer:
-      - reproduz o vídeo atual da playlist
-
-      videoPreload:
-      - pré-carrega o próximo vídeo
-      - fica invisível
-      - ajuda a reduzir travadas entre trocas
-
-      imagePlayer:
-      - exibe imagens da playlist
     -->
     <section id="mediaArea">
-      <!-- Vídeo principal -->
       <video id="videoPlayer" autoplay muted playsinline preload="auto"></video>
 
-      <!-- Vídeo invisível para pré-carregamento -->
       <video id="videoPreload" muted playsinline preload="auto" style="display: none;"></video>
 
-      <!-- Exibição de imagens -->
       <img id="imagePlayer" alt="Conteúdo do painel" />
     </section>
 
@@ -95,59 +71,25 @@
       =======================================================
       STATUS
       =======================================================
-
-      Caixa usada para mensagens temporárias, por exemplo:
-      - carregando vídeo
-      - playlist atualizada
-      - erro de mídia
-      - preparando conteúdo
-
-      Em produção, se quiser, pode ser desligada pelo config.json.
     -->
     <div id="status">Carregando conteúdo...</div>
 
     <!--
       =======================================================
-      BARRA LATERAL
+      BARRA LATERAL / PAINEL DE CONTROLES
       =======================================================
-
-      Painel lateral institucional exibido quando há interação:
-      - mouse
-      - clique
-      - touch
-      - controle remoto compatível
-
-      Ela contém:
-      - relógio/data
-      - botões de controle
-      - texto de apoio
-      - identidade visual da prefeitura
     -->
     <aside id="sidePanel" class="controls-hidden">
-      <!-- Faixa azul superior -->
       <div class="sidePanelTopBar"></div>
 
-      <!-- Corpo da barra lateral -->
       <div class="sidePanelBody">
-
-        <!--
-          Relógio e data
-          Ficam no topo da barra lateral
-        -->
+        <!-- Relógio -->
         <div class="sidePanelClock">
           <div id="sidebarClockTime">00:00:00</div>
           <div id="sidebarClockDate">00/00/0000</div>
         </div>
 
-        <!--
-          Controles principais do painel
-
-          Botões:
-          - play/pause
-          - próximo
-          - anterior
-          - som
-        -->
+        <!-- Controles -->
         <div id="controls">
           <button id="btnPlayPause">
             <i class="fa-solid fa-play"></i>
@@ -168,29 +110,31 @@
             <i class="fa-solid fa-volume-xmark"></i>
             <span>Som desligado</span>
           </button>
+
+          <!--
+            Botão extra útil para mobile/tablet.
+            Em desktop/TV ele pode ficar discreto,
+            mas em celular pode ajudar bastante.
+          -->
+          <button id="btnFullscreen">
+            <i class="fa-solid fa-expand"></i>
+            <span>Tela cheia</span>
+          </button>
         </div>
 
-        <!--
-          Texto de apoio
-          Usado como orientação discreta ao usuário
-        -->
+        <!-- Texto de apoio -->
         <div class="sidePanelHint">
-          <p>Mova o mouse para exibir os controles.</p>
-          <p>Ao parar, a barra lateral recolhe automaticamente.</p>
+          <p>Mova o mouse ou use o controle para exibir os controles.</p>
+          <p>Em dispositivos móveis, prefira o modo horizontal.</p>
         </div>
 
-        <!--
-          Logo / identidade visual da prefeitura no rodapé da barra
-          Ideal usar SVG ou PNG com fundo transparente.
-        -->
+        <!-- Logo -->
         <div class="sidePanelLogoArea">
           <img id="sidePanelLogo" src="assets/logo-prefeitura.svg" alt="Identidade visual da Prefeitura" />
         </div>
       </div>
 
-      <!--
-        Faixa inferior com as 4 cores institucionais
-      -->
+      <!-- Faixa inferior -->
       <div class="sidePanelBottomColors">
         <span class="colorStrip coral"></span>
         <span class="colorStrip yellow"></span>
@@ -200,9 +144,7 @@
     </aside>
   </main>
 
-  <!-- ======================================================
-       JAVASCRIPT PRINCIPAL DO SISTEMA
-       ====================================================== -->
+  <!-- Script principal -->
   <script src="script.js"></script>
 </body>
 
