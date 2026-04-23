@@ -1,5 +1,8 @@
 /* =========================================================
    ELEMENTOS PRINCIPAIS DA INTERFACE
+   =========================================================
+   Nesta seção capturamos todos os elementos do HTML
+   que serão manipulados pelo JavaScript.
    ========================================================= */
 
 // Players de mídia
@@ -7,7 +10,7 @@ const videoPlayer = document.getElementById("videoPlayer");
 const videoPreload = document.getElementById("videoPreload");
 const imagePlayer = document.getElementById("imagePlayer");
 
-// Status
+// Caixa de status / mensagens rápidas
 const statusBox = document.getElementById("status");
 
 // Splash inicial
@@ -18,18 +21,18 @@ const splashWallpaper = document.getElementById("splashWallpaper");
 const sidePanel = document.getElementById("sidePanel");
 const controls = document.getElementById("controls");
 
-// Relógio
+// Relógio lateral
 const sidebarClockTime = document.getElementById("sidebarClockTime");
 const sidebarClockDate = document.getElementById("sidebarClockDate");
 
-// Botões
+// Botões principais
 const btnPlayPause = document.getElementById("btnPlayPause");
 const btnNext = document.getElementById("btnNext");
 const btnPrev = document.getElementById("btnPrev");
 const btnMute = document.getElementById("btnMute");
 const btnFullscreen = document.getElementById("btnFullscreen");
 
-// Conteúdo interno dos botões
+// Ícones e textos internos dos botões
 const btnPlayPauseIcon = btnPlayPause ? btnPlayPause.querySelector("i") : null;
 const btnPlayPauseText = btnPlayPause ? btnPlayPause.querySelector("span") : null;
 
@@ -39,44 +42,71 @@ const btnMuteText = btnMute ? btnMute.querySelector("span") : null;
 const btnFullscreenIcon = btnFullscreen ? btnFullscreen.querySelector("i") : null;
 const btnFullscreenText = btnFullscreen ? btnFullscreen.querySelector("span") : null;
 
-// Aviso de rotação
+// Aviso de rotação em dispositivos móveis
 const rotateNotice = document.getElementById("rotateNotice");
 const btnDismissRotate = document.getElementById("btnDismissRotate");
 
 /* =========================================================
    ESTADO DA APLICAÇÃO
+   =========================================================
+   Variáveis globais que guardam o estado do painel.
    ========================================================= */
 
+// Configuração carregada do config.json
 let config = {};
+
+// Playlist carregada do playlist.json
 let playlist = [];
+
+// Índice atual da playlist
 let indiceAtual = 0;
+
+// Tipo da mídia atual ("video" ou "imagem")
 let tipoAtual = null;
 
+// Timers auxiliares
 let timerImagem = null;
 let timerStatus = null;
 let timerInterface = null;
 
+// Controle de transição entre mídias
 let emTransicao = false;
+
+// Indica se a primeira inicialização já terminou
 let primeiraInicializacaoConcluida = false;
+
+// Preferência de som do usuário
 let somHabilitadoPeloUsuario = false;
 
-// Controle do aviso de rotação
+// Controle do overlay de rotação
 let rotateNoticeDismissed = false;
 
 /* =========================================================
-   UTILITÁRIOS
+   FUNÇÕES UTILITÁRIAS
    ========================================================= */
 
+/**
+ * Espera um tempo em milissegundos.
+ * Útil para splash, fade e pequenos atrasos controlados.
+ */
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Retorna a duração configurada do fade entre mídias.
+ * Se não houver valor válido no config, usa 600ms.
+ */
 function getFadeDuration() {
   return Number(config.duracaoFadeMidia) > 0
     ? Number(config.duracaoFadeMidia)
     : 600;
 }
 
+/**
+ * Aplica uma animação rápida de feedback visual em um botão.
+ * Serve para clique com mouse, toque ou interação de teclado/controle.
+ */
 function aplicarFeedbackNoBotao(botao) {
   if (!botao) return;
 
@@ -90,9 +120,13 @@ function aplicarFeedbackNoBotao(botao) {
 }
 
 /* =========================================================
-   STATUS
+   STATUS / MENSAGENS
    ========================================================= */
 
+/**
+ * Mostra uma mensagem temporária na caixa de status.
+ * Em modo teste ela fica visível por mais tempo.
+ */
 function atualizarStatus(texto) {
   statusBox.textContent = texto;
   statusBox.classList.remove("hidden");
@@ -110,6 +144,9 @@ function atualizarStatus(texto) {
    CONFIGURAÇÃO
    ========================================================= */
 
+/**
+ * Carrega o arquivo config.json.
+ */
 async function carregarConfig() {
   const resposta = await fetch(`config.json?v=${Date.now()}`);
 
@@ -121,18 +158,26 @@ async function carregarConfig() {
   aplicarConfig();
 }
 
+/**
+ * Aplica as configurações carregadas na interface.
+ */
 function aplicarConfig() {
+  // Define wallpaper da splash
   if (config.wallpaperInicial) {
     splashWallpaper.src = config.wallpaperInicial;
   }
 
+  // Liga/desliga status visual
   if (!config.mostrarStatus) {
     statusBox.classList.add("hidden");
   } else {
     statusBox.classList.remove("hidden");
   }
 
+  // Liga/desliga a barra lateral
   sidePanel.classList.toggle("hidden", !config.mostrarControles);
+
+  // Garante que a barra comece escondida
   sidePanel.classList.add("controls-hidden");
   sidePanel.classList.remove("panel-open");
 }
@@ -141,6 +186,10 @@ function aplicarConfig() {
    RELÓGIO
    ========================================================= */
 
+/**
+ * Inicia a atualização contínua de hora e data
+ * usando o fuso de Campo Grande / MS.
+ */
 function iniciarRelogio() {
   function atualizarRelogio() {
     const agora = new Date();
@@ -171,6 +220,9 @@ function iniciarRelogio() {
    PLAYLIST
    ========================================================= */
 
+/**
+ * Carrega o arquivo playlist.json.
+ */
 async function carregarPlaylist() {
   const resposta = await fetch(`playlist.json?v=${Date.now()}`);
 
@@ -190,26 +242,47 @@ async function carregarPlaylist() {
 
 /* =========================================================
    INTERFACE INTELIGENTE
+   =========================================================
+   Controla:
+   - mostrar/esconder cursor
+   - mostrar/esconder barra lateral
+   - reaparecer quando há interação
    ========================================================= */
 
+/**
+ * Mostra o cursor.
+ */
 function mostrarCursor() {
   document.body.classList.remove("cursor-hidden");
 }
 
+/**
+ * Esconde o cursor.
+ */
 function esconderCursor() {
   document.body.classList.add("cursor-hidden");
 }
 
+/**
+ * Mostra temporariamente a barra lateral.
+ */
 function mostrarControlesTemporariamente() {
   sidePanel.classList.remove("controls-hidden");
   sidePanel.classList.add("panel-open");
 }
 
+/**
+ * Esconde temporariamente a barra lateral.
+ */
 function esconderControlesTemporariamente() {
   sidePanel.classList.add("controls-hidden");
   sidePanel.classList.remove("panel-open");
 }
 
+/**
+ * Reinicia a visibilidade da interface.
+ * Toda interação chama essa função.
+ */
 function resetarInterface() {
   mostrarCursor();
 
@@ -228,6 +301,7 @@ function resetarInterface() {
   }, Number(config.tempoOcultarPainel) > 0 ? Number(config.tempoOcultarPainel) : 3500);
 }
 
+// Qualquer interação relevante reativa a interface
 document.addEventListener("mousemove", resetarInterface);
 document.addEventListener("mousedown", resetarInterface);
 document.addEventListener("touchstart", resetarInterface);
@@ -236,22 +310,34 @@ document.addEventListener("touchstart", resetarInterface);
    CONTROLE VISUAL DAS MÍDIAS
    ========================================================= */
 
+/**
+ * Mostra o vídeo atual e esconde a imagem.
+ */
 function mostrarVideo() {
   videoPlayer.style.opacity = 1;
   imagePlayer.style.opacity = 0;
 }
 
+/**
+ * Mostra a imagem atual e esconde o vídeo.
+ */
 function mostrarImagem() {
   imagePlayer.style.opacity = 1;
   videoPlayer.style.opacity = 0;
 }
 
+/**
+ * Faz fade out das mídias antes da próxima entrar.
+ */
 async function fadeOutMidias() {
   videoPlayer.style.opacity = 0;
   imagePlayer.style.opacity = 0;
   await sleep(getFadeDuration());
 }
 
+/**
+ * Limpa estado da mídia anterior.
+ */
 function limparMidias() {
   clearTimeout(timerImagem);
   timerImagem = null;
@@ -262,8 +348,14 @@ function limparMidias() {
 
 /* =========================================================
    PRÉ-CARREGAMENTO
+   =========================================================
+   Tenta deixar a próxima mídia mais pronta para reduzir
+   travadas na troca.
    ========================================================= */
 
+/**
+ * Pré-carrega o próximo vídeo.
+ */
 function preCarregarProximoVideo() {
   if (!playlist.length) return;
 
@@ -280,6 +372,9 @@ function preCarregarProximoVideo() {
   }
 }
 
+/**
+ * Pré-carrega a próxima imagem.
+ */
 function preCarregarProximaImagem() {
   if (!playlist.length) return;
 
@@ -292,20 +387,29 @@ function preCarregarProximaImagem() {
   }
 }
 
+/**
+ * Executa o pré-carregamento da próxima mídia.
+ */
 function preCarregarProximaMidia() {
   preCarregarProximoVideo();
   preCarregarProximaImagem();
 }
 
 /* =========================================================
-   SPLASH
+   SPLASH INICIAL
    ========================================================= */
 
+/**
+ * Mostra a splash inicial.
+ */
 function mostrarSplash() {
   splashScreen.classList.remove("hidden");
   splashScreen.classList.add("visible");
 }
 
+/**
+ * Esconde visualmente a splash.
+ */
 function esconderSplash() {
   splashScreen.classList.remove("visible");
 }
@@ -314,6 +418,10 @@ function esconderSplash() {
    PREPARAÇÃO DA PRIMEIRA MÍDIA
    ========================================================= */
 
+/**
+ * Pré-carrega a primeira mídia da playlist antes do painel
+ * ficar visível para o usuário.
+ */
 async function prepararPrimeiraMidiaDoCiclo() {
   if (!playlist.length) return;
 
@@ -349,9 +457,14 @@ async function prepararPrimeiraMidiaDoCiclo() {
 }
 
 /* =========================================================
-   REPRODUÇÃO DA MÍDIA
+   REPRODUÇÃO DA MÍDIA ATUAL
    ========================================================= */
 
+/**
+ * Toca a mídia atual da playlist.
+ * Mantém comportamento seguro:
+ * se falhar, avança para a próxima.
+ */
 async function tocarItemAtual() {
   if (!playlist.length || emTransicao) return;
 
@@ -433,9 +546,12 @@ async function tocarItemAtual() {
 }
 
 /* =========================================================
-   NAVEGAÇÃO
+   NAVEGAÇÃO ENTRE ITENS
    ========================================================= */
 
+/**
+ * Vai para o próximo item da playlist.
+ */
 async function proximoItem() {
   if (!playlist.length || emTransicao) return;
 
@@ -443,6 +559,9 @@ async function proximoItem() {
   tocarItemAtual();
 }
 
+/**
+ * Volta para o item anterior.
+ */
 function itemAnterior() {
   if (!playlist.length || emTransicao) return;
 
@@ -451,9 +570,12 @@ function itemAnterior() {
 }
 
 /* =========================================================
-   BOTÕES DINÂMICOS
+   ATUALIZAÇÃO VISUAL DOS BOTÕES
    ========================================================= */
 
+/**
+ * Atualiza texto e ícone do botão play/pause conforme o estado atual.
+ */
 function atualizarTextoBotaoPlayPause() {
   if (!btnPlayPause || !btnPlayPauseIcon || !btnPlayPauseText) return;
 
@@ -479,6 +601,9 @@ function atualizarTextoBotaoPlayPause() {
   }
 }
 
+/**
+ * Atualiza ícone e texto do botão de som.
+ */
 function atualizarBotaoSom() {
   if (!btnMute || !btnMuteIcon || !btnMuteText) return;
 
@@ -491,6 +616,9 @@ function atualizarBotaoSom() {
   }
 }
 
+/**
+ * Atualiza ícone e texto do botão de tela cheia.
+ */
 function atualizarBotaoFullscreen() {
   if (!btnFullscreen || !btnFullscreenIcon || !btnFullscreenText) return;
 
@@ -509,6 +637,9 @@ function atualizarBotaoFullscreen() {
    CONTROLES MANUAIS
    ========================================================= */
 
+/**
+ * Alterna entre play e pause da mídia atual.
+ */
 function alternarPlayPause() {
   if (!playlist.length) return;
 
@@ -543,6 +674,9 @@ function alternarPlayPause() {
   }
 }
 
+/**
+ * Liga ou desliga o som manualmente.
+ */
 function alternarSom() {
   somHabilitadoPeloUsuario = !somHabilitadoPeloUsuario;
   videoPlayer.muted = !somHabilitadoPeloUsuario;
@@ -557,9 +691,13 @@ function alternarSom() {
 }
 
 /* =========================================================
-   FULLSCREEN
+   TELA CHEIA
    ========================================================= */
 
+/**
+ * Alterna modo tela cheia.
+ * Em navegador mobile pode depender de suporte do browser.
+ */
 async function alternarFullscreen() {
   try {
     if (!document.fullscreenElement) {
@@ -575,23 +713,34 @@ async function alternarFullscreen() {
 }
 
 /* =========================================================
-   MODO MOBILE / ORIENTAÇÃO
+   MODO RESPONSIVO / ORIENTAÇÃO
    ========================================================= */
 
+/**
+ * Retorna true se a tela for considerada pequena
+ * (tablet/celular).
+ */
 function isSmallScreen() {
   return window.innerWidth <= 1024;
 }
 
+/**
+ * Retorna true se o dispositivo estiver em retrato.
+ */
 function isPortrait() {
   return window.innerHeight > window.innerWidth;
 }
 
+/**
+ * Atualiza classes e comportamento visual para
+ * mobile/tablet conforme tamanho/orientação.
+ */
 function atualizarModoResponsivo() {
   const mobile = isSmallScreen();
 
   document.body.classList.toggle("mobile-mode", mobile);
 
-  // Reset do aviso ao mudar para paisagem
+  // Quando sai do retrato, resetamos o dismiss
   if (!isPortrait()) {
     rotateNoticeDismissed = false;
   }
@@ -604,9 +753,20 @@ function atualizarModoResponsivo() {
 }
 
 /* =========================================================
-   INICIALIZAÇÃO
+   INICIALIZAÇÃO DO SISTEMA
    ========================================================= */
 
+/**
+ * Fluxo principal:
+ * 1. carrega config
+ * 2. inicia relógio
+ * 3. carrega playlist
+ * 4. mostra splash
+ * 5. prepara primeira mídia
+ * 6. toca primeira mídia
+ * 7. esconde splash
+ * 8. ativa interface e responsividade
+ */
 async function iniciarSistema() {
   try {
     await carregarConfig();
@@ -709,7 +869,7 @@ btnDismissRotate.addEventListener("click", () => {
 });
 
 /* =========================================================
-   FULLSCREEN / ORIENTAÇÃO
+   EVENTOS DE FULLSCREEN / ORIENTAÇÃO
    ========================================================= */
 
 document.addEventListener("fullscreenchange", atualizarBotaoFullscreen);
@@ -718,8 +878,9 @@ window.addEventListener("orientationchange", atualizarModoResponsivo);
 
 /* =========================================================
    ATUALIZAÇÃO AUTOMÁTICA DA PLAYLIST
+   =========================================================
+   Verifica periodicamente se o playlist.json mudou.
    ========================================================= */
-
 setInterval(async () => {
   try {
     const resposta = await fetch(`playlist.json?v=${Date.now()}`);
@@ -741,14 +902,17 @@ setInterval(async () => {
 
 /* =========================================================
    TECLADO / CONTROLE REMOTO
+   =========================================================
+   Muitas TVs e navegadores enviam botões do controle
+   como eventos de teclado / media keys.
    ========================================================= */
-
 document.addEventListener("keydown", (event) => {
   const tecla = event.key;
   const codigo = event.keyCode || event.which;
 
   resetarInterface();
 
+  // Play / Pause
   const ehPlayPause =
     tecla === "Enter" ||
     tecla === " " ||
@@ -770,6 +934,7 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
+  // Próximo item
   const ehProximo =
     tecla === "ArrowRight" ||
     tecla === "MediaTrackNext" ||
@@ -784,6 +949,7 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
+  // Item anterior
   const ehAnterior =
     tecla === "ArrowLeft" ||
     tecla === "MediaTrackPrevious" ||
@@ -798,18 +964,21 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
+  // Mostrar barra
   if (tecla === "ArrowUp" || codigo === 38) {
     event.preventDefault();
     mostrarControlesTemporariamente();
     return;
   }
 
+  // Esconder barra
   if (tecla === "ArrowDown" || codigo === 40) {
     event.preventDefault();
     esconderControlesTemporariamente();
     return;
   }
 
+  // Mute pelo teclado
   if (tecla === "m" || tecla === "M") {
     event.preventDefault();
     aplicarFeedbackNoBotao(btnMute);
@@ -820,5 +989,4 @@ document.addEventListener("keydown", (event) => {
 /* =========================================================
    START
    ========================================================= */
-
 iniciarSistema();
