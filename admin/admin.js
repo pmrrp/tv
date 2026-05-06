@@ -106,6 +106,122 @@ const userRoleField = userRoleInput
 
 const usersDropdown = document.getElementById("usersDropdown");
 const usersDropdownCount = document.getElementById("usersDropdownCount");
+
+/* =========================================================
+   ELEMENTOS - RESET DE SENHA
+   ========================================================= */
+
+const resetPasswordModal = document.getElementById("resetPasswordModal");
+const resetPasswordForm = document.getElementById("resetPasswordForm");
+const resetPasswordUserIdInput = document.getElementById("resetPasswordUserId");
+const resetPasswordInput = document.getElementById("resetPasswordInput");
+const resetPasswordHint = document.getElementById("resetPasswordHint");
+const resetPasswordDescription = document.getElementById("resetPasswordDescription");
+
+const btnCancelResetPassword = document.getElementById("btnCancelResetPassword");
+const btnSaveResetPassword = document.getElementById("btnSaveResetPassword");
+const btnToggleResetPassword = document.getElementById("btnToggleResetPassword");
+
+const btnToggleResetPasswordIcon = btnToggleResetPassword
+    ? btnToggleResetPassword.querySelector("i")
+    : null;
+
+/**
+* Envia a nova senha para a API.
+*/
+async function salvarResetSenha(event) {
+    event.preventDefault();
+
+    const idUsuario = resetPasswordUserIdInput
+        ? resetPasswordUserIdInput.value
+        : "";
+
+    const novaSenha = resetPasswordInput
+        ? resetPasswordInput.value
+        : "";
+
+    if (!idUsuario) {
+        mostrarToast("Usuário inválido para reset de senha.", "erro");
+        return;
+    }
+
+    if (!novaSenha || novaSenha.length < 6) {
+        mostrarToast("Informe uma senha com pelo menos 6 caracteres.", "erro");
+
+        if (resetPasswordInput) {
+            resetPasswordInput.focus();
+            validarResetSenhaVisualmente();
+        }
+
+        return;
+    }
+
+    const textoOriginalBotao = btnSaveResetPassword
+        ? btnSaveResetPassword.innerHTML
+        : "";
+
+    if (btnSaveResetPassword) {
+        btnSaveResetPassword.disabled = true;
+        btnSaveResetPassword.innerHTML = `
+            <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+            Salvando...
+        `;
+    }
+
+    try {
+        const resposta = await fetchComSessao(
+            `/api/admin/users/${encodeURIComponent(idUsuario)}/reset-password`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    senha: novaSenha
+                })
+            }
+        );
+
+        const resultado = await resposta.json();
+
+        if (!resposta.ok || resultado.erro) {
+            throw new Error(resultado.mensagem || "Erro ao resetar senha.");
+        }
+
+        mostrarToast("Senha redefinida com sucesso.", "sucesso");
+
+        fecharModalResetSenha();
+
+        await carregarUsuarios();
+    } catch (erro) {
+        console.error("Erro ao resetar senha:", erro);
+
+        mostrarToast(
+            erro.message || "Erro ao resetar senha.",
+            "erro"
+        );
+    } finally {
+        if (btnSaveResetPassword) {
+            btnSaveResetPassword.disabled = false;
+            btnSaveResetPassword.innerHTML = textoOriginalBotao;
+        }
+    }
+}
+
+/* =========================================================
+   ELEMENTOS - ALTERAR STATUS DO USUÁRIO
+   ========================================================= */
+
+const userStatusModal = document.getElementById("userStatusModal");
+const userStatusTitle = document.getElementById("userStatusTitle");
+const userStatusDescription = document.getElementById("userStatusDescription");
+const userStatusUserIdInput = document.getElementById("userStatusUserId");
+const userStatusNewValueInput = document.getElementById("userStatusNewValue");
+
+const btnCancelUserStatus = document.getElementById("btnCancelUserStatus");
+const btnDismissUserStatus = document.getElementById("btnDismissUserStatus");
+const btnConfirmUserStatus = document.getElementById("btnConfirmUserStatus");
+
 /* =========================================================
    USUÁRIO LOGADO - UTILITÁRIO SEGURO
    ========================================================= */
@@ -152,6 +268,7 @@ let mediaArrastada = null;
 let uploadMessageTimer = null;
 let playlistMessageTimer = null;
 let modalConfirmacao = null;
+let usuariosCarregados = [];
 
 
 /* =========================================================
@@ -376,6 +493,7 @@ function renderizarUsuarios(usuarios) {
                     class="${ativo ? "dangerAction" : "successAction"} btnToggleUserStatus"
                     type="button"
                     data-user-id="${usuario.id}"
+                    data-user-name="${nome}"
                     data-active="${ativo ? "true" : "false"}"
                 >
                     <i class="fa-solid ${ativo ? "fa-user-slash" : "fa-user-check"}" aria-hidden="true"></i>
@@ -421,7 +539,8 @@ async function carregarUsuarios() {
             throw new Error(dados.mensagem || "Erro ao carregar usuários.");
         }
 
-        renderizarUsuarios(dados.usuarios || []);
+        usuariosCarregados = dados.usuarios || [];
+        renderizarUsuarios(usuariosCarregados);
     } catch (erro) {
         console.error("Erro ao carregar usuários:", erro);
 
@@ -785,8 +904,14 @@ async function salvarUsuarioPeloFormulario(event) {
     }
 
     try {
-        const resposta = await fetchComSessao("/api/admin/users", {
-            method: "POST",
+        const url = criandoNovoUsuario
+            ? "/api/admin/users"
+            : `/api/admin/users/${encodeURIComponent(dados.id)}`;
+
+        const metodo = criandoNovoUsuario ? "POST" : "PUT";
+
+        const resposta = await fetchComSessao(url, {
+            method: metodo,
             headers: {
                 "Content-Type": "application/json"
             },
@@ -799,8 +924,12 @@ async function salvarUsuarioPeloFormulario(event) {
             throw new Error(resultado.mensagem || "Erro ao salvar usuário.");
         }
 
-        mostrarToast("Usuário criado com sucesso.", "sucesso");
-
+        mostrarToast(
+            criandoNovoUsuario
+                ? "Usuário criado com sucesso."
+                : "Usuário atualizado com sucesso.",
+            "sucesso"
+        );
         fecharFormularioUsuario();
 
         await carregarUsuarios();
@@ -1182,6 +1311,449 @@ function esconderMensagemPlaylist() {
     playlistMessage.textContent = "";
 }
 
+/* =========================================================
+   USUÁRIOS - EDITAR
+   ========================================================= */
+
+/**
+ * Abre o modal preenchido com os dados de um usuário existente.
+ *
+ * Observação:
+ * - edição não altera senha;
+ * - reset de senha terá modal próprio depois.
+ */
+function abrirFormularioEditarUsuario(idUsuario) {
+    const id = Number(idUsuario);
+
+    const usuario = usuariosCarregados.find((item) => Number(item.id) === id);
+
+    if (!usuario) {
+        mostrarToast("Usuário não encontrado na lista carregada.", "erro");
+        return;
+    }
+
+    limparFormularioUsuario();
+
+    if (userFormTitle) {
+        userFormTitle.textContent = "Editar usuário";
+    }
+
+    if (userIdInput) {
+        userIdInput.value = usuario.id;
+    }
+
+    if (userNameInput) {
+        userNameInput.value = usuario.nome || "";
+    }
+
+    if (userEmailInput) {
+        userEmailInput.value = usuario.email || "";
+    }
+
+    if (userRoleInput) {
+        userRoleInput.value = usuario.role || "viewer";
+    }
+
+    /*
+      Na edição, não alteramos senha aqui.
+      Reset de senha será outro modal.
+    */
+    if (userPasswordLabel) {
+        userPasswordLabel.classList.add("hidden");
+    }
+
+    if (userPasswordInput) {
+        userPasswordInput.required = false;
+        userPasswordInput.value = "";
+    }
+
+    /*
+      Status ativo/inativo fica controlado pelo botão da lista.
+      Mesmo assim mantemos o valor internamente para o PUT.
+    */
+    if (userActiveInput) {
+        if (userActiveInput.type === "checkbox") {
+            userActiveInput.checked = Number(usuario.ativo) === 1;
+        } else {
+            userActiveInput.value = Number(usuario.ativo) === 1 ? "true" : "false";
+        }
+    }
+
+    abrirModalUsuario();
+
+    setTimeout(() => {
+        if (userNameInput) userNameInput.focus();
+    }, 180);
+}
+
+/* =========================================================
+   USUÁRIOS - MODAL DE RESET DE SENHA
+   =========================================================
+   Este bloco controla o modal usado para redefinir a senha
+   de um usuário existente.
+
+   Fluxo:
+   - clica em "Resetar senha" na lista;
+   - abre o modal;
+   - digita nova senha;
+   - valida mínimo de 6 caracteres;
+   - envia para POST /api/admin/users/:id/reset-password.
+   ========================================================= */
+
+/**
+ * Limpa o formulário de reset de senha.
+ */
+function limparFormularioResetSenha() {
+    if (resetPasswordUserIdInput) {
+        resetPasswordUserIdInput.value = "";
+    }
+
+    if (resetPasswordInput) {
+        resetPasswordInput.value = "";
+        resetPasswordInput.type = "password";
+        resetPasswordInput.classList.remove("fieldInvalid");
+        resetPasswordInput.classList.remove("fieldValid");
+    }
+
+    if (btnToggleResetPasswordIcon) {
+        btnToggleResetPasswordIcon.className = "fa-solid fa-eye";
+    }
+
+    if (btnToggleResetPassword) {
+        btnToggleResetPassword.setAttribute("aria-label", "Mostrar senha");
+    }
+
+    if (resetPasswordHint) {
+        resetPasswordHint.classList.remove("erro");
+        resetPasswordHint.classList.remove("sucesso");
+        resetPasswordHint.textContent = "A senha deve ter pelo menos 6 caracteres.";
+    }
+}
+
+/**
+ * Abre o modal de reset de senha.
+ */
+function abrirModalResetSenha(idUsuario, nomeUsuario = "usuário") {
+    if (!resetPasswordModal) return;
+
+    limparFormularioResetSenha();
+
+    if (resetPasswordUserIdInput) {
+        resetPasswordUserIdInput.value = idUsuario;
+    }
+
+    if (resetPasswordDescription) {
+        resetPasswordDescription.textContent =
+            `Defina uma nova senha para ${nomeUsuario}.`;
+    }
+
+    resetPasswordModal.classList.remove("hidden");
+    resetPasswordModal.setAttribute("aria-hidden", "false");
+
+    document.body.classList.add("modal-open");
+
+    setTimeout(() => {
+        if (resetPasswordInput) {
+            resetPasswordInput.focus();
+        }
+    }, 180);
+}
+
+/**
+ * Fecha o modal de reset de senha.
+ */
+function fecharModalResetSenha() {
+    if (!resetPasswordModal) return;
+
+    limparFormularioResetSenha();
+
+    resetPasswordModal.classList.add("hidden");
+    resetPasswordModal.setAttribute("aria-hidden", "true");
+
+    document.body.classList.remove("modal-open");
+}
+
+/**
+ * Alterna entre mostrar e ocultar a senha no modal de reset.
+ */
+function alternarVisibilidadeResetSenha() {
+    if (!resetPasswordInput || !btnToggleResetPassword || !btnToggleResetPasswordIcon) return;
+
+    const senhaEstaOculta = resetPasswordInput.type === "password";
+
+    resetPasswordInput.type = senhaEstaOculta ? "text" : "password";
+
+    btnToggleResetPasswordIcon.className = senhaEstaOculta
+        ? "fa-solid fa-eye-slash"
+        : "fa-solid fa-eye";
+
+    btnToggleResetPassword.setAttribute(
+        "aria-label",
+        senhaEstaOculta ? "Ocultar senha" : "Mostrar senha"
+    );
+}
+
+/**
+ * Valida visualmente a nova senha.
+ */
+function validarResetSenhaVisualmente() {
+    if (!resetPasswordInput || !resetPasswordHint) return true;
+
+    const senha = resetPasswordInput.value;
+    const senhaValida = senha.length >= 6;
+
+    if (senhaValida) {
+        resetPasswordInput.classList.remove("fieldInvalid");
+        resetPasswordInput.classList.add("fieldValid");
+
+        resetPasswordHint.classList.remove("erro");
+        resetPasswordHint.classList.add("sucesso");
+        resetPasswordHint.textContent = "Senha válida.";
+
+        return true;
+    }
+
+    resetPasswordInput.classList.remove("fieldValid");
+    resetPasswordInput.classList.add("fieldInvalid");
+
+    resetPasswordHint.classList.remove("sucesso");
+    resetPasswordHint.classList.add("erro");
+    resetPasswordHint.textContent = "A senha precisa ter pelo menos 6 caracteres.";
+
+    return false;
+}
+
+/**
+ * Envia a nova senha para a API.
+ */
+async function salvarResetSenha(event) {
+    event.preventDefault();
+
+    const idUsuario = resetPasswordUserIdInput
+        ? resetPasswordUserIdInput.value
+        : "";
+
+    const novaSenha = resetPasswordInput
+        ? resetPasswordInput.value
+        : "";
+
+    if (!idUsuario) {
+        mostrarToast("Usuário inválido para reset de senha.", "erro");
+        return;
+    }
+
+    if (!novaSenha || novaSenha.length < 6) {
+        mostrarToast("Informe uma senha com pelo menos 6 caracteres.", "erro");
+
+        if (resetPasswordInput) {
+            resetPasswordInput.focus();
+            validarResetSenhaVisualmente();
+        }
+
+        return;
+    }
+
+    const textoOriginalBotao = btnSaveResetPassword
+        ? btnSaveResetPassword.innerHTML
+        : "";
+
+    if (btnSaveResetPassword) {
+        btnSaveResetPassword.disabled = true;
+        btnSaveResetPassword.innerHTML = `
+            <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+            Salvando...
+        `;
+    }
+
+    try {
+        const resposta = await fetchComSessao(
+            `/api/admin/users/${encodeURIComponent(idUsuario)}/reset-password`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    senha: novaSenha
+                })
+            }
+        );
+
+        const resultado = await resposta.json();
+
+        if (!resposta.ok || resultado.erro) {
+            throw new Error(resultado.mensagem || "Erro ao resetar senha.");
+        }
+
+        mostrarToast("Senha redefinida com sucesso.", "sucesso");
+
+        fecharModalResetSenha();
+
+        await carregarUsuarios();
+    } catch (erro) {
+        console.error("Erro ao resetar senha:", erro);
+
+        mostrarToast(
+            erro.message || "Erro ao resetar senha.",
+            "erro"
+        );
+    } finally {
+        if (btnSaveResetPassword) {
+            btnSaveResetPassword.disabled = false;
+            btnSaveResetPassword.innerHTML = textoOriginalBotao;
+        }
+    }
+}
+
+/* =========================================================
+   USUÁRIOS - MODAL DE ALTERAÇÃO DE STATUS
+   ========================================================= */
+
+/**
+ * Abre o modal para confirmar ativação/desativação de usuário.
+ */
+function abrirModalStatusUsuario(idUsuario, nomeUsuario, usuarioEstaAtivo) {
+    if (!userStatusModal) return;
+
+    const novoStatus = !usuarioEstaAtivo;
+
+    if (userStatusUserIdInput) {
+        userStatusUserIdInput.value = idUsuario;
+    }
+
+    if (userStatusNewValueInput) {
+        userStatusNewValueInput.value = novoStatus ? "true" : "false";
+    }
+
+    if (userStatusTitle) {
+        userStatusTitle.textContent = novoStatus
+            ? "Ativar usuário"
+            : "Desativar usuário";
+    }
+
+    if (userStatusDescription) {
+        userStatusDescription.textContent = novoStatus
+            ? `Tem certeza que deseja ativar o usuário ${nomeUsuario}?`
+            : `Tem certeza que deseja desativar o usuário ${nomeUsuario}? Ele não conseguirá acessar o painel até ser ativado novamente.`;
+    }
+
+    if (btnConfirmUserStatus) {
+        btnConfirmUserStatus.className = novoStatus
+            ? "successAction"
+            : "dangerAction";
+
+        btnConfirmUserStatus.innerHTML = novoStatus
+            ? `
+                <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+                Ativar usuário
+            `
+            : `
+                <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
+                Desativar usuário
+            `;
+    }
+
+    userStatusModal.classList.remove("hidden");
+    userStatusModal.setAttribute("aria-hidden", "false");
+
+    document.body.classList.add("modal-open");
+}
+
+/**
+ * Fecha o modal de alteração de status.
+ */
+function fecharModalStatusUsuario() {
+    if (!userStatusModal) return;
+
+    if (userStatusUserIdInput) {
+        userStatusUserIdInput.value = "";
+    }
+
+    if (userStatusNewValueInput) {
+        userStatusNewValueInput.value = "";
+    }
+
+    userStatusModal.classList.add("hidden");
+    userStatusModal.setAttribute("aria-hidden", "true");
+
+    document.body.classList.remove("modal-open");
+}
+
+/**
+ * Confirma a ativação/desativação do usuário.
+ */
+async function confirmarAlteracaoStatusUsuario() {
+    const idUsuario = userStatusUserIdInput
+        ? userStatusUserIdInput.value
+        : "";
+
+    const novoValorTexto = userStatusNewValueInput
+        ? userStatusNewValueInput.value
+        : "";
+
+    if (!idUsuario || !novoValorTexto) {
+        mostrarToast("Dados inválidos para alterar status do usuário.", "erro");
+        return;
+    }
+
+    const ativo = novoValorTexto === "true";
+
+    const textoOriginalBotao = btnConfirmUserStatus
+        ? btnConfirmUserStatus.innerHTML
+        : "";
+
+    if (btnConfirmUserStatus) {
+        btnConfirmUserStatus.disabled = true;
+        btnConfirmUserStatus.innerHTML = `
+            <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+            Salvando...
+        `;
+    }
+
+    try {
+        const resposta = await fetchComSessao(
+            `/api/admin/users/${encodeURIComponent(idUsuario)}/status`,
+            {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    ativo
+                })
+            }
+        );
+
+        const resultado = await resposta.json();
+
+        if (!resposta.ok || resultado.erro) {
+            throw new Error(resultado.mensagem || "Erro ao alterar status do usuário.");
+        }
+
+        mostrarToast(
+            ativo
+                ? "Usuário ativado com sucesso."
+                : "Usuário desativado com sucesso.",
+            "sucesso"
+        );
+
+        fecharModalStatusUsuario();
+
+        await carregarUsuarios();
+    } catch (erro) {
+        console.error("Erro ao alterar status do usuário:", erro);
+
+        mostrarToast(
+            erro.message || "Erro ao alterar status do usuário.",
+            "erro"
+        );
+    } finally {
+        if (btnConfirmUserStatus) {
+            btnConfirmUserStatus.disabled = false;
+            btnConfirmUserStatus.innerHTML = textoOriginalBotao;
+        }
+    }
+}
 
 /* =========================================================
    RESUMO ADMINISTRATIVO
@@ -2809,8 +3381,21 @@ if (userModal) {
   Fecha o modal com ESC.
 */
 document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && userModal && !userModal.classList.contains("hidden")) {
+    if (event.key !== "Escape") return;
+
+    if (userModal && !userModal.classList.contains("hidden")) {
         fecharFormularioUsuario();
+        return;
+    }
+
+    if (resetPasswordModal && !resetPasswordModal.classList.contains("hidden")) {
+        fecharModalResetSenha();
+        return;
+    }
+
+    if (userStatusModal && !userStatusModal.classList.contains("hidden")) {
+        fecharModalStatusUsuario();
+        return;
     }
 });
 
@@ -2845,6 +3430,82 @@ if (userForm) {
     userForm.addEventListener("submit", salvarUsuarioPeloFormulario);
 }
 
+
+if (usersList) {
+    usersList.addEventListener("click", (event) => {
+        const btnEditar = event.target.closest(".btnEditUser");
+        const btnResetSenha = event.target.closest(".btnResetUserPassword");
+        const btnStatus = event.target.closest(".btnToggleUserStatus");
+
+        if (btnEditar) {
+            const idUsuario = btnEditar.dataset.userId;
+
+            abrirFormularioEditarUsuario(idUsuario);
+            return;
+        }
+
+        if (btnResetSenha) {
+            const idUsuario = btnResetSenha.dataset.userId;
+            const nomeUsuario = btnResetSenha.dataset.userName || "usuário";
+
+            abrirModalResetSenha(idUsuario, nomeUsuario);
+            return;
+        }
+
+        if (btnStatus) {
+            const idUsuario = btnStatus.dataset.userId;
+            const nomeUsuario = btnStatus.dataset.userName || "usuário";
+            const usuarioEstaAtivo = btnStatus.dataset.active === "true";
+
+            abrirModalStatusUsuario(idUsuario, nomeUsuario, usuarioEstaAtivo);
+            return;
+        }
+    });
+}
+
+if (btnCancelResetPassword) {
+    btnCancelResetPassword.addEventListener("click", fecharModalResetSenha);
+}
+
+if (btnToggleResetPassword) {
+    btnToggleResetPassword.addEventListener("click", alternarVisibilidadeResetSenha);
+}
+
+if (resetPasswordInput) {
+    resetPasswordInput.addEventListener("input", validarResetSenhaVisualmente);
+}
+
+if (resetPasswordForm) {
+    resetPasswordForm.addEventListener("submit", salvarResetSenha);
+}
+
+if (resetPasswordModal) {
+    resetPasswordModal.addEventListener("click", (event) => {
+        if (event.target === resetPasswordModal) {
+            fecharModalResetSenha();
+        }
+    });
+}
+
+if (btnCancelUserStatus) {
+    btnCancelUserStatus.addEventListener("click", fecharModalStatusUsuario);
+}
+
+if (btnDismissUserStatus) {
+    btnDismissUserStatus.addEventListener("click", fecharModalStatusUsuario);
+}
+
+if (btnConfirmUserStatus) {
+    btnConfirmUserStatus.addEventListener("click", confirmarAlteracaoStatusUsuario);
+}
+
+if (userStatusModal) {
+    userStatusModal.addEventListener("click", (event) => {
+        if (event.target === userStatusModal) {
+            fecharModalStatusUsuario();
+        }
+    });
+}
 
 if (btnReload) {
     btnReload.addEventListener("click", carregarMidias);

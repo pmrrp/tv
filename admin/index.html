@@ -494,6 +494,96 @@
         © 2026 Prefeitura Municipal de Ribas do Rio Pardo - MS. Todos os direitos reservados.
     </footer>
 
+    <!-- =====================================================
+     MODAL - RESETAR SENHA DE USUÁRIO
+     =====================================================
+     Usado para redefinir a senha de um usuário existente.
+     ===================================================== -->
+    <div id="resetPasswordModal" class="modalOverlay hidden" aria-hidden="true">
+        <section class="modalCard resetPasswordModalCard" role="dialog" aria-modal="true"
+            aria-labelledby="resetPasswordTitle">
+            <div class="modalHeader">
+                <div>
+                    <span class="sectionKicker">Acesso e permissões</span>
+                    <h3 id="resetPasswordTitle">Resetar senha</h3>
+                    <p id="resetPasswordDescription">
+                        Defina uma nova senha para este usuário.
+                    </p>
+                </div>
+
+                <button id="btnCancelResetPassword" class="iconButton" type="button" aria-label="Fechar reset de senha">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <form id="resetPasswordForm" class="resetPasswordForm">
+                <input id="resetPasswordUserId" type="hidden" />
+
+                <label>
+                    Nova senha
+
+                    <div class="passwordField userPasswordField">
+                        <input id="resetPasswordInput" type="password" placeholder="Mínimo 6 caracteres" minlength="6"
+                            required />
+
+                        <button id="btnToggleResetPassword" class="btnTogglePassword" type="button"
+                            aria-label="Mostrar senha">
+                            <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                        </button>
+                    </div>
+
+                    <small id="resetPasswordHint" class="fieldHint">
+                        A senha deve ter pelo menos 6 caracteres.
+                    </small>
+                </label>
+
+                <div class="userFormActions">
+                    <button id="btnSaveResetPassword" class="warningAction" type="submit">
+                        <i class="fa-solid fa-key" aria-hidden="true"></i>
+                        Resetar senha
+                    </button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <!-- =====================================================
+     MODAL - ALTERAR STATUS DO USUÁRIO
+     =====================================================
+     Usado para confirmar ativação ou desativação de usuário.
+     ===================================================== -->
+    <div id="userStatusModal" class="modalOverlay hidden" aria-hidden="true">
+        <section class="modalCard confirmModalCard" role="dialog" aria-modal="true" aria-labelledby="userStatusTitle">
+            <div class="modalHeader">
+                <div>
+                    <span class="sectionKicker">Acesso e permissões</span>
+                    <h3 id="userStatusTitle">Alterar status do usuário</h3>
+                    <p id="userStatusDescription">
+                        Confirme a alteração de status deste usuário.
+                    </p>
+                </div>
+
+                <button id="btnCancelUserStatus" class="iconButton" type="button" aria-label="Fechar confirmação">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <input id="userStatusUserId" type="hidden" />
+            <input id="userStatusNewValue" type="hidden" />
+
+            <div class="confirmModalActions">
+                <button id="btnDismissUserStatus" class="secondaryAction" type="button">
+                    Cancelar
+                </button>
+
+                <button id="btnConfirmUserStatus" class="dangerAction" type="button">
+                    <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
+                    Confirmar
+                </button>
+            </div>
+        </section>
+    </div>
+
     <!-- Script principal do painel administrativo -->
     <script src="admin.js"></script>
 </body>

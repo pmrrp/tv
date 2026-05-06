@@ -4234,3 +4234,77 @@ body.modal-open {
         transform: translateY(0);
     }
 }
+
+/* =========================================================
+   MODAL - RESETAR SENHA
+   ========================================================= */
+
+.resetPasswordModalCard {
+    width: min(520px, 100%);
+    padding: 22px;
+}
+
+.resetPasswordForm {
+    display: grid;
+    gap: 16px;
+}
+
+.resetPasswordForm label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+
+    color: #19324d;
+
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.resetPasswordForm input {
+    width: 100%;
+
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+
+    padding: 11px 12px;
+
+    background: #ffffff;
+    color: #0f172a;
+
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.resetPasswordForm input:focus {
+    outline: 3px solid rgba(15, 112, 196, 0.20);
+    border-color: #0f70c4;
+}
+
+/* =========================================================
+   MODAL - CONFIRMAÇÃO
+   ========================================================= */
+
+.confirmModalCard {
+    width: min(520px, 100%);
+    padding: 22px;
+}
+
+.confirmModalActions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+
+    margin-top: 20px;
+}
+
+@media (max-width: 640px) {
+    .confirmModalActions {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .confirmModalActions button {
+        width: 100%;
+    }
+}
