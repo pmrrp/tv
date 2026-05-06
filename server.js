@@ -1009,15 +1009,23 @@ function exigirRole(...rolesPermitidas) {
 
 /* =========================================================
    PROTEÇÕES DE USUÁRIOS ADMINISTRATIVOS
+   =========================================================
+   Helpers reaproveitáveis para proteger operações sensíveis
+   envolvendo usuários administrativos.
+
+   Observação:
+   O projeto usa:
+   - req.session.user para guardar o usuário logado;
+   - tabela users no SQLite.
    ========================================================= */
 
 /**
  * Retorna true se o usuário logado for superadmin.
  */
 function usuarioSessaoEhSuperadmin(req) {
-    return req.session &&
-        req.session.usuario &&
-        req.session.usuario.role === "superadmin";
+    const usuario = obterUsuarioDaSessao(req);
+
+    return usuario && usuario.role === "superadmin";
 }
 
 /**
@@ -1025,53 +1033,43 @@ function usuarioSessaoEhSuperadmin(req) {
  * sobre o próprio cadastro.
  */
 function usuarioEstaAlterandoASiMesmo(req, idAlvo) {
-    const idUsuarioLogado = req.session && req.session.usuario
-        ? Number(req.session.usuario.id)
-        : null;
+    const usuario = obterUsuarioDaSessao(req);
 
-    return Number(idAlvo) === idUsuarioLogado;
+    if (!usuario) return false;
+
+    return Number(usuario.id) === Number(idAlvo);
 }
 
 /**
- * Verifica se o usuário alvo é superadmin.
+ * Busca um usuário alvo no banco pelo ID.
  *
- * Usa callback porque o sqlite3 trabalha de forma assíncrona.
+ * Como o projeto usa better-sqlite3, a consulta é síncrona.
+ * Retorna:
+ * - o usuário, se encontrar;
+ * - null, se não encontrar.
  */
-function verificarUsuarioAlvo(req, res, idUsuario, callback) {
-    db.get(
-        `
-        SELECT id, nome, email, role, ativo
-        FROM usuarios
+function buscarUsuarioAlvoPorId(idUsuario) {
+    return db.prepare(`
+        SELECT
+            id,
+            nome,
+            email,
+            role,
+            ativo
+        FROM users
         WHERE id = ?
-        `,
-        [idUsuario],
-        (erro, usuarioAlvo) => {
-            if (erro) {
-                console.error("Erro ao verificar usuário alvo:", erro);
-
-                return res.status(500).json({
-                    erro: true,
-                    mensagem: "Erro ao verificar usuário."
-                });
-            }
-
-            if (!usuarioAlvo) {
-                return res.status(404).json({
-                    erro: true,
-                    mensagem: "Usuário não encontrado."
-                });
-            }
-
-            callback(usuarioAlvo);
-        }
-    );
+        LIMIT 1
+    `).get(idUsuario) || null;
 }
 
 /**
  * Impede que admin comum altere superadmin.
+ *
+ * Retorna true quando bloqueou a ação.
+ * Retorna false quando pode continuar.
  */
 function bloquearAdminAlterandoSuperadmin(req, res, usuarioAlvo) {
-    const alvoEhSuperadmin = usuarioAlvo.role === "superadmin";
+    const alvoEhSuperadmin = usuarioAlvo && usuarioAlvo.role === "superadmin";
     const logadoEhSuperadmin = usuarioSessaoEhSuperadmin(req);
 
     if (alvoEhSuperadmin && !logadoEhSuperadmin) {
@@ -1085,25 +1083,6 @@ function bloquearAdminAlterandoSuperadmin(req, res, usuarioAlvo) {
 
     return false;
 }
-
-/**
- * Atalho para rotas administrativas sensíveis.
- *
- * Superadmin e admin podem usar.
- */
-function exigirAdmin(req, res, next) {
-    return exigirRole("superadmin", "admin")(req, res, next);
-}
-
-/**
- * Atalho para rotas de edição de conteúdo.
- *
- * Superadmin, admin e editor podem usar.
- */
-function exigirEditor(req, res, next) {
-    return exigirRole("superadmin", "admin", "editor")(req, res, next);
-}
-
 
 /* =========================================================
    ARQUIVOS ESTÁTICOS PÚBLICOS
