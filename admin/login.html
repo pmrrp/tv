@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <!-- =====================================================
+         CONFIGURAÇÕES BÁSICAS
+         ===================================================== -->
+    <meta charset="UTF-8" />
+
+    <!--
+        Mantém a tela de login adaptada para desktop, notebook,
+        tablet e celular.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Login - Painel TV</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+
+    <!-- Estilos da tela de login -->
+    <link rel="stylesheet" href="/admin/login.css" />
+</head>
+
+<body>
+    <!-- =====================================================
+         TELA DE LOGIN
+         =====================================================
+
+         Esta página controla o acesso ao painel administrativo.
+
+         Fluxo:
+         1. usuário informa a senha;
+         2. login.js envia a senha para /api/login;
+         3. server.js valida a senha;
+         4. servidor cria sessão;
+         5. usuário é redirecionado para /admin.
+         ===================================================== -->
+
+    <main class="loginPage">
+        <section class="loginCard" aria-labelledby="loginTitle">
+            <div class="loginHeader">
+                <img class="loginBrandLogo" src="/assets/logo_hor.svg" alt="Prefeitura de Ribas do Rio Pardo" />
+                <span class="loginKicker">Acesso administrativo</span>
+                <h1 id="loginTitle">Painel TV Prefeitura</h1>
+                <p>Gerencie a programação exibida nas TVs institucionais.</p>
+            </div>
+
+            <form id="loginForm" class="loginForm">
+                <label for="email">
+                    Usuário
+                    <input id="email" name="email" type="text" autocomplete="username" placeholder="Digite seu usuário"
+                        required />
+                </label>
+
+                <label for="password">
+                    Senha de acesso
+                    <div class="passwordField">
+                        <input id="password" name="password" type="password" autocomplete="current-password"
+                            placeholder="Digite a senha" required />
+
+                        <button id="btnTogglePassword" class="btnTogglePassword" type="button"
+                            aria-label="Mostrar senha" title="Mostrar senha">
+                            <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </label>
+
+                <button id="btnLogin" type="submit">
+                    Entrar
+                </button>
+            </form>
+
+            <!-- Mensagens de erro do login -->
+            <div id="loginMessage" class="loginMessage hidden" role="alert" aria-live="assertive"></div>
+        </section>
+    </main>
+
+    <footer class="loginFooter">
+        © 2026 Prefeitura Municipal de Ribas do Rio Pardo - MS. Todos os direitos reservados.
+    </footer>
+
+    <!-- Script da tela de login -->
+    <script src="/admin/login.js"></script>
+</body>
+
+</html>

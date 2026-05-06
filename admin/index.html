@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <!-- =====================================================
+         CONFIGURAÇÕES BÁSICAS
+         ===================================================== -->
+    <meta charset="UTF-8" />
+
+    <!--
+        Faz o painel se adaptar melhor a telas menores.
+        Importante para notebook, tablet ou acesso eventual por celular.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Admin - Painel TV</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+
+    <!-- Estilos do painel administrativo -->
+    <link rel="stylesheet" href="admin.css" />
+</head>
+
+<body>
+
+    <!-- =====================================================
+     NOTIFICAÇÕES FLUTUANTES
+     =====================================================
+     As mensagens de sucesso, erro e aviso aparecem aqui.
+
+     Diferente das mensagens antigas presas na página,
+     estas notificações ficam fixas na tela e somem sozinhas.
+     ===================================================== -->
+    <div id="toastContainer" class="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- =====================================================
+         PÁGINA ADMINISTRATIVA
+         =====================================================
+
+         Esta tela é a área de gestão das mídias exibidas no player.
+
+         Principais funções:
+         - enviar imagens e vídeos;
+         - configurar mídias cadastradas;
+         - ordenar playlist;
+         - ativar/desativar conteúdos;
+         - definir validade de exibição;
+         - salvar alterações em lote;
+         - abrir o player;
+         - sair da sessão administrativa.
+
+         Observação importante:
+         O visual abaixo foi mantido no padrão gerado pelo Codex.
+         Aqui foram feitos apenas ajustes pontuais de segurança/compatibilidade:
+         - correção de texto em UTF-8;
+         - upload limitado a 1 arquivo por vez para combinar com o backend atual;
+         - manutenção do painel de publicação manual removido.
+         ===================================================== -->
+
+    <main class="adminPage">
+
+        <!-- =================================================
+             CABEÇALHO
+             ================================================= -->
+        <header class="adminHeader">
+            <div class="adminBrand">
+                <img class="adminBrandLogo" src="/assets/watermark-prefeitura.svg"
+                    alt="Prefeitura de Ribas do Rio Pardo" />
+
+                <div class="adminHeaderText">
+                    <span class="adminEyebrow">Painel TV Prefeitura</span>
+                    <h1>Painel Administrativo</h1>
+                    <p>Gestão de conteúdos exibidos nas TVs institucionais.</p>
+                </div>
+            </div>
+
+            <div class="adminHeaderActions">
+                <!--
+                    Botão principal de salvamento.
+                    Ele começa oculto/desabilitado e aparece quando o admin.js
+                    detecta alterações pendentes nos cards de mídia.
+                -->
+                <button id="btnSalvarTudo" class="successAction hidden" type="button" disabled>
+                    <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                    Salvar alterações
+                </button>
+
+                <!--
+                    Abre o player em nova aba para conferência rápida.
+                -->
+                <a class="openPlayerButton" href="/" target="_blank" rel="noopener noreferrer">
+                    <i class="fa-solid fa-tv" aria-hidden="true"></i>
+                    Abrir Player
+                </a>
+
+                <!--
+                    Área de usuário/sessão.
+                    Por enquanto o backend informa apenas o status básico,
+                    mas a estrutura já fica preparada para usuário real no futuro.
+                -->
+                <div class="adminUserMenu" aria-label="Usuário da sessão">
+                    <button id="btnUserProfile" class="userProfileButton" type="button">
+                        <span class="userAvatar" aria-hidden="true">
+                            <i class="fa-solid fa-user"></i>
+                        </span>
+                        <span class="userGreeting">
+                            Olá, <strong id="adminUserName">usuário</strong>
+                        </span>
+                    </button>
+
+                    <button id="btnLogout" class="logoutButton" type="button">
+                        <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
+                        Sair
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- =================================================
+             RESUMO OPERACIONAL
+             =================================================
+
+             Os números abaixo são preenchidos pelo admin.js usando:
+             /api/admin/resumo
+             ================================================= -->
+        <section class="summaryGrid" aria-label="Resumo operacional do painel">
+            <article class="summaryCard summaryCardPrimary">
+                <span class="summaryIcon" aria-hidden="true"><i class="fa-solid fa-photo-film"></i></span>
+                <span class="summaryLabel">Mídias cadastradas</span>
+                <strong id="summaryTotalMedia">--</strong>
+                <small id="summaryActiveMedia">Carregando resumo...</small>
+            </article>
+
+            <article class="summaryCard">
+                <span class="summaryIcon" aria-hidden="true"><i class="fa-solid fa-calendar-check"></i></span>
+                <span class="summaryLabel">Na validade</span>
+                <strong id="summaryValidMedia">--</strong>
+                <small id="summaryScheduledMedia">Agendadas: --</small>
+            </article>
+
+            <article class="summaryCard">
+                <span class="summaryIcon" aria-hidden="true"><i class="fa-solid fa-bolt"></i></span>
+                <span class="summaryLabel">Prioridades</span>
+                <strong id="summaryPriorityMedia">--</strong>
+                <small id="summaryRepeatMedia">Recorrência: --</small>
+            </article>
+
+            <article class="summaryCard">
+                <span class="summaryIcon" aria-hidden="true"><i class="fa-solid fa-list-check"></i></span>
+                <span class="summaryLabel">Playlist publicada</span>
+                <strong id="summaryPlaylistItems">--</strong>
+                <small id="summaryPlaylistUpdated">Última atualização: --</small>
+            </article>
+        </section>
+
+        <!-- =================================================
+             CARD: UPLOAD DE MÍDIA
+             =================================================
+
+             Permite enviar novos vídeos ou imagens para a pasta midia.
+
+             Importante:
+             O backend atual usa multer com upload.single("arquivo"),
+             então o envio fica limitado a 1 arquivo por vez.
+
+             A interface continua aceitando clique e arraste, mas somente
+             o primeiro arquivo selecionado/arrastado será enviado.
+             ================================================= -->
+        <section class="operationsGrid" aria-label="Ações rápidas do painel">
+            <section class="card uploadCard" aria-labelledby="uploadTitle">
+                <div class="cardHeader">
+                    <div>
+                        <span class="sectionKicker">Upload</span>
+                        <h2 id="uploadTitle">Enviar nova mídia</h2>
+                    </div>
+                </div>
+
+                <form id="uploadForm" class="uploadForm">
+                    <label class="uploadBox" for="arquivo">
+                        <span class="uploadIcon" aria-hidden="true">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                        </span>
+                        <span class="uploadTitle">Selecionar arquivo</span>
+
+                        <span class="uploadHint">
+                            Arraste e solte aqui ou clique para escolher um arquivo.
+                        </span>
+
+                        <span class="uploadFormats">
+                            Vídeos: MP4, WEBM, OGG, MOV. Imagens: JPG, PNG, WEBP, GIF.
+                        </span>
+
+                        <span id="selectedFileName" class="selectedFileName">
+                            Nenhum arquivo selecionado
+                        </span>
+                    </label>
+
+                    <!--
+                        Input real do arquivo.
+                        Sem atributo "multiple" para ficar compatível com
+                        a rota atual /api/upload do backend.
+                    -->
+                    <input id="arquivo" name="arquivo" type="file"
+                        accept=".mp4,.webm,.ogg,.mov,.jpg,.jpeg,.png,.webp,.gif" />
+
+                    <button id="btnUpload" class="primaryAction" type="submit">
+                        <i class="fa-solid fa-upload" aria-hidden="true"></i>
+                        Enviar mídia
+                    </button>
+                </form>
+
+                <!-- Mensagens de sucesso/erro do upload -->
+                <div id="uploadMessage" class="uploadMessage hidden" role="status" aria-live="polite"></div>
+            </section>
+
+            <!--
+                Painel de publicação removido propositalmente.
+
+                A playlist já é publicada automaticamente pelo backend após:
+                - upload;
+                - exclusão;
+                - alteração de ordem;
+                - salvamento de configurações;
+                - rotina automática de validade.
+
+                Mantemos apenas playlistMessage fora do card para exibir
+                avisos do sistema quando necessário.
+            -->
+        </section>
+
+        <div id="playlistMessage" class="uploadMessage hidden" role="status" aria-live="polite"></div>
+        <div id="pendingChanges" class="pendingChanges hidden" role="alert">
+            Existem alterações não salvas nesta página.
+        </div>
+
+        <!-- =================================================
+             CARD: LISTA DE MÍDIAS
+             =================================================
+
+             A lista em si é renderizada dinamicamente pelo admin.js.
+             O HTML abaixo mantém apenas o container, filtros e botões
+             usados pelo JavaScript.
+             ================================================= -->
+        <section class="card mediaCard" aria-labelledby="mediaTitle">
+            <div class="cardHeader">
+                <div>
+                    <h2 id="mediaTitle">BIBLIOTECA DE MÍDIAS</h2>
+                </div>
+            </div>
+
+            <details class="libraryDropdown" open>
+                <summary class="libraryDropdownSummary">
+                    <span class="libraryDropdownText">
+                        <strong>Mídias disponíveis</strong>
+                        <small id="libraryDropdownMeta">Carregando mídias...</small>
+                    </span>
+                    <span class="libraryDropdownChevron" aria-hidden="true">
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </span>
+                </summary>
+
+                <div class="libraryDropdownBody">
+                    <div class="mediaToolbar">
+                        <label class="mediaSearchLabel">
+                            <span>Buscar</span>
+                            <input id="mediaSearch" type="search" placeholder="Nome, arquivo ou tipo" />
+                        </label>
+
+                        <label class="mediaFilterLabel">
+                            <span>Status</span>
+                            <select id="mediaStatusFilter">
+                                <option value="todas">Todas</option>
+                                <option value="ativas">Ativas</option>
+                                <option value="inativas">Inativas</option>
+                            </select>
+                        </label>
+
+                        <label class="mediaFilterLabel">
+                            <span>Tipo</span>
+                            <select id="mediaTypeFilter">
+                                <option value="todos">Todos</option>
+                                <option value="video">Vídeos</option>
+                                <option value="imagem">Imagens</option>
+                            </select>
+                        </label>
+
+                        <label class="mediaFilterLabel">
+                            <span>Período</span>
+                            <select id="mediaPeriodFilter">
+                                <option value="todos">Todos</option>
+                                <option value="indeterminado">Indeterminado</option>
+                                <option value="programado">Com data definida</option>
+                                <option value="agendado">Agendados</option>
+                                <option value="vencido">Vencidos</option>
+                            </select>
+                        </label>
+
+                        <label class="mediaFilterLabel">
+                            <span>Prioridade</span>
+                            <select id="mediaPriorityFilter">
+                                <option value="todas">Todas</option>
+                                <option value="normal">Normal</option>
+                                <option value="alta">Alta</option>
+                                <option value="urgente">Urgente</option>
+                            </select>
+                        </label>
+
+                        <label class="mediaFilterLabel">
+                            <span>Repetição</span>
+                            <select id="mediaRepeatFilter">
+                                <option value="todas">Todas</option>
+                                <option value="com">Com repetição</option>
+                                <option value="sem">Sem repetição</option>
+                            </select>
+                        </label>
+
+                        <!--
+                            A seleção em lote existe no JS/CSS do Codex,
+                            mas permanece escondida por padrão. Não é a ação
+                            principal do fluxo atual.
+                        -->
+                        <label class="selectAllLabel hidden">
+                            <input id="selectAllMedia" type="checkbox" />
+                            Selecionar todas
+                        </label>
+
+                        <button id="btnDeleteSelected" class="hidden" type="button" disabled>
+                            <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                            Excluir selecionadas
+                        </button>
+
+                        <button id="btnReload" type="button"
+                            title="Sincroniza a lista com as mídias salvas no servidor">
+                            <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
+                            Sincronizar
+                        </button>
+                    </div>
+
+                    <!-- Mensagem temporária enquanto carrega a lista -->
+                    <div id="loadingMessage" class="message" role="status" aria-live="polite">
+                        Carregando arquivos...
+                    </div>
+
+                    <div id="mediaFilterInfo" class="mediaFilterInfo hidden" role="status" aria-live="polite"></div>
+
+                    <!-- Lista renderizada via JavaScript -->
+                    <div id="mediaList" class="mediaList"></div>
+                </div>
+            </details>
+        </section>
+
+    </main>
+
+    <footer class="adminFooter">
+        © 2026 Prefeitura Municipal de Ribas do Rio Pardo - MS. Todos os direitos reservados.
+    </footer>
+
+    <!-- Script principal do painel administrativo -->
+    <script src="admin.js"></script>
+</body>
+
+</html>

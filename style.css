@@ -1,0 +1,885 @@
+/* =========================================================
+   RESET BÁSICO
+   =========================================================
+   Remove margens e paddings padrão do navegador
+   e aplica box-sizing para facilitar o layout.
+   ========================================================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   BASE DA APLICAÇÃO
+   =========================================================
+   Define o fundo geral, tamanho total da viewport
+   e o estilo de fonte principal.
+   ========================================================= */
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+
+  background:
+    radial-gradient(circle at top right, rgba(19, 71, 148, 0.18), transparent 35%),
+    radial-gradient(circle at bottom left, rgba(0, 151, 178, 0.12), transparent 35%),
+    #05080d;
+
+  font-family: Arial, sans-serif;
+  color: #fff;
+}
+
+/*
+  Classe aplicada via JavaScript quando a tela é pequena.
+  Ajuda a separar comportamentos específicos de mobile/tablet.
+*/
+body.mobile-mode {
+  overflow: hidden;
+}
+
+/* Container principal */
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* =========================================================
+   AVISO DE ORIENTAÇÃO
+   =========================================================
+   Overlay usado em celulares/tablets menores quando o
+   dispositivo está em retrato.
+   ========================================================= */
+#rotateNotice {
+  position: absolute;
+  inset: 0;
+  z-index: 120;
+  background: rgba(5, 8, 13, 0.96);
+  backdrop-filter: blur(10px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* Classe utilitária para esconder o aviso */
+#rotateNotice.hidden {
+  display: none !important;
+}
+
+/* Caixa central do aviso */
+.rotateNoticeContent {
+  width: min(92vw, 420px);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  padding: 24px 20px;
+  text-align: center;
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.rotateNoticeContent i {
+  font-size: 36px;
+  margin-bottom: 14px;
+  color: #ffffff;
+}
+
+.rotateNoticeContent h2 {
+  font-size: 22px;
+  line-height: 1.2;
+  margin-bottom: 10px;
+}
+
+.rotateNoticeContent p {
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: 0.9;
+  margin-bottom: 18px;
+}
+
+#btnDismissRotate {
+  border: none;
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #0f70c4;
+  color: #fff;
+}
+
+/* =========================================================
+   SPLASH SCREEN
+   =========================================================
+   Tela inicial com efeito de fade e respiração leve
+   no wallpaper.
+   ========================================================= */
+#splashScreen {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+  background: #000;
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.8s ease;
+}
+
+#splashScreen.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#splashWallpaper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: splashBreathing 5s ease-in-out infinite;
+}
+
+#splashOverlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom,
+      rgba(0, 0, 0, 0.25),
+      rgba(0, 0, 0, 0.10),
+      rgba(0, 0, 0, 0.25));
+}
+
+/* Animação sutil da splash */
+@keyframes splashBreathing {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.02);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* =========================================================
+   ÁREA DE MÍDIA
+   =========================================================
+   Área de exibição principal das mídias.
+   ========================================================= */
+#mediaArea {
+  position: absolute;
+  inset: 0;
+}
+
+/*
+  Marca d'água institucional ao fundo.
+  Fica acima do fundo, mas abaixo das mídias.
+*/
+#mediaArea::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+
+  background-image: url("assets/watermark-prefeitura.svg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: min(50vw, 50vh);
+  opacity: 0.05;
+}
+
+/*
+  Players de mídia:
+  - vídeo
+  - imagem
+
+  Usamos opacity para transição suave.
+*/
+#videoPlayer,
+#imagePlayer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  z-index: 3;
+}
+
+/* =========================================================
+   STATUS
+   =========================================================
+   Caixa de mensagens rápidas do sistema.
+   ========================================================= */
+#status {
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  z-index: 40;
+
+  background: rgba(0, 0, 0, 0.60);
+  backdrop-filter: blur(8px);
+
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* =========================================================
+   BARRA LATERAL
+   =========================================================
+   Painel institucional e funcional.
+   ========================================================= */
+#sidePanel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 260px;
+  height: 100%;
+  z-index: 45;
+
+  display: flex;
+  flex-direction: column;
+
+  background: #e6e6e6;
+  color: #111;
+
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.2);
+
+  transform: translateX(100%);
+  opacity: 0;
+  transition:
+    transform 0.35s ease,
+    opacity 0.35s ease;
+}
+
+/* Estado visível da barra */
+#sidePanel.panel-open {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* Faixa azul superior */
+.sidePanelTopBar {
+  height: 4px;
+  background: #0f70c4;
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   TOPO INTERNO DA BARRA
+   =========================================================
+   Esse bloco agrupa:
+   - relógio/data
+   - logo inline (usado principalmente no retrato mobile)
+   ========================================================= */
+.sidePanelTopContent {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sidePanelLogoInline {
+  display: none;
+}
+
+#sidePanelLogoInlineImg {
+  display: block;
+  width: 100%;
+  max-width: 120px;
+  height: auto;
+  object-fit: contain;
+}
+
+/*
+  Corpo da barra:
+  organiza relógio, botões, textos e logo.
+*/
+.sidePanelBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 16px;
+  overflow: hidden;
+}
+
+/* =========================================================
+   RELÓGIO
+   ========================================================= */
+.sidePanelClock {
+  width: 100%;
+  text-align: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.10);
+  padding-bottom: 12px;
+}
+
+#sidebarClockTime {
+  font-size: 31px;
+  font-weight: 900;
+  line-height: 1;
+  color: #111827;
+  letter-spacing: 0.3px;
+}
+
+#sidebarClockDate {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: #4b5563;
+  margin-top: 6px;
+}
+
+/* =========================================================
+   BLOCO DE CONTROLES
+   ========================================================= */
+#controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+}
+
+/*
+  Estilo base dos botões do painel.
+*/
+#controls button {
+  width: 100%;
+  max-width: 210px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  border: none;
+  border-radius: 16px;
+  padding: 12px 14px;
+
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  cursor: pointer;
+
+  background: #ffffff;
+  color: #1f2937;
+
+  box-shadow:
+    0 5px 12px rgba(0, 0, 0, 0.10),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    filter 0.2s ease;
+}
+
+#controls button i {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+#controls button span {
+  display: inline-block;
+}
+
+/* Botão principal de play/pause */
+#btnPlayPause {
+  background: #0f70c4;
+  color: #fff;
+}
+
+#controls button:hover {
+  transform: translateY(-2px);
+}
+
+#controls button:active {
+  transform: scale(0.95);
+}
+
+/* Feedback visual rápido ao clicar */
+#controls button.feedback {
+  animation: buttonPulse 0.28s ease;
+}
+
+@keyframes buttonPulse {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  50% {
+    transform: scale(0.96);
+    filter: brightness(1.05);
+  }
+
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+/* =========================================================
+   TEXTO DE AJUDA
+   ========================================================= */
+.sidePanelHint {
+  font-size: 11px;
+  text-align: center;
+  color: #666;
+  line-height: 1.4;
+}
+
+/* =========================================================
+   LOGO INFERIOR
+   ========================================================= */
+.sidePanelLogoArea {
+  margin-top: auto;
+  text-align: center;
+}
+
+#sidePanelLogo {
+  width: 100%;
+  max-width: 205px;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+/* =========================================================
+   FAIXA DE CORES INFERIOR
+   ========================================================= */
+.sidePanelBottomColors {
+  display: flex;
+  height: 4px;
+}
+
+.colorStrip {
+  flex: 1;
+}
+
+.coral {
+  background: #f06b68;
+}
+
+.yellow {
+  background: #ddb100;
+}
+
+.green {
+  background: #20b038;
+}
+
+.blue {
+  background: #0f70c4;
+}
+
+/* =========================================================
+   CLASSES UTILITÁRIAS
+   ========================================================= */
+.hidden {
+  display: none !important;
+}
+
+.cursor-hidden {
+  cursor: none;
+}
+
+.controls-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* =========================================================
+   RESPONSIVIDADE - TELA MENOR
+   =========================================================
+   Até 1024px consideramos comportamento adaptado
+   para tablet/celular.
+   ========================================================= */
+@media (max-width: 1024px) {
+  #mediaArea::after {
+    background-size: min(60vw, 40vh);
+    opacity: 0.04;
+  }
+
+  #status {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    font-size: 12px;
+    padding: 9px 12px;
+  }
+
+  #sidePanel {
+    width: min(300px, 82vw);
+    max-width: 300px;
+  }
+
+  .sidePanelBody {
+    gap: 14px;
+    padding: 16px 14px;
+  }
+
+  #sidebarClockTime {
+    font-size: 26px;
+  }
+
+  #sidebarClockDate {
+    font-size: 13px;
+  }
+
+  #controls button {
+    max-width: 100%;
+    min-height: 46px;
+    font-size: 14px;
+    padding: 12px 12px;
+  }
+
+  #sidePanelLogo {
+    max-width: 175px;
+  }
+}
+
+/* =========================================================
+   MOBILE / TABLET EM RETRATO
+   =========================================================
+   Painel vira uma área inferior sobreposta.
+   ========================================================= */
+@media (max-width: 1024px) and (orientation: portrait) {
+  body.mobile-mode #rotateNotice {
+    display: flex;
+  }
+
+  /*
+    No retrato, o painel vira uma barra inferior.
+    Mantemos bordas arredondadas no topo.
+  */
+  body.mobile-mode #sidePanel {
+    width: 100%;
+    height: auto;
+    max-width: none;
+    top: auto;
+    bottom: 0;
+    right: 0;
+    left: 0;
+
+    transform: translateY(100%);
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    overflow: hidden;
+  }
+
+  body.mobile-mode #sidePanel.panel-open {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  /*
+    A faixa azul agora acompanha certinho os cantos arredondados.
+  */
+  body.mobile-mode .sidePanelTopBar {
+    height: 5px;
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    overflow: hidden;
+  }
+
+  /*
+    Corpo com padding compacto.
+  */
+  body.mobile-mode .sidePanelBody {
+    padding: 12px 14px 10px;
+    gap: 10px;
+  }
+
+  /*
+    Topo interno vira linha:
+    relógio de um lado, logo do outro.
+  */
+  body.mobile-mode .sidePanelTopContent {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.10);
+  }
+
+  /*
+    Relógio deixa de ocupar 100% da largura e fica alinhado à esquerda.
+  */
+  body.mobile-mode .sidePanelClock {
+    width: auto;
+    flex: 1;
+    text-align: left;
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  body.mobile-mode #sidebarClockTime {
+    font-size: 22px;
+  }
+
+  body.mobile-mode #sidebarClockDate {
+    font-size: 12px;
+    margin-top: 3px;
+  }
+
+  /*
+    Logo inline aparece no retrato e fica compacta.
+  */
+  body.mobile-mode .sidePanelLogoInline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 110px;
+    flex-shrink: 0;
+  }
+
+  body.mobile-mode #sidePanelLogoInlineImg {
+    max-width: 100px;
+  }
+
+  /*
+    O logo grande do rodapé some no retrato,
+    porque o logo já está no topo.
+  */
+  body.mobile-mode .sidePanelLogoArea {
+    display: none;
+  }
+
+  /*
+    Texto de ajuda escondido para economizar altura.
+  */
+  body.mobile-mode .sidePanelHint {
+    display: none;
+  }
+
+  /*
+    Grade de botões compacta.
+  */
+  body.mobile-mode #controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  body.mobile-mode #controls button {
+    max-width: none;
+    width: 100%;
+    min-height: 48px;
+    font-size: 13px;
+    padding: 10px;
+  }
+
+  body.mobile-mode #controls button span {
+    font-size: 12px;
+  }
+
+  /*
+    Botões principais ocupam a largura total.
+  */
+  body.mobile-mode #btnPlayPause,
+  body.mobile-mode #btnMute,
+  body.mobile-mode #btnFullscreen {
+    grid-column: span 2;
+  }
+}
+
+/* =========================================================
+   MOBILE / TABLET EM PAISAGEM
+   =========================================================
+   Aqui está o ajuste principal pedido:
+   reduzir a barra para caber SEM scroll na maioria dos casos.
+   ========================================================= */
+@media (max-width: 1024px) and (orientation: landscape) {
+  body.mobile-mode #rotateNotice {
+    display: none !important;
+  }
+
+  /*
+    Mantemos a barra lateral, mas mais compacta.
+  */
+  body.mobile-mode #sidePanel {
+    width: min(220px, 31vw);
+  }
+
+  /*
+    Menos espaçamento vertical para tudo caber.
+  */
+  body.mobile-mode .sidePanelBody {
+    padding: 10px 10px 8px;
+    gap: 8px;
+    justify-content: flex-start;
+  }
+
+  /*
+    Relógio menor para economizar altura.
+  */
+  body.mobile-mode .sidePanelClock {
+    padding-bottom: 6px;
+  }
+
+  body.mobile-mode #sidebarClockTime {
+    font-size: 19px;
+  }
+
+  body.mobile-mode #sidebarClockDate {
+    font-size: 11px;
+    margin-top: 4px;
+  }
+
+  /*
+    Grade de 2 colunas para botões no paisagem.
+    Isso reduz muito a altura ocupada.
+  */
+  body.mobile-mode #controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+
+  /*
+    Botões menores e mais compactos.
+  */
+  body.mobile-mode #controls button {
+    max-width: none;
+    width: 100%;
+    min-height: 38px;
+    padding: 8px 8px;
+    border-radius: 12px;
+    gap: 6px;
+  }
+
+  body.mobile-mode #controls button i {
+    font-size: 12px;
+  }
+
+  body.mobile-mode #controls button span {
+    font-size: 11px;
+    line-height: 1.1;
+  }
+
+  /*
+    Botões principais ocupam largura total para
+    manter legibilidade e destaque.
+  */
+  body.mobile-mode #btnPlayPause,
+  body.mobile-mode #btnMute,
+  body.mobile-mode #btnFullscreen {
+    grid-column: span 2;
+  }
+
+  /*
+    Texto de ajuda escondido no paisagem mobile
+    para economizar altura.
+  */
+  body.mobile-mode .sidePanelHint {
+    display: none;
+  }
+
+  /*
+    Logo menor, mas ainda visível.
+  */
+  body.mobile-mode #sidePanelLogo {
+    max-width: 105px;
+  }
+
+  /*
+    Rodapé colorido ainda presente.
+  */
+  body.mobile-mode .sidePanelBottomColors {
+    height: 3px;
+  }
+
+  /*
+    Status menor.
+  */
+  body.mobile-mode #status {
+    font-size: 11px;
+    padding: 8px 10px;
+  }
+}
+
+/* =========================================================
+   PAINEL DE DIAGNÓSTICO OPCIONAL
+   =========================================================
+   O painel só aparece quando o JavaScript adiciona a classe
+   body.debug-mode, ou seja, quando a URL contém ?debug=1.
+   ========================================================= */
+#debugPanel {
+  display: none;
+
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  z-index: 90;
+
+  width: min(760px, 70vw);
+  max-height: 52vh;
+
+  padding: 10px 12px;
+
+  background: rgba(0, 0, 0, 0.82);
+  color: #40ff99;
+
+  border-left: 6px solid #0f70c4;
+  border-radius: 8px;
+
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.35;
+
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+}
+
+body.debug-mode #debugPanel {
+  display: block;
+}
+
+#debugTitle {
+  color: #ffffff;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+#debugLog {
+  max-height: 46vh;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 1024px) {
+  #debugPanel {
+    left: 10px;
+    bottom: 10px;
+
+    width: calc(100vw - 20px);
+    max-height: 48vh;
+
+    font-size: 11px;
+  }
+
+  #debugLog {
+    max-height: 42vh;
+  }
+}

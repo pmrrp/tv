@@ -1,0 +1,460 @@
+/* =========================================================
+   LOGIN - PAINEL TV PREFEITURA
+   ========================================================= */
+
+@font-face {
+    font-family: "Belinda";
+    src: local("Belinda"), local("Belinda Regular");
+    font-display: swap;
+}
+
+:root {
+    --font-brand: "Belinda", "Segoe UI", Arial, sans-serif;
+    --font-ui: "Segoe UI", Arial, Helvetica, sans-serif;
+    --blue-950: #052f52;
+    --blue-900: #063b68;
+    --blue-800: #075894;
+    --blue-700: #0a6fb5;
+    --blue-100: #e7f3fb;
+    --green-700: #15803d;
+    --green-600: #1fa344;
+    --yellow-500: #e0b300;
+    --brand-coral: #f06b68;
+    --brand-yellow: #ddb100;
+    --brand-green: #20b038;
+    --brand-blue: #0f70c4;
+    --red-700: #b42318;
+    --red-100: #fde8e6;
+    --ink: #172033;
+    --muted: #667489;
+    --line: #d8e2ec;
+    --surface: #ffffff;
+    --shadow-lg: 0 28px 70px rgba(6, 59, 104, 0.18);
+    --radius: 8px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    min-height: 100%;
+}
+
+body {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    overflow-x: hidden;
+    padding: 28px;
+    color: var(--ink);
+    font-family: var(--font-ui);
+    background:
+        radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.95), transparent 36%),
+        radial-gradient(circle at 74% 68%, rgba(15, 112, 196, 0.045), transparent 34%),
+        linear-gradient(180deg, #fbfdff 0%, #f6faf8 100%);
+}
+
+.loginFooter {
+    position: relative;
+    z-index: 1;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+}
+
+body::after {
+    content: "";
+    position: fixed;
+    pointer-events: none;
+    z-index: 0;
+    width: 100vh;
+    height: 100vh;
+    top: 50%;
+    right: -50vh;
+    background-image: url("/assets/favicon.svg");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    opacity: 0.065;
+    filter: saturate(0.74) drop-shadow(0 32px 56px rgba(5, 47, 82, 0.08));
+    transform: translateY(-50%);
+    animation: loginCrestEnter 1.25s 0.08s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+button,
+input {
+    font-family: inherit;
+}
+
+.fa-solid,
+.fa-regular,
+.fa-brands {
+    line-height: 1;
+}
+
+button,
+input,
+.loginCard,
+.loginKicker {
+    transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        opacity 0.2s ease,
+        transform 0.2s ease;
+}
+
+button:focus-visible,
+input:focus-visible {
+    outline: 3px solid rgba(10, 111, 181, 0.22);
+    outline-offset: 2px;
+}
+
+.loginPage {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 440px);
+    display: grid;
+    align-items: center;
+}
+
+.loginCard {
+    position: relative;
+    overflow: hidden;
+    padding: 34px;
+    border: 1px solid rgba(216, 226, 236, 0.92);
+    border-radius: var(--radius);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.94)),
+        var(--surface);
+    box-shadow: var(--shadow-lg);
+    animation: loginCardEnter 0.64s cubic-bezier(0.2, 0.85, 0.25, 1) both;
+}
+
+.loginCard::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+        linear-gradient(180deg, rgba(10, 111, 181, 0.06), transparent 28%),
+        linear-gradient(140deg, rgba(255, 255, 255, 0.9), transparent 42%);
+    pointer-events: none;
+}
+
+.loginCard::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 5px;
+    border-radius: var(--radius) var(--radius) 0 0;
+    background: linear-gradient(90deg,
+            var(--brand-coral) 0 25%,
+            var(--brand-yellow) 25% 50%,
+            var(--brand-green) 50% 75%,
+            var(--brand-blue) 75% 100%);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.76);
+    pointer-events: none;
+}
+
+.loginHeader,
+.loginForm,
+.loginMessage {
+    position: relative;
+    z-index: 1;
+}
+
+.loginHeader {
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.loginBrandLogo {
+    display: block;
+    width: min(260px, 84%);
+    height: auto;
+    margin: 0 auto 18px;
+    object-fit: contain;
+    filter: drop-shadow(0 12px 18px rgba(5, 47, 82, 0.08));
+    animation: loginFadeUp 0.54s 0.1s ease both;
+}
+
+.loginKicker {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 26px;
+    margin-bottom: 10px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(10, 111, 181, 0.09);
+    color: var(--blue-800);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    animation: loginFadeUp 0.54s 0.16s ease both;
+}
+
+.loginHeader h1 {
+    color: var(--blue-950);
+    font-family: var(--font-brand);
+    font-size: 30px;
+    font-weight: 500;
+    line-height: 1.12;
+    animation: loginFadeUp 0.54s 0.22s ease both;
+}
+
+.loginHeader p {
+    max-width: 320px;
+    margin: 10px auto 0;
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.45;
+    animation: loginFadeUp 0.54s 0.28s ease both;
+}
+
+.loginForm {
+    display: grid;
+    gap: 16px;
+    animation: loginFadeUp 0.54s 0.34s ease both;
+}
+
+.loginForm label {
+    display: grid;
+    gap: 8px;
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.loginLabelText {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.loginForm input {
+    width: 100%;
+    min-height: 50px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 13px 14px;
+    background: rgba(255, 255, 255, 0.94);
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.loginForm input::placeholder {
+    color: #8a97aa;
+}
+
+.loginForm input:hover {
+    border-color: rgba(10, 111, 181, 0.34);
+}
+
+.loginForm input:focus {
+    border-color: var(--blue-700);
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(10, 111, 181, 0.12);
+}
+
+#btnLogin {
+    min-height: 50px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 0;
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    background: linear-gradient(135deg, var(--blue-700), var(--blue-950));
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 12px 24px rgba(10, 111, 181, 0.22);
+}
+
+#btnLogin i {
+    font-size: 14px;
+}
+
+#btnLogin:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 30px rgba(10, 111, 181, 0.28);
+}
+
+#btnLogin:active {
+    transform: translateY(0);
+}
+
+#btnLogin:disabled {
+    opacity: 0.72;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.loginMessage {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    border: 1px solid rgba(180, 35, 24, 0.22);
+    background: var(--red-100);
+    color: var(--red-700);
+    font-size: 14px;
+    font-weight: 800;
+    animation: loginMessageEnter 0.25s ease both;
+}
+
+.loginMessage.hidden {
+    display: none;
+}
+
+@keyframes loginCardEnter {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes loginCrestEnter {
+    from {
+        opacity: 0;
+        transform: translate(72px, -50%) scale(0.96);
+        filter: saturate(0.74) blur(2px) drop-shadow(0 32px 56px rgba(5, 47, 82, 0));
+    }
+
+    to {
+        opacity: 0.065;
+        transform: translate(0, -50%) scale(1);
+        filter: saturate(0.74) blur(0) drop-shadow(0 32px 56px rgba(5, 47, 82, 0.08));
+    }
+}
+
+@keyframes loginFadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes loginMessageEnter {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        align-items: stretch;
+        padding: 14px;
+    }
+
+    .loginPage {
+        width: 100%;
+        align-items: center;
+    }
+
+    .loginCard {
+        padding: 28px 22px;
+        align-self: center;
+    }
+
+    .loginHeader h1 {
+        font-size: 26px;
+    }
+
+    body::after {
+        width: 86vh;
+        height: 86vh;
+        right: -51vh;
+        opacity: 0.045;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* =========================================================
+   CAMPO DE SENHA COM BOTÃO DE VISUALIZAÇÃO
+   ========================================================= */
+
+.passwordField {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+}
+
+.passwordField input {
+    padding-right: 48px;
+}
+
+.btnTogglePassword {
+    position: absolute;
+    right: 10px;
+
+    width: 34px;
+    height: 34px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+    border-radius: 10px;
+
+    background: transparent;
+    color: #334155;
+
+    font-size: 15px;
+
+    cursor: pointer;
+}
+
+.btnTogglePassword:hover {
+    background: rgba(15, 112, 196, 0.10);
+    color: #0f70c4;
+}
+
+.btnTogglePassword:focus {
+    outline: 3px solid rgba(15, 112, 196, 0.25);
+}

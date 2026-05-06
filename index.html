@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <!-- ======================================================
+       CONFIGURAÇÕES BÁSICAS DA PÁGINA
+       ====================================================== -->
+
+  <!-- Define o padrão de caracteres -->
+  <meta charset="UTF-8" />
+
+  <!-- Faz a página se adaptar ao tamanho do dispositivo -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <!-- Título da aba do navegador -->
+  <title>Painel TV Prefeitura</title>
+
+  <!--
+    FAVICON
+    Ícone da aba do navegador.
+    Ideal usar PNG quadrado para evitar incompatibilidade.
+  -->
+  <link rel="icon" type="image/png" href="assets/favicon.png" />
+
+  <!--
+    FONT AWESOME
+    Biblioteca de ícones usada nos botões.
+    Usada por CDN para manter tudo simples e leve.
+  -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+
+  <!-- Arquivo principal de estilos -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <!--
+    =========================================================
+    APP PRINCIPAL
+    =========================================================
+
+    Este é o container geral de toda a aplicação.
+    Tudo o que o painel exibe fica aqui dentro.
+  -->
+  <main id="app">
+
+    <!--
+      =======================================================
+      AVISO DE ORIENTAÇÃO
+      =======================================================
+
+      Este bloco aparece em celulares e tablets menores
+      quando o dispositivo está em retrato.
+
+      Objetivo:
+      - orientar o usuário a girar o dispositivo
+      - melhorar a experiência visual
+      - evitar a impressão de layout “quebrado” em retrato
+
+      Observação:
+      Esse aviso não aparece em desktop/TV.
+    -->
+    <section id="rotateNotice" class="hidden">
+      <div class="rotateNoticeContent">
+        <i class="fa-solid fa-rotate-right"></i>
+        <h2>Melhor visualização em modo horizontal</h2>
+        <p>Gire o dispositivo para paisagem para visualizar o painel com mais conforto.</p>
+        <button id="btnDismissRotate">Continuar assim mesmo</button>
+      </div>
+    </section>
+
+    <!--
+      =======================================================
+      SPLASH SCREEN
+      =======================================================
+
+      Tela inicial exibida enquanto:
+      - a configuração é carregada
+      - a playlist é lida
+      - a primeira mídia é preparada
+
+      Essa splash é usada apenas na inicialização.
+      Não usamos mais splash no meio do loop.
+    -->
+    <section id="splashScreen">
+      <!-- Camada de sobreposição escura -->
+      <div id="splashOverlay"></div>
+
+      <!-- Imagem institucional de fundo -->
+      <img id="splashWallpaper" alt="Wallpaper institucional" />
+    </section>
+
+    <!--
+      =======================================================
+      ÁREA PRINCIPAL DE MÍDIA
+      =======================================================
+
+      Aqui ficam os elementos responsáveis por exibir:
+      - vídeos
+      - imagens
+
+      Estrutura:
+      - videoPlayer: vídeo atual
+      - videoPreload: próximo vídeo em pré-carga
+      - imagePlayer: imagem atual
+    -->
+    <section id="mediaArea">
+      <!-- Vídeo principal -->
+      <video id="videoPlayer" autoplay muted playsinline preload="auto"></video>
+
+      <!-- Vídeo invisível usado para pré-carregamento -->
+      <video id="videoPreload" muted playsinline preload="auto" style="display: none;"></video>
+
+      <!-- Exibição de imagem -->
+      <img id="imagePlayer" alt="Conteúdo do painel" />
+    </section>
+
+    <!--
+      =======================================================
+      STATUS
+      =======================================================
+
+      Caixa auxiliar para mensagens rápidas do sistema.
+
+      Exemplos:
+      - preparando conteúdo
+      - falha ao carregar mídia
+      - conteúdo atualizado
+
+      Em produção, pode ser desligado via config.json.
+    -->
+    <div id="status">Carregando conteúdo...</div>
+
+    <!--
+      =======================================================
+      PAINEL DE DIAGNÓSTICO
+      =======================================================
+      Este painel fica escondido no uso normal.
+
+      Para ativar, abra a página com ?debug=1
+
+      Exemplos:
+      - http://localhost/?debug=1
+      - http://IP-DO-SERVIDOR/?debug=1
+      - https://painelribas.com.br/?debug=1
+
+      Ele ajuda a diagnosticar comportamento em Smart TV:
+      - eventos do vídeo
+      - estado do player
+      - erros de mídia
+      - autoplay bloqueado
+    -->
+    <section id="debugPanel">
+      <div id="debugTitle">Diagnóstico do Player</div>
+      <pre id="debugLog"></pre>
+    </section>
+
+    <!--
+      =======================================================
+      BARRA LATERAL / PAINEL DE CONTROLES
+      =======================================================
+
+      Esse painel é o bloco institucional e funcional do sistema.
+      Ele contém:
+      - relógio
+      - data
+      - controles de mídia
+      - botão de tela cheia
+      - texto de ajuda
+      - logo da prefeitura
+      - faixa de cores institucionais
+
+      Em TV e desktop:
+      - funciona como painel lateral
+
+      Em mobile retrato:
+      - vira painel inferior sobreposto
+
+      Em mobile paisagem:
+      - permanece lateral, mas compactado
+    -->
+    <aside id="sidePanel" class="controls-hidden">
+      <!-- Faixa superior azul -->
+      <div class="sidePanelTopBar"></div>
+
+      <!-- Corpo principal da barra -->
+      <div class="sidePanelBody">
+
+        <!--
+          BLOCO DO RELÓGIO
+          Exibe hora e data em tempo real.
+        -->
+        <!--
+  BLOCO DO TOPO DA BARRA
+  Em desktop/TV:
+  - relógio centralizado
+
+  Em mobile retrato:
+  - relógio e logo ficam lado a lado
+-->
+        <div class="sidePanelTopContent">
+          <div class="sidePanelClock">
+            <div id="sidebarClockTime">00:00:00</div>
+            <div id="sidebarClockDate">00/00/0000</div>
+          </div>
+
+          <div class="sidePanelLogoInline">
+            <img id="sidePanelLogoInlineImg" src="assets/logo-prefeitura.svg" alt="Identidade visual da Prefeitura" />
+          </div>
+        </div>
+
+        <!--
+          BLOCO DE CONTROLES
+          Botões de operação do painel.
+        -->
+        <div id="controls">
+          <button id="btnPlayPause">
+            <i class="fa-solid fa-play"></i>
+            <span>Reproduzir</span>
+          </button>
+
+          <button id="btnNext">
+            <i class="fa-solid fa-forward-step"></i>
+            <span>Próximo</span>
+          </button>
+
+          <button id="btnPrev">
+            <i class="fa-solid fa-backward-step"></i>
+            <span>Anterior</span>
+          </button>
+
+          <button id="btnMute">
+            <i class="fa-solid fa-volume-xmark"></i>
+            <span>Som desligado</span>
+          </button>
+
+          <button id="btnFullscreen">
+            <i class="fa-solid fa-expand"></i>
+            <span>Tela cheia</span>
+          </button>
+        </div>
+
+        <!--
+          TEXTO DE APOIO
+          Usado para orientar discretamente o usuário.
+        -->
+        <div class="sidePanelHint">
+          <p>Mova o mouse ou use o controle para exibir os controles.</p>
+          <p>Em dispositivos móveis, prefira o modo horizontal.</p>
+        </div>
+
+        <!--
+          LOGO / IDENTIDADE VISUAL
+          Rodapé institucional da barra lateral.
+        -->
+        <div class="sidePanelLogoArea">
+          <img id="sidePanelLogo" src="assets/logo-prefeitura.svg" alt="Identidade visual da Prefeitura" />
+        </div>
+      </div>
+
+      <!--
+        FAIXA INFERIOR COM AS CORES INSTITUCIONAIS
+      -->
+      <div class="sidePanelBottomColors">
+        <span class="colorStrip coral"></span>
+        <span class="colorStrip yellow"></span>
+        <span class="colorStrip green"></span>
+        <span class="colorStrip blue"></span>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Script principal -->
+  <script src="script.js"></script>
+</body>
+
+</html>

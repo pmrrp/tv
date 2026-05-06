@@ -1,0 +1,2489 @@
+/* =========================================================
+   ADMIN - PAINEL TV PREFEITURA
+   =========================================================
+
+   Este arquivo controla toda a lógica do painel administrativo.
+
+   Responsabilidades:
+   - listar mídias cadastradas;
+   - enviar novas mídias por upload;
+   - salvar configurações em lote;
+   - controlar alterações pendentes;
+   - ordenar mídias na playlist;
+   - selecionar e excluir mídias em lote;
+   - controlar validade por data/hora;
+   - atualizar contador da playlist;
+   - controlar logout do painel.
+
+   Observação:
+   Este arquivo ainda está em JavaScript puro.
+   Futuramente, se o painel crescer muito, podemos separar em
+   módulos menores ou migrar para uma estrutura mais organizada.
+   ========================================================= */
+
+
+/* =========================================================
+   ELEMENTOS DA INTERFACE
+   ========================================================= */
+
+const mediaList = document.getElementById("mediaList");
+const loadingMessage = document.getElementById("loadingMessage");
+
+const btnReload = document.getElementById("btnReload");
+const btnSalvarTudo = document.getElementById("btnSalvarTudo");
+const pendingChanges = document.getElementById("pendingChanges");
+const btnLogout = document.getElementById("btnLogout");
+
+const uploadForm = document.getElementById("uploadForm");
+const inputArquivo = document.getElementById("arquivo");
+const selectedFileName = document.getElementById("selectedFileName");
+const uploadMessage = document.getElementById("uploadMessage");
+const btnUpload = document.getElementById("btnUpload");
+
+const btnGerarPlaylist = document.getElementById("btnGerarPlaylist");
+const playlistMessage = document.getElementById("playlistMessage");
+const playlistTotal = document.getElementById("playlistTotal");
+
+const selectAllMedia = document.getElementById("selectAllMedia");
+const btnDeleteSelected = document.getElementById("btnDeleteSelected");
+
+const summaryTotalMedia = document.getElementById("summaryTotalMedia");
+const summaryActiveMedia = document.getElementById("summaryActiveMedia");
+const summaryValidMedia = document.getElementById("summaryValidMedia");
+const summaryScheduledMedia = document.getElementById("summaryScheduledMedia");
+const summaryPriorityMedia = document.getElementById("summaryPriorityMedia");
+const summaryRepeatMedia = document.getElementById("summaryRepeatMedia");
+const summaryPlaylistItems = document.getElementById("summaryPlaylistItems");
+const summaryPlaylistUpdated = document.getElementById("summaryPlaylistUpdated");
+
+const mediaSearch = document.getElementById("mediaSearch");
+const mediaStatusFilter = document.getElementById("mediaStatusFilter");
+const mediaTypeFilter = document.getElementById("mediaTypeFilter");
+const mediaPeriodFilter = document.getElementById("mediaPeriodFilter");
+const mediaPriorityFilter = document.getElementById("mediaPriorityFilter");
+const mediaRepeatFilter = document.getElementById("mediaRepeatFilter");
+const mediaFilterInfo = document.getElementById("mediaFilterInfo");
+const libraryDropdownMeta = document.getElementById("libraryDropdownMeta");
+
+const adminUserName = document.getElementById("adminUserName");
+
+const toastContainer = document.getElementById("toastContainer");
+
+/* =========================================================
+   USUÁRIO LOGADO - UTILITÁRIO SEGURO
+   ========================================================= */
+
+/**
+ * Atualiza o nome exibido no cabeçalho.
+ *
+ * Aceita:
+ * - string: "Raul"
+ * - objeto: { nome: "Raul", ... }
+ *
+ * Evita aparecer "Olá, [object Object]".
+ */
+function definirNomeUsuarioLogado(valor) {
+    if (!adminUserName) return;
+
+    if (typeof valor === "string" && valor.trim()) {
+        adminUserName.textContent = valor.trim();
+        return;
+    }
+
+    if (valor && typeof valor === "object" && typeof valor.nome === "string") {
+        adminUserName.textContent = valor.nome.trim() || "usuário";
+        return;
+    }
+
+    definirNomeUsuarioLogado("usuário");
+}
+
+
+/* =========================================================
+   ESTADO GLOBAL DO ADMIN
+   ========================================================= */
+
+/*
+  Indica se o usuário alterou algum campo e ainda não salvou.
+  Usado para:
+  - habilitar o botão "Salvar alterações";
+  - mostrar aviso visual;
+  - impedir saída acidental da página.
+*/
+let existemAlteracoesPendentes = false;
+let mediaArrastada = null;
+let uploadMessageTimer = null;
+let playlistMessageTimer = null;
+let modalConfirmacao = null;
+
+
+/* =========================================================
+   FUNÇÕES UTILITÁRIAS
+   ========================================================= */
+
+/**
+ * Faz uma requisição fetch e trata erro de sessão expirada.
+ *
+ * Se a API retornar 401, significa que o usuário não está logado
+ * ou a sessão expirou. Nesse caso, redirecionamos para o login.
+ */
+async function fetchComSessao(url, opcoes = {}) {
+    const resposta = await fetch(url, {
+        credentials: "same-origin",
+        ...opcoes
+    });
+
+    if (resposta.status === 401) {
+        window.location.href = "/admin/login";
+        throw new Error("Sessão expirada. Faça login novamente.");
+    }
+
+    return resposta;
+}
+
+/* =========================================================
+   USUÁRIO LOGADO
+   ========================================================= */
+
+/**
+ * Carrega os dados do usuário logado e atualiza o cabeçalho.
+ */
+async function carregarUsuarioLogado() {
+    if (!adminUserName) return;
+
+    try {
+        const resposta = await fetchComSessao("/api/auth/me");
+
+        if (!resposta.ok) {
+            throw new Error(`Erro HTTP: ${resposta.status}`);
+        }
+
+        const dados = await resposta.json();
+
+        const nomeUsuario =
+            dados &&
+                dados.usuario &&
+                typeof dados.usuario.nome === "string"
+                ? dados.usuario.nome
+                : "usuário";
+
+        definirNomeUsuarioLogado(nomeUsuario);
+    } catch (erro) {
+        console.error("Erro ao carregar usuário logado:", erro);
+        definirNomeUsuarioLogado("usuário");
+    }
+}
+
+/**
+ * Escapa texto para uso seguro dentro de HTML.
+ *
+ * Isso evita que nomes de arquivos ou títulos com caracteres especiais
+ * quebrem o HTML renderizado.
+ */
+function escaparHtml(valor) {
+    return String(valor ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+/**
+ * Escapa valores usados em seletores CSS.
+ */
+function escaparSeletorCss(valor) {
+    if (window.CSS && typeof window.CSS.escape === "function") {
+        return window.CSS.escape(String(valor || ""));
+    }
+
+    return String(valor || "").replace(/["\\]/g, "\\$&");
+}
+
+/**
+ * Converte uma data ISO salva no servidor para o formato aceito
+ * pelo input datetime-local.
+ *
+ * Exemplo:
+ * ISO salvo:
+ * 2026-05-04T18:30:00.000Z
+ *
+ * No navegador local:
+ * 2026-05-04T14:30
+ */
+function formatarIsoParaDatetimeLocal(valorIso) {
+    if (!valorIso) return "";
+
+    const data = new Date(valorIso);
+
+    if (Number.isNaN(data.getTime())) {
+        return "";
+    }
+
+    /*
+      Ajusta o horário para o fuso local do navegador.
+      Assim o datetime-local mostra a hora esperada pelo usuário.
+    */
+    const offsetMinutos = data.getTimezoneOffset();
+    const dataLocal = new Date(data.getTime() - offsetMinutos * 60000);
+
+    return dataLocal.toISOString().slice(0, 16);
+}
+
+/**
+ * Formata tamanho de arquivo para leitura humana.
+ */
+function formatarTamanho(bytes) {
+    if (!bytes && bytes !== 0) return "Tamanho desconhecido";
+
+    const kb = bytes / 1024;
+    const mb = kb / 1024;
+    const gb = mb / 1024;
+
+    if (gb >= 1) {
+        return `${gb.toFixed(2)} GB`;
+    }
+
+    if (mb >= 1) {
+        return `${mb.toFixed(2)} MB`;
+    }
+
+    return `${kb.toFixed(2)} KB`;
+}
+
+/**
+ * Formata números do resumo administrativo.
+ */
+function formatarNumero(valor) {
+    return Number(valor || 0).toLocaleString("pt-BR");
+}
+
+/**
+ * Formata quantidade com singular/plural.
+ */
+function formatarQuantidadeItens(valor) {
+    const quantidade = Number(valor || 0);
+    const unidade = quantidade > 1 ? "itens" : "item";
+
+    return `${formatarNumero(quantidade)} ${unidade}`;
+}
+
+/**
+ * Formata uma quantidade com singular ate 1 e plural acima disso.
+ */
+function formatarQuantidade(valor, singular, plural) {
+    const quantidade = Number(valor || 0);
+    const unidade = quantidade > 1 ? plural : singular;
+
+    return `${formatarNumero(quantidade)} ${unidade}`;
+}
+
+/**
+ * Formata datas exibidas em cards de resumo.
+ */
+function formatarDataResumo(valorIso) {
+    if (!valorIso) return "Sem publicação";
+
+    const data = new Date(valorIso);
+
+    if (Number.isNaN(data.getTime())) {
+        return "Data indisponível";
+    }
+
+    return data.toLocaleString("pt-BR", {
+        dateStyle: "short",
+        timeStyle: "short"
+    });
+}
+
+/**
+ * Retorna o estado temporal da mídia para filtros.
+ */
+function obterEstadoPeriodo(inicio, fim) {
+    const agora = Date.now();
+    const inicioMs = inicio ? new Date(inicio).getTime() : null;
+    const fimMs = fim ? new Date(fim).getTime() : null;
+
+    if (!inicio && !fim) return "indeterminado";
+    if (Number.isFinite(inicioMs) && inicioMs > agora) return "agendado";
+    if (Number.isFinite(fimMs) && fimMs < agora) return "vencido";
+
+    return "programado";
+}
+
+/**
+ * Normaliza texto para busca local na lista.
+ */
+function normalizarBusca(valor) {
+    return String(valor || "")
+        .toLocaleLowerCase("pt-BR")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+}
+
+/**
+ * Monta a URL pública da mídia.
+ */
+function obterUrlMidia(nomeArquivo) {
+    return `/midia/${encodeURIComponent(nomeArquivo)}`;
+}
+
+/**
+ * Atualiza texto de botões mantendo ícones do Font Awesome.
+ */
+function definirBotaoComIcone(botao, icone, texto) {
+    if (!botao) return;
+
+    botao.innerHTML = `
+        <i class="${icone}" aria-hidden="true"></i>
+        <span>${escaparHtml(texto)}</span>
+    `;
+}
+
+/**
+ * Exibe uma confirmação em modal antes de ações de CRUD.
+ */
+function confirmarAcaoModal({ titulo, mensagem, confirmar = "Confirmar", cancelar = "Cancelar" }) {
+    if (!modalConfirmacao) {
+        modalConfirmacao = document.createElement("div");
+        modalConfirmacao.className = "confirmModal hidden";
+        modalConfirmacao.innerHTML = `
+            <div class="confirmModalBackdrop" data-confirm-cancel></div>
+            <section class="confirmModalDialog" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+                <h2 id="confirmModalTitle"></h2>
+                <p id="confirmModalText"></p>
+                <div class="confirmModalActions">
+                    <button class="confirmModalCancel" type="button" data-confirm-cancel></button>
+                    <button class="confirmModalAccept" type="button" data-confirm-accept></button>
+                </div>
+            </section>
+        `;
+        document.body.appendChild(modalConfirmacao);
+    }
+
+    modalConfirmacao.querySelector("#confirmModalTitle").textContent = titulo;
+    modalConfirmacao.querySelector("#confirmModalText").textContent = mensagem;
+    modalConfirmacao.querySelector(".confirmModalCancel").textContent = cancelar;
+    modalConfirmacao.querySelector(".confirmModalAccept").textContent = confirmar;
+    modalConfirmacao.classList.remove("hidden");
+
+    const botaoConfirmar = modalConfirmacao.querySelector("[data-confirm-accept]");
+    const focoAnterior = document.activeElement;
+
+    botaoConfirmar.focus();
+
+    return new Promise((resolve) => {
+        function fechar(resultado) {
+            modalConfirmacao.classList.add("hidden");
+            modalConfirmacao.removeEventListener("click", aoClicar);
+            document.removeEventListener("keydown", aoTeclar);
+
+            if (focoAnterior && typeof focoAnterior.focus === "function") {
+                focoAnterior.focus();
+            }
+
+            resolve(resultado);
+        }
+
+        function aoClicar(event) {
+            if (event.target.closest("[data-confirm-accept]")) {
+                fechar(true);
+                return;
+            }
+
+            if (event.target.closest("[data-confirm-cancel]")) {
+                fechar(false);
+            }
+        }
+
+        function aoTeclar(event) {
+            if (event.key === "Escape") {
+                fechar(false);
+            }
+        }
+
+        modalConfirmacao.addEventListener("click", aoClicar);
+        document.addEventListener("keydown", aoTeclar);
+    });
+}
+
+/**
+ * Retorna texto curto para o card da mídia.
+ */
+function obterTipoVisual(tipo) {
+    if (tipo === "video") return "VÍDEO";
+    if (tipo === "imagem") return "IMG";
+
+    return "ARQ";
+}
+
+/**
+ * Cria a prévia visual para imagens e vídeos.
+ */
+function renderizarPreviewMidia(midia) {
+    const nomeArquivo = midia.nome || "";
+    const urlMidia = obterUrlMidia(nomeArquivo);
+    const alt = escaparHtml(`Prévia de ${midia.titulo || midia.nome || "mídia"}`);
+
+    if (midia.tipo === "imagem") {
+        return `
+            <div class="mediaPreview mediaPreviewImage">
+                <img src="${urlMidia}" alt="${alt}" loading="lazy" />
+                <span class="mediaPreviewHint">Prévia</span>
+            </div>
+        `;
+    }
+
+    if (midia.tipo === "video") {
+        return `
+            <div class="mediaPreview mediaPreviewVideo">
+                <video src="${urlMidia}" muted preload="metadata" playsinline aria-label="${alt}"></video>
+                <span class="mediaPreviewHint">Prévia</span>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="mediaPreview">
+            <div class="mediaIcon">
+                ${obterTipoVisual(midia.tipo)}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Mostra mensagem na área de upload.
+ */
+function mostrarMensagemUpload(texto, tipo = "info") {
+    mostrarToast(texto, tipo);
+
+    if (!uploadMessage) return;
+
+    uploadMessage.textContent = texto;
+    uploadMessage.className = `uploadMessage ${tipo} hidden`;
+}
+
+/**
+ * Esconde mensagem da área de upload.
+ */
+function esconderMensagemUpload() {
+    if (!uploadMessage) return;
+
+    window.clearTimeout(uploadMessageTimer);
+    uploadMessage.className = "uploadMessage hidden";
+    uploadMessage.textContent = "";
+}
+
+/**
+ * Mostra mensagem na área da playlist.
+ */
+function mostrarMensagemPlaylist(texto, tipo = "info") {
+    mostrarToast(texto, tipo);
+
+    /*
+      Mantemos compatibilidade com o bloco antigo, se ele existir,
+      mas não dependemos mais dele visualmente.
+    */
+    if (!playlistMessage) return;
+
+    playlistMessage.textContent = texto;
+    playlistMessage.className = `uploadMessage ${tipo} hidden`;
+}
+
+/**
+ * Esconde mensagem da área da playlist.
+ */
+function esconderMensagemPlaylist() {
+    if (!playlistMessage) return;
+
+    window.clearTimeout(playlistMessageTimer);
+    playlistMessage.className = "uploadMessage hidden";
+    playlistMessage.textContent = "";
+}
+
+
+/* =========================================================
+   RESUMO ADMINISTRATIVO
+   ========================================================= */
+
+/**
+ * Carrega os dados consolidados da API de resumo do admin.
+ */
+async function carregarResumoAdmin() {
+    if (!summaryTotalMedia) return;
+
+    try {
+        const resposta = await fetchComSessao("/api/admin/resumo");
+
+        if (!resposta.ok) {
+            throw new Error(`Erro HTTP: ${resposta.status}`);
+        }
+
+        const dados = await resposta.json();
+
+        if (dados.erro) {
+            throw new Error(dados.mensagem || "Erro ao carregar resumo.");
+        }
+
+        const midias = dados.midias || {};
+        const playlist = dados.playlist || {};
+
+        summaryTotalMedia.textContent = formatarNumero(midias.total);
+        summaryActiveMedia.textContent = [
+            formatarQuantidade(midias.ativas, "ativa", "ativas"),
+            formatarQuantidade(midias.inativas, "inativa", "inativas")
+        ].join(" • ");
+
+        summaryValidMedia.textContent = formatarNumero(midias.dentroDaValidade);
+        summaryScheduledMedia.textContent = [
+            formatarQuantidade(midias.agendadas, "agendada", "agendadas"),
+            formatarQuantidade(midias.vencidas, "vencida", "vencidas")
+        ].join(" • ");
+
+        summaryPriorityMedia.textContent =
+            formatarNumero(Number(midias.prioridadeAlta || 0) + Number(midias.urgentes || 0));
+        summaryRepeatMedia.textContent = [
+            formatarQuantidade(midias.comRecorrencia, "Recorrência", "Recorrências"),
+            formatarQuantidade(midias.prioridadeAlta, "Alta", "Altas"),
+            formatarQuantidade(midias.urgentes, "Urgente", "Urgentes")
+        ].join(" • ");
+
+        summaryPlaylistItems.textContent = formatarQuantidadeItens(playlist.itensPublicados);
+        summaryPlaylistUpdated.textContent =
+            `Última atualização: ${formatarDataResumo(playlist.ultimaAtualizacao)}`;
+
+        if (libraryDropdownMeta) {
+            libraryDropdownMeta.textContent = [
+                formatarQuantidade(midias.total, "mídia", "mídias"),
+                formatarQuantidade(midias.ativas, "ativa", "ativas")
+            ].join(" • ");
+        }
+    } catch (erro) {
+        summaryTotalMedia.textContent = "--";
+        summaryActiveMedia.textContent = "Resumo indisponível";
+        summaryValidMedia.textContent = "--";
+        summaryScheduledMedia.textContent = "Tente atualizar a página";
+        summaryPriorityMedia.textContent = "--";
+        summaryRepeatMedia.textContent = "Dados não carregados";
+        summaryPlaylistItems.textContent = "--";
+        summaryPlaylistUpdated.textContent = "Última atualização: indisponível";
+
+        if (libraryDropdownMeta) {
+            libraryDropdownMeta.textContent = "Resumo da biblioteca indisponível";
+        }
+
+        console.error(erro);
+    }
+}
+
+
+/* =========================================================
+   PLAYLIST
+   ========================================================= */
+
+/**
+ * Carrega informações da playlist atual.
+ *
+ * Atualiza o contador:
+ * "Itens publicados: X item/itens"
+ */
+async function carregarPlaylistAtual() {
+    if (!playlistTotal) return;
+
+    try {
+        const resposta = await fetchComSessao("/api/playlist");
+
+        if (!resposta.ok) {
+            throw new Error(`Erro HTTP: ${resposta.status}`);
+        }
+
+        const dados = await resposta.json();
+
+        playlistTotal.textContent = formatarQuantidadeItens(dados.total);
+    } catch (erro) {
+        playlistTotal.textContent = "Erro ao carregar";
+        console.error(erro);
+    }
+}
+
+/* =========================================================
+   NOTIFICAÇÕES FLUTUANTES / TOASTS
+   ========================================================= */
+
+/**
+ * Mostra uma notificação flutuante na tela.
+ *
+ * Tipos aceitos:
+ * - sucesso
+ * - erro
+ * - info
+ * - aviso
+ */
+function mostrarToast(texto, tipo = "info", tempo = 4200) {
+    if (!toastContainer) {
+        console.log(`[${tipo}] ${texto}`);
+        return;
+    }
+
+    const toast = document.createElement("div");
+    toast.className = `toastMessage ${tipo}`;
+
+    const icones = {
+        sucesso: "fa-circle-check",
+        erro: "fa-circle-xmark",
+        info: "fa-circle-info",
+        aviso: "fa-triangle-exclamation"
+    };
+
+    const icone = icones[tipo] || icones.info;
+
+    toast.innerHTML = `
+        <span class="toastIcon">
+            <i class="fa-solid ${icone}" aria-hidden="true"></i>
+        </span>
+
+        <span class="toastText">${texto}</span>
+
+        <button class="toastClose" type="button" aria-label="Fechar aviso">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+    `;
+
+    const fecharToast = () => {
+        toast.classList.add("saindo");
+
+        setTimeout(() => {
+            toast.remove();
+        }, 260);
+    };
+
+    toast.querySelector(".toastClose").addEventListener("click", fecharToast);
+
+    toastContainer.appendChild(toast);
+
+    if (tempo > 0) {
+        setTimeout(fecharToast, tempo);
+    }
+}
+
+/* =========================================================
+   PRESERVAÇÃO DO SCROLL
+   ========================================================= */
+
+/**
+ * Executa uma ação assíncrona preservando a posição atual da página.
+ *
+ * Útil quando o admin.js recarrega/renderiza a lista depois de salvar,
+ * excluir ou enviar mídia.
+ */
+async function executarPreservandoScroll(callback) {
+    const scrollAtual = window.scrollY;
+
+    const resultado = await callback();
+
+    /*
+      Espera o navegador terminar de redesenhar a tela
+      antes de restaurar o scroll.
+    */
+    requestAnimationFrame(() => {
+        window.scrollTo({
+            top: scrollAtual,
+            behavior: "auto"
+        });
+    });
+
+    return resultado;
+}
+
+/* =========================================================
+   DESTAQUE VISUAL DE MÍDIA
+   ========================================================= */
+
+/**
+ * Localiza uma mídia na lista, rola até ela e aplica destaque visual.
+ *
+ * Usado principalmente depois do upload, para mostrar ao usuário
+ * qual item acabou de ser enviado.
+ */
+function destacarMidiaNaLista(nomeArquivo) {
+    if (!nomeArquivo) return;
+
+    const seletor = `.mediaItem[data-arquivo="${CSS.escape(nomeArquivo)}"]`;
+    const item = document.querySelector(seletor);
+
+    if (!item) return;
+
+    /*
+      Rola até o card da mídia.
+      block: "center" tenta deixar o card no meio da tela.
+    */
+    item.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+    });
+
+    /*
+      Reinicia a animação caso o destaque já tenha sido aplicado antes.
+    */
+    item.classList.remove("mediaItemUploadHighlight");
+    void item.offsetWidth;
+    item.classList.add("mediaItemUploadHighlight");
+
+    /*
+      Remove a classe depois da animação.
+    */
+    setTimeout(() => {
+        item.classList.remove("mediaItemUploadHighlight");
+    }, 2600);
+}
+
+/**
+ * Gera manualmente o arquivo playlist.json no servidor.
+ *
+ * Observação:
+ * A playlist já é atualizada automaticamente após várias ações,
+ * mas mantemos este botão como recurso manual de segurança.
+ */
+async function gerarPlaylist() {
+    /*
+      Segurança: o layout criado pelo Codex removeu o card visual de
+      publicação manual da playlist, porque a playlist já é publicada
+      automaticamente após upload, exclusão, ordenação ou salvamento.
+
+      Mesmo assim, mantemos esta função no arquivo para compatibilidade
+      futura. Se o botão não existir no HTML atual, a função simplesmente
+      encerra sem gerar erro no console.
+    */
+    if (!btnGerarPlaylist) {
+        mostrarMensagemPlaylist(
+            "A playlist já é atualizada automaticamente após as alterações.",
+            "info"
+        );
+        return;
+    }
+
+    esconderMensagemPlaylist();
+
+    btnGerarPlaylist.disabled = true;
+    definirBotaoComIcone(btnGerarPlaylist, "fa-solid fa-spinner fa-spin", "Gerando...");
+
+    mostrarMensagemPlaylist("Gerando playlist, aguarde...", "info");
+
+    try {
+        const resposta = await fetchComSessao("/api/playlist/gerar", {
+            method: "POST"
+        });
+
+        const dados = await resposta.json();
+
+        if (!resposta.ok || dados.erro) {
+            throw new Error(dados.mensagem || "Erro ao gerar playlist.");
+        }
+
+        mostrarMensagemPlaylist(
+            `Playlist gerada com sucesso. Total de itens: ${dados.total}`,
+            "sucesso"
+        );
+
+        await carregarPlaylistAtual();
+        await carregarResumoAdmin();
+    } catch (erro) {
+        mostrarMensagemPlaylist(
+            erro.message || "Erro ao gerar playlist.",
+            "erro"
+        );
+
+        console.error(erro);
+    } finally {
+        btnGerarPlaylist.disabled = false;
+        definirBotaoComIcone(btnGerarPlaylist, "fa-solid fa-rotate", "Gerar Playlist");
+    }
+}
+
+
+/* =========================================================
+   RENDERIZAÇÃO DAS MÍDIAS
+   ========================================================= */
+
+/**
+ * Renderiza a lista de mídias no painel.
+ *
+ * Cada mídia exibe:
+ * - checkbox de seleção;
+ * - posição na playlist;
+ * - botões de subir/descer;
+ * - tipo da mídia;
+ * - nome amigável;
+ * - nome real do arquivo;
+ * - tamanho/extensão;
+ * - ativo/inativo;
+ * - duração, se imagem;
+ * - validade;
+ * - prioridade;
+ * - recorrência.
+ */
+function renderizarMidias(midias) {
+    mediaList.innerHTML = "";
+
+    if (libraryDropdownMeta) {
+        libraryDropdownMeta.textContent = `${formatarQuantidade(midias.length, "mídia cadastrada", "mídias cadastradas")}`;
+    }
+
+    if (!midias.length) {
+        mediaList.innerHTML = `
+            <div class="emptyState">
+                Nenhuma mídia cadastrada ainda.
+            </div>
+        `;
+        aplicarFiltrosMidia();
+        return;
+    }
+
+    midias.forEach((midia, index) => {
+        const item = document.createElement("div");
+
+        item.className = [
+            "mediaItem",
+            midia.tipo === "imagem" ? "mediaItemImage" : "",
+            midia.tipo === "video" ? "mediaItemVideo" : "",
+            midia.ativo ? "" : "mediaItemInactive"
+        ].filter(Boolean).join(" ");
+        item.style.setProperty("--item-index", index);
+        item.draggable = true;
+
+        /*
+        Identifica este card pelo nome real do arquivo.
+
+        Isso permite localizar o card depois de ações como upload,
+        para rolar até ele e aplicar um destaque visual.
+        */
+        item.dataset.arquivo = midia.nome;
+
+        const nomeArquivo = escaparHtml(midia.nome);
+        const tituloMidia = escaparHtml(midia.titulo || midia.nome);
+        const extensao = escaparHtml(midia.extensao || "");
+        const tipo = escaparHtml(midia.tipo || "arquivo");
+        const prioridade = escaparHtml(midia.prioridade || "normal");
+        const prioridadeLabel = midia.prioridade === "urgente"
+            ? "Urgente"
+            : midia.prioridade === "alta"
+                ? "Alta"
+                : "Normal";
+
+        const semValidadeDefinida = !midia.inicio && !midia.fim;
+
+        const detalheDuracao = midia.tipo === "imagem"
+            ? `${Number(midia.duracao || 0)}s por exibição`
+            : "Duração automática do vídeo";
+
+        const detalhesMidia = `
+            <span><strong>Arquivo</strong>${nomeArquivo}</span>
+            <span><strong>Tamanho</strong>${formatarTamanho(midia.tamanho)}</span>
+            <span><strong>Tipo</strong>${tipo}</span>
+            <span><strong>Extensão</strong>${extensao || "sem extensão"}</span>
+            <span><strong>Duração</strong>${detalheDuracao}</span>
+        `;
+
+        const controleDuracao = midia.tipo === "imagem"
+            ? `
+                <label class="mediaConfigLabel">
+                    Duração
+                    <select class="mediaDuration" data-arquivo="${nomeArquivo}">
+                        <option value="5" ${Number(midia.duracao) === 5 ? "selected" : ""}>5s</option>
+                        <option value="8" ${Number(midia.duracao) === 8 ? "selected" : ""}>8s</option>
+                        <option value="10" ${Number(midia.duracao) === 10 ? "selected" : ""}>10s</option>
+                        <option value="15" ${Number(midia.duracao) === 15 ? "selected" : ""}>15s</option>
+                        <option value="20" ${Number(midia.duracao) === 20 ? "selected" : ""}>20s</option>
+                        <option value="30" ${Number(midia.duracao) === 30 ? "selected" : ""}>30s</option>
+                    </select>
+                </label>
+            `
+            : "";
+
+        item.innerHTML = `
+            <div class="mediaSelectArea">
+                <input
+                    type="checkbox"
+                    class="mediaSelect"
+                    data-arquivo="${nomeArquivo}"
+                    aria-label="Selecionar mídia ${nomeArquivo}"
+                />
+            </div>
+
+            <div class="mediaOrder">
+                <span class="mediaOrderNumber">${index + 1}</span>
+
+                <span
+                    class="mediaDragHandle"
+                    aria-label="Clique e arraste para reorganizar"
+                    data-tooltip="Clique e arraste para reorganizar"
+                >
+                    <i class="fa-solid fa-grip-vertical" aria-hidden="true"></i>
+                </span>
+            </div>
+
+            ${renderizarPreviewMidia(midia)}
+
+            <div class="mediaInfo">
+                <label class="mediaTitleLabel">
+                    Nome
+                    <input
+                        type="text"
+                        class="mediaTitleInput"
+                        data-arquivo="${nomeArquivo}"
+                        value="${tituloMidia}"
+                        placeholder="Ex: Campanha de Vacinação 2026"
+                    />
+                </label>
+
+                <div class="mediaConfigRow">
+                    <label class="mediaStatusToggle ${midia.ativo ? "isActive" : "isInactive"}">
+                        <input
+                            type="checkbox"
+                            class="mediaActive"
+                            data-arquivo="${nomeArquivo}"
+                            ${midia.ativo ? "checked" : ""}
+                        />
+                        <span>${midia.ativo ? "Ativo" : "Inativo"}</span>
+                    </label>
+
+                    ${controleDuracao}
+
+                    <details class="mediaScheduleMenu">
+                        <summary>
+                            <span>
+                                <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+                                Período de exibição
+                            </span>
+                            <small>${semValidadeDefinida ? "Tempo indeterminado" : "Com data definida"}</small>
+                        </summary>
+
+                        <div class="mediaValidityBox">
+                            <label class="mediaConfigCheckbox mediaIndefiniteLabel">
+                                <input
+                                    type="checkbox"
+                                    class="mediaIndefinite"
+                                    data-arquivo="${nomeArquivo}"
+                                    ${semValidadeDefinida ? "checked" : ""}
+                                />
+                                Tempo indeterminado
+                            </label>
+
+                            <div class="mediaDateFields ${semValidadeDefinida ? "disabledDates" : ""}">
+                                <label class="mediaConfigLabel mediaDateLabel">
+                                    Início
+                                    <input
+                                        type="datetime-local"
+                                    class="mediaStartDate"
+                                    data-arquivo="${nomeArquivo}"
+                                    value="${formatarIsoParaDatetimeLocal(midia.inicio)}"
+                                    />
+                                </label>
+
+                                <label class="mediaConfigLabel mediaDateLabel">
+                                    Fim
+                                    <input
+                                        type="datetime-local"
+                                    class="mediaEndDate"
+                                    data-arquivo="${nomeArquivo}"
+                                    value="${formatarIsoParaDatetimeLocal(midia.fim)}"
+                                    />
+                                </label>
+                            </div>
+                        </div>
+                    </details>
+
+                    <select class="mediaPriority" data-arquivo="${nomeArquivo}" aria-label="Prioridade da mídia ${nomeArquivo}">
+                            <option value="normal" ${midia.prioridade === "normal" ? "selected" : ""}>Normal</option>
+                            <option value="alta" ${midia.prioridade === "alta" ? "selected" : ""}>Alta</option>
+                            <option value="urgente" ${midia.prioridade === "urgente" ? "selected" : ""}>Urgente</option>
+                    </select>
+
+                    <label class="mediaConfigLabel">
+                        Repetir
+                        <select class="mediaRepeatEvery" data-arquivo="${nomeArquivo}">
+                            <option value="0" ${Number(midia.repetirACada) === 0 ? "selected" : ""}>Não repetir</option>
+                            <option value="3" ${Number(midia.repetirACada) === 3 ? "selected" : ""}>A cada 3 mídias</option>
+                            <option value="4" ${Number(midia.repetirACada) === 4 ? "selected" : ""}>A cada 4 mídias</option>
+                            <option value="5" ${Number(midia.repetirACada) === 5 ? "selected" : ""}>A cada 5 mídias</option>
+                            <option value="10" ${Number(midia.repetirACada) === 10 ? "selected" : ""}>A cada 10 mídias</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="mediaFooterActions">
+                    <div class="mediaBadges">
+                        <details class="mediaPriorityMenu">
+                            <summary class="mediaBadge ${prioridade}">
+                                <i class="fa-solid ${midia.prioridade === "urgente" ? "fa-triangle-exclamation" : midia.prioridade === "alta" ? "fa-bolt" : "fa-circle-check"}" aria-hidden="true"></i>
+                                <span>${prioridadeLabel}</span>
+                            </summary>
+                            <div class="mediaPriorityOptions">
+                                <button type="button" data-prioridade="normal" data-arquivo="${nomeArquivo}">
+                                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                                    Normal
+                                </button>
+                                <button type="button" data-prioridade="alta" data-arquivo="${nomeArquivo}">
+                                    <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+                                    Alta
+                                </button>
+                                <button type="button" data-prioridade="urgente" data-arquivo="${nomeArquivo}">
+                                    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                                    Urgente
+                                </button>
+                            </div>
+                        </details>
+                    </div>
+
+                    <div class="mediaDetailsHover">
+                        <span class="mediaDetailsTrigger">
+                            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                            Detalhes
+                        </span>
+                        <div class="mediaDetailsPopover" role="tooltip">
+                            ${detalhesMidia}
+                        </div>
+                    </div>
+
+                    <button class="mediaDeleteButton" type="button" data-arquivo="${nomeArquivo}">
+                        <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                        Excluir
+                    </button>
+
+                    <button class="mediaSaveButton hidden" type="button" data-arquivo="${nomeArquivo}">
+                        <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                        Salvar
+                    </button>
+                </div>
+            </div>
+
+        `;
+
+        item.dataset.search = normalizarBusca([
+            midia.nome,
+            midia.titulo,
+            midia.tipo,
+            midia.extensao,
+            midia.prioridade
+        ].join(" "));
+        item.dataset.active = midia.ativo ? "true" : "false";
+        item.dataset.tipo = midia.tipo || "arquivo";
+        item.dataset.prioridade = midia.prioridade || "normal";
+        item.dataset.repeat = Number(midia.repetirACada || 0) > 0 ? "com" : "sem";
+        item.dataset.periodo = obterEstadoPeriodo(midia.inicio, midia.fim);
+
+        mediaList.appendChild(item);
+    });
+
+    aplicarFiltrosMidia();
+}
+
+/**
+ * Aplica busca e filtro de status sem remover cards do DOM.
+ *
+ * Isso mantém o salvamento em lote funcionando com todos os campos
+ * renderizados, mesmo quando a lista está filtrada visualmente.
+ */
+function aplicarFiltrosMidia() {
+    const itens = Array.from(document.querySelectorAll(".mediaItem"));
+
+    if (!itens.length) {
+        if (mediaFilterInfo) {
+            mediaFilterInfo.classList.add("hidden");
+            mediaFilterInfo.textContent = "";
+        }
+
+        atualizarEstadoAcoesEmLote();
+        return;
+    }
+
+    const termo = normalizarBusca(mediaSearch ? mediaSearch.value : "");
+    const status = mediaStatusFilter ? mediaStatusFilter.value : "todas";
+    const tipoFiltro = mediaTypeFilter ? mediaTypeFilter.value : "todos";
+    const periodoFiltro = mediaPeriodFilter ? mediaPeriodFilter.value : "todos";
+    const prioridadeFiltro = mediaPriorityFilter ? mediaPriorityFilter.value : "todas";
+    const repeticaoFiltro = mediaRepeatFilter ? mediaRepeatFilter.value : "todas";
+
+    let totalVisivel = 0;
+
+    itens.forEach((item) => {
+        const atendeBusca = !termo || item.dataset.search.includes(termo);
+        const ativo = item.dataset.active === "true";
+        const atendeTipo = tipoFiltro === "todos" || item.dataset.tipo === tipoFiltro;
+        const atendePeriodo =
+            periodoFiltro === "todos" ||
+            item.dataset.periodo === periodoFiltro ||
+            (periodoFiltro === "programado" && item.dataset.periodo === "programado");
+        const atendePrioridade =
+            prioridadeFiltro === "todas" || item.dataset.prioridade === prioridadeFiltro;
+        const atendeRepeticao =
+            repeticaoFiltro === "todas" || item.dataset.repeat === repeticaoFiltro;
+
+        const atendeStatus =
+            status === "todas" ||
+            (status === "ativas" && ativo) ||
+            (status === "inativas" && !ativo);
+
+        const deveExibir =
+            atendeBusca &&
+            atendeStatus &&
+            atendeTipo &&
+            atendePeriodo &&
+            atendePrioridade &&
+            atendeRepeticao;
+
+        item.classList.toggle("mediaItemFiltered", !deveExibir);
+
+        if (!deveExibir) {
+            const checkbox = item.querySelector(".mediaSelect");
+
+            if (checkbox) {
+                checkbox.checked = false;
+            }
+        } else {
+            totalVisivel += 1;
+        }
+    });
+
+    const filtroAtivo =
+        Boolean(termo) ||
+        status !== "todas" ||
+        tipoFiltro !== "todos" ||
+        periodoFiltro !== "todos" ||
+        prioridadeFiltro !== "todas" ||
+        repeticaoFiltro !== "todas";
+
+    if (mediaFilterInfo) {
+        mediaFilterInfo.classList.toggle("hidden", !filtroAtivo);
+        mediaFilterInfo.textContent = filtroAtivo
+            ? `${formatarQuantidade(totalVisivel, "mídia exibida", "mídias exibidas")} de ${formatarNumero(itens.length)}.`
+            : "";
+    }
+
+    if (libraryDropdownMeta) {
+        libraryDropdownMeta.textContent = filtroAtivo
+            ? `${formatarNumero(totalVisivel)} de ${formatarQuantidade(itens.length, "mídia exibida", "mídias exibidas")}`
+            : formatarQuantidade(itens.length, "mídia cadastrada", "mídias cadastradas");
+    }
+
+    atualizarEstadoAcoesEmLote();
+}
+
+/**
+ * Carrega as mídias pela API e renderiza na tela.
+ */
+async function carregarMidias() {
+    loadingMessage.style.display = "block";
+    loadingMessage.textContent = "Carregando arquivos...";
+    mediaList.innerHTML = "";
+
+    try {
+        const resposta = await fetchComSessao("/api/midias");
+
+        if (!resposta.ok) {
+            throw new Error(`Erro HTTP: ${resposta.status}`);
+        }
+
+        const dados = await resposta.json();
+
+        loadingMessage.style.display = "none";
+
+        renderizarMidias(dados.midias || []);
+        atualizarEstadoAcoesEmLote();
+        await carregarResumoAdmin();
+    } catch (erro) {
+        loadingMessage.style.display = "block";
+        loadingMessage.textContent = "Erro ao carregar mídias. Verifique se a API está rodando.";
+        console.error(erro);
+    }
+}
+
+
+/* =========================================================
+   UPLOAD DE MÍDIA
+   ========================================================= */
+
+/**
+ * Atualiza o texto com o nome do arquivo selecionado.
+ */
+function atualizarNomeSelecionado() {
+    /*
+      O backend atual usa upload.single("arquivo"), ou seja:
+      ele recebe apenas UM arquivo por envio.
+
+      Por isso, mesmo que algum navegador permita seleção/arraste de
+      vários arquivos, a interface considera somente o primeiro.
+      Essa escolha mantém o layout bonito do Codex sem exigir alteração
+      no server.js agora.
+    */
+    const arquivo = inputArquivo && inputArquivo.files
+        ? inputArquivo.files[0]
+        : null;
+
+    if (!arquivo) {
+        selectedFileName.textContent = "Nenhum arquivo selecionado";
+        uploadForm.classList.remove("uploadFormHasFile");
+        return;
+    }
+
+    selectedFileName.textContent = arquivo.name;
+    uploadForm.classList.add("uploadFormHasFile");
+}
+
+/**
+ * Carrega o usuário da sessão para o cabeçalho.
+ */
+async function carregarUsuarioSessao() {
+    if (!adminUserName) return;
+
+    try {
+        const resposta = await fetchComSessao("/api/auth/status");
+        const dados = await resposta.json();
+
+        definirNomeUsuarioLogado(dados.usuario || "Administrador");
+    } catch (erro) {
+        definirNomeUsuarioLogado("Administrador");
+    }
+}
+
+/**
+ * Recebe arquivos arrastados para a área de upload.
+ */
+function receberArquivoArrastado(event) {
+    event.preventDefault();
+    uploadForm.classList.remove("uploadFormDragging");
+
+    const arquivos = event.dataTransfer ? event.dataTransfer.files : null;
+
+    if (!arquivos || !arquivos.length || !inputArquivo) return;
+
+    /*
+      Mantém compatibilidade com o backend atual:
+      - o usuário pode arrastar vários arquivos sem quebrar a tela;
+      - mas o sistema usa somente o primeiro arquivo arrastado;
+      - quando quisermos upload múltiplo de verdade, alteramos também
+        a rota /api/upload no server.js para upload.array(...).
+    */
+    const primeiroArquivo = arquivos[0];
+
+    if (typeof DataTransfer !== "undefined") {
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(primeiroArquivo);
+        inputArquivo.files = dataTransfer.files;
+    }
+
+    atualizarNomeSelecionado();
+}
+
+/**
+ * Envia o arquivo selecionado para a API.
+ */
+async function enviarArquivo(event) {
+    event.preventDefault();
+
+    esconderMensagemUpload();
+
+    /*
+      Upload de UM arquivo por vez.
+
+      Motivo técnico:
+      O backend atual está configurado com multer usando:
+      upload.single("arquivo")
+
+      Portanto, o FormData deve enviar apenas um campo "arquivo".
+      Isso evita erro silencioso e mantém o frontend alinhado ao backend.
+    */
+    const arquivo = inputArquivo && inputArquivo.files
+        ? inputArquivo.files[0]
+        : null;
+
+    if (!arquivo) {
+        mostrarMensagemUpload("Selecione um arquivo antes de enviar.", "erro");
+        return;
+    }
+
+    const confirmouUpload = await confirmarAcaoModal({
+        titulo: "Enviar mídia",
+        mensagem: `Deseja enviar o arquivo "${arquivo.name}" para a biblioteca?`,
+        confirmar: "Enviar"
+    });
+
+    if (!confirmouUpload) return;
+
+    const formData = new FormData();
+    formData.append("arquivo", arquivo);
+
+    btnUpload.disabled = true;
+    definirBotaoComIcone(btnUpload, "fa-solid fa-spinner fa-spin", "Enviando...");
+
+    mostrarMensagemUpload("Enviando arquivo, aguarde...", "info");
+
+    try {
+        const resposta = await fetchComSessao("/api/upload", {
+            method: "POST",
+            body: formData
+        });
+
+        const dados = await resposta.json();
+
+        if (!resposta.ok || dados.erro) {
+            throw new Error(dados.mensagem || "Erro ao enviar arquivo.");
+        }
+
+        mostrarMensagemUpload(
+            `Arquivo enviado e playlist atualizada: ${dados.arquivo.nomeSalvo}`,
+            "sucesso"
+        );
+
+        uploadForm.reset();
+        selectedFileName.textContent = "Nenhum arquivo selecionado";
+        uploadForm.classList.remove("uploadFormHasFile");
+
+        await carregarMidias();
+        await carregarPlaylistAtual();
+
+        /*
+          Após recarregar a lista, rola até a mídia enviada
+          e aplica destaque visual nela.
+        */
+        setTimeout(() => {
+            destacarMidiaNaLista(dados.arquivo.nomeSalvo);
+        }, 180);
+
+        await carregarResumoAdmin();
+    } catch (erro) {
+        mostrarMensagemUpload(
+            erro.message || "Erro ao enviar arquivo.",
+            "erro"
+        );
+
+        console.error(erro);
+    } finally {
+        btnUpload.disabled = false;
+        definirBotaoComIcone(btnUpload, "fa-solid fa-upload", "Enviar mídia");
+    }
+}
+
+
+/* =========================================================
+   ALTERAÇÕES PENDENTES / SALVAR EM LOTE
+   ========================================================= */
+
+/**
+ * Marca que existem alterações ainda não salvas.
+ */
+function marcarAlteracoesPendentes() {
+    existemAlteracoesPendentes = true;
+
+    if (pendingChanges) {
+        pendingChanges.classList.remove("hidden");
+    }
+
+    if (btnSalvarTudo) {
+        btnSalvarTudo.classList.remove("hidden");
+        btnSalvarTudo.disabled = false;
+        btnSalvarTudo.classList.add("hasChanges");
+        definirBotaoComIcone(btnSalvarTudo, "fa-solid fa-floppy-disk", "Salvar alterações");
+    }
+}
+
+/**
+ * Limpa o aviso de alterações pendentes.
+ */
+function limparAlteracoesPendentes() {
+    existemAlteracoesPendentes = false;
+
+    if (pendingChanges) {
+        pendingChanges.classList.add("hidden");
+    }
+
+    if (btnSalvarTudo) {
+        btnSalvarTudo.disabled = true;
+        btnSalvarTudo.classList.remove("hasChanges");
+        btnSalvarTudo.classList.add("hidden");
+        definirBotaoComIcone(btnSalvarTudo, "fa-solid fa-floppy-disk", "Salvar alterações");
+    }
+
+    document.querySelectorAll(".mediaItemChanged").forEach((item) => {
+        item.classList.remove("mediaItemChanged");
+    });
+}
+
+/**
+ * Coleta todas as configurações visíveis na lista.
+ *
+ * Esta função é usada pelo botão "Salvar alterações".
+ */
+function coletarConfiguracoesDaTela() {
+    const checkboxes = Array.from(
+        document.querySelectorAll(".mediaActive")
+    );
+
+    return checkboxes.map((checkbox) => {
+        const nomeArquivo = checkbox.dataset.arquivo;
+        const item = checkbox.closest(".mediaItem");
+
+        const selectDuracao = item
+            ? item.querySelector(".mediaDuration")
+            : null;
+
+        const selectPrioridade = item
+            ? item.querySelector(".mediaPriority")
+            : null;
+
+        const selectRepetirACada = item
+            ? item.querySelector(".mediaRepeatEvery")
+            : null;
+
+        const inputTitulo = item
+            ? item.querySelector(".mediaTitleInput")
+            : null;
+
+        const checkboxIndefinido = item
+            ? item.querySelector(".mediaIndefinite")
+            : null;
+
+        const inputInicio = item
+            ? item.querySelector(".mediaStartDate")
+            : null;
+
+        const inputFim = item
+            ? item.querySelector(".mediaEndDate")
+            : null;
+
+        const exibirIndefinidamente =
+            checkboxIndefinido ? checkboxIndefinido.checked : false;
+
+        return {
+            nome: nomeArquivo,
+            ativo: checkbox.checked,
+            duracao: selectDuracao ? Number(selectDuracao.value) : 8,
+            prioridade: selectPrioridade ? selectPrioridade.value : "normal",
+            repetirACada: selectRepetirACada ? Number(selectRepetirACada.value) : 0,
+            titulo: inputTitulo ? inputTitulo.value : nomeArquivo,
+
+            inicio: exibirIndefinidamente
+                ? ""
+                : inputInicio
+                    ? inputInicio.value
+                    : "",
+
+            fim: exibirIndefinidamente
+                ? ""
+                : inputFim
+                    ? inputFim.value
+                    : ""
+        };
+    });
+}
+
+/**
+ * Salva todas as configurações de uma vez.
+ */
+async function salvarTodasConfiguracoes() {
+    const selecionadas = obterMidiasSelecionadas();
+    const midias = selecionadas.length
+        ? coletarConfiguracoesDaTela().filter((midia) => selecionadas.includes(midia.nome))
+        : coletarConfiguracoesDaTela();
+
+    if (!midias.length) {
+        mostrarMensagemPlaylist("Nenhuma mídia encontrada para salvar.", "erro");
+        return;
+    }
+
+    const confirmou = await confirmarAcaoModal({
+        titulo: "Salvar alterações em lote",
+        mensagem: `Deseja salvar ${formatarQuantidade(midias.length, "mídia selecionada", "mídias selecionadas")}?`,
+        confirmar: "Salvar"
+    });
+
+    if (!confirmou) return;
+
+    btnSalvarTudo.disabled = true;
+    definirBotaoComIcone(btnSalvarTudo, "fa-solid fa-spinner fa-spin", "Salvando...");
+
+    mostrarMensagemPlaylist("Salvando alterações, aguarde...", "info");
+
+    try {
+        const resposta = await fetchComSessao("/api/midias/config/lote", {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                midias
+            })
+        });
+
+        const dados = await resposta.json();
+
+        if (!resposta.ok || dados.erro) {
+            throw new Error(dados.mensagem || "Erro ao salvar alterações.");
+        }
+
+        mostrarMensagemPlaylist(
+            `Alterações salvas e playlist atualizada automaticamente. ${formatarQuantidade(dados.totalSalvo, "item salvo", "itens salvos")}.`,
+            "sucesso"
+        );
+
+        limparAlteracoesPendentes();
+
+        await executarPreservandoScroll(async () => {
+            await carregarMidias();
+            await carregarPlaylistAtual();
+        });
+    } catch (erro) {
+        mostrarMensagemPlaylist(
+            erro.message || "Erro ao salvar alterações.",
+            "erro"
+        );
+
+        if (btnSalvarTudo) {
+            btnSalvarTudo.disabled = false;
+        }
+
+        console.error(erro);
+    } finally {
+        if (btnSalvarTudo) {
+            definirBotaoComIcone(btnSalvarTudo, "fa-solid fa-floppy-disk", "Salvar alterações");
+        }
+    }
+}
+
+/*
+  Se houver alteração pendente, o navegador avisa antes de sair.
+*/
+window.addEventListener("beforeunload", (event) => {
+    if (!existemAlteracoesPendentes) return;
+
+    event.preventDefault();
+    event.returnValue = "Existem alterações não salvas.";
+});
+
+
+/* =========================================================
+   SELEÇÃO E EXCLUSÃO EM LOTE
+   ========================================================= */
+
+/**
+ * Retorna os nomes dos arquivos selecionados na lista.
+ */
+function obterMidiasSelecionadas() {
+    return Array.from(document.querySelectorAll(".mediaSelect:checked"))
+        .map((checkbox) => checkbox.dataset.arquivo)
+        .filter(Boolean);
+}
+
+/**
+ * Retorna checkboxes de mídias visíveis após busca/filtro.
+ */
+function obterCheckboxesVisiveis() {
+    return Array.from(
+        document.querySelectorAll(".mediaItem:not(.mediaItemFiltered) .mediaSelect")
+    );
+}
+
+/**
+ * Atualiza estado do botão "Excluir selecionadas".
+ */
+function atualizarEstadoAcoesEmLote() {
+    const selecionadas = obterMidiasSelecionadas();
+    const existeSelecao = selecionadas.length > 0;
+    const selectAllWrapper = selectAllMedia
+        ? selectAllMedia.closest(".selectAllLabel")
+        : null;
+
+    mediaList.classList.toggle("mediaSelectionMode", existeSelecao);
+
+    document.querySelectorAll(".mediaItem").forEach((item) => {
+        const checkbox = item.querySelector(".mediaSelect");
+        item.classList.toggle("mediaItemSelected", Boolean(checkbox && checkbox.checked));
+    });
+
+    if (selectAllWrapper) {
+        selectAllWrapper.classList.toggle("hidden", !existeSelecao);
+    }
+
+    if (btnDeleteSelected) {
+        btnDeleteSelected.classList.toggle("hidden", !existeSelecao);
+        btnDeleteSelected.disabled = !existeSelecao;
+        definirBotaoComIcone(
+            btnDeleteSelected,
+            "fa-solid fa-trash-can",
+            existeSelecao
+                ? `Excluir ${formatarQuantidade(selecionadas.length, "selecionada", "selecionadas")}`
+                : "Excluir selecionadas"
+        );
+    }
+
+    if (selectAllMedia) {
+        const todas = obterCheckboxesVisiveis();
+
+        selectAllMedia.checked =
+            todas.length > 0 && selecionadas.length === todas.length;
+
+        selectAllMedia.indeterminate =
+            selecionadas.length > 0 && selecionadas.length < todas.length;
+    }
+}
+
+/**
+ * Marca ou desmarca todas as mídias visíveis.
+ */
+function alternarSelecionarTodas() {
+    const checkboxes = obterCheckboxesVisiveis();
+
+    checkboxes.forEach((checkbox) => {
+        checkbox.checked = selectAllMedia.checked;
+    });
+
+    atualizarEstadoAcoesEmLote();
+}
+
+/**
+ * Exclui todas as mídias selecionadas.
+ */
+async function excluirMidiasSelecionadas() {
+    const arquivos = obterMidiasSelecionadas();
+
+    if (!arquivos.length) {
+        mostrarMensagemUpload("Nenhuma mídia selecionada.", "erro");
+        return;
+    }
+
+    const confirmar = await confirmarAcaoModal({
+        titulo: "Excluir mídias",
+        mensagem: `Tem certeza que deseja excluir ${formatarQuantidade(arquivos.length, "mídia selecionada", "mídias selecionadas")}?`,
+        confirmar: "Excluir"
+    });
+
+    if (!confirmar) return;
+
+    btnDeleteSelected.disabled = true;
+    definirBotaoComIcone(btnDeleteSelected, "fa-solid fa-spinner fa-spin", "Excluindo...");
+
+    try {
+        const resposta = await fetchComSessao("/api/midias/excluir-lote", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                arquivos
+            })
+        });
+
+        const dados = await resposta.json();
+
+        if (!resposta.ok || dados.erro) {
+            throw new Error(dados.mensagem || "Erro ao excluir mídias.");
+        }
+
+        mostrarMensagemUpload(
+            `Mídias excluídas: ${dados.excluidos.length}. Playlist atualizada automaticamente.`,
+            "sucesso"
+        );
+
+        await executarPreservandoScroll(async () => {
+            await carregarMidias();
+            await carregarPlaylistAtual();
+        });
+
+        atualizarEstadoAcoesEmLote();
+    } catch (erro) {
+        mostrarMensagemUpload(
+            erro.message || "Erro ao excluir mídias selecionadas.",
+            "erro"
+        );
+
+        console.error(erro);
+    } finally {
+        btnDeleteSelected.disabled = false;
+        atualizarEstadoAcoesEmLote();
+    }
+}
+
+
+/* =========================================================
+   ORDEM DA PLAYLIST
+   ========================================================= */
+
+/**
+ * Move uma mídia para cima ou para baixo na ordem da playlist.
+ */
+async function moverMidia(nomeArquivo, direcao) {
+    try {
+        const resposta = await fetchComSessao(
+            `/api/midias/${encodeURIComponent(nomeArquivo)}/mover`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    direcao
+                })
+            }
+        );
+
+        const dados = await resposta.json();
+
+        if (!resposta.ok || dados.erro) {
+            throw new Error(dados.mensagem || "Erro ao mover mídia.");
+        }
+
+        mostrarMensagemPlaylist(
+            "Ordem atualizada e playlist publicada automaticamente.",
+            "sucesso"
+        );
+
+        await executarPreservandoScroll(async () => {
+            await carregarMidias();
+            await carregarPlaylistAtual();
+        });
+    } catch (erro) {
+        mostrarMensagemPlaylist(
+            erro.message || "Erro ao mover mídia.",
+            "erro"
+        );
+
+        console.error(erro);
+    }
+}
+
+/**
+ * Exclui uma única mídia diretamente pelo card.
+ */
+async function excluirMidiaIndividual(nomeArquivo) {
+    if (!nomeArquivo) return;
+
+    const confirmar = await confirmarAcaoModal({
+        titulo: "Excluir mídia",
+        mensagem: `Tem certeza que deseja excluir a mídia "${nomeArquivo}"?`,
+        confirmar: "Excluir"
+    });
+
+    if (!confirmar) return;
+
+    const botao = mediaList.querySelector(
+        `.mediaDeleteButton[data-arquivo="${escaparSeletorCss(nomeArquivo)}"]`
+    );
+
+    if (botao) {
+        botao.disabled = true;
+        definirBotaoComIcone(botao, "fa-solid fa-spinner fa-spin", "Excluindo...");
+    }
+
+    try {
+        const resposta = await fetchComSessao(
+            `/api/midias/${encodeURIComponent(nomeArquivo)}`,
+            { method: "DELETE" }
+        );
+
+        const dados = await resposta.json();
+
+        if (!resposta.ok || dados.erro) {
+            throw new Error(dados.mensagem || "Erro ao excluir mídia.");
+        }
+
+        mostrarMensagemUpload("Mídia excluída e playlist atualizada automaticamente.", "sucesso");
+
+        await executarPreservandoScroll(async () => {
+            await carregarMidias();
+            await carregarPlaylistAtual();
+        });;
+    } catch (erro) {
+        mostrarMensagemUpload(erro.message || "Erro ao excluir mídia.", "erro");
+        console.error(erro);
+    } finally {
+        if (botao) {
+            botao.disabled = false;
+            definirBotaoComIcone(botao, "fa-solid fa-trash-can", "Excluir");
+        }
+    }
+}
+
+/**
+ * Move uma mídia várias posições usando a API de ordenação existente.
+ */
+async function moverMidiaParaIndice(nomeArquivo, indiceInicial, indiceFinal) {
+    if (!nomeArquivo || indiceInicial === indiceFinal) return;
+
+    const direcao = indiceFinal < indiceInicial ? "up" : "down";
+    const passos = Math.abs(indiceFinal - indiceInicial);
+
+    mediaList.classList.add("mediaListSavingOrder");
+
+    try {
+        for (let passo = 0; passo < passos; passo += 1) {
+            const resposta = await fetchComSessao(
+                `/api/midias/${encodeURIComponent(nomeArquivo)}/mover`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        direcao
+                    })
+                }
+            );
+
+            const dados = await resposta.json();
+
+            if (!resposta.ok || dados.erro) {
+                throw new Error(dados.mensagem || "Erro ao reordenar mídia.");
+            }
+        }
+
+        mostrarMensagemPlaylist(
+            "Ordem atualizada e playlist publicada automaticamente.",
+            "sucesso"
+        );
+
+        await executarPreservandoScroll(async () => {
+            await carregarMidias();
+            await carregarPlaylistAtual();
+        });
+    } catch (erro) {
+        mostrarMensagemPlaylist(
+            erro.message || "Erro ao reordenar mídia.",
+            "erro"
+        );
+
+        await carregarMidias();
+        console.error(erro);
+    } finally {
+        mediaList.classList.remove("mediaListSavingOrder");
+    }
+}
+
+/**
+ * Encontra o ponto de inserção durante o arraste.
+ */
+function obterItemDepoisDoArraste(y) {
+    const itens = Array.from(
+        mediaList.querySelectorAll(".mediaItem:not(.mediaItemDragging):not(.mediaItemFiltered)")
+    );
+    const arrastandoParaCima = Boolean(
+        mediaArrastada &&
+        typeof mediaArrastada.ultimoY === "number" &&
+        y < mediaArrastada.ultimoY
+    );
+
+    for (const item of itens) {
+        const caixa = item.getBoundingClientRect();
+        const margemDeTroca = caixa.height * 0.1;
+        const limite = arrastandoParaCima
+            ? caixa.bottom - margemDeTroca
+            : caixa.top + margemDeTroca;
+
+        if (y < limite) {
+            return item;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Atualiza visualmente os numerais depois de uma reordenação local.
+ */
+function atualizarNumerosDaPlaylist() {
+    Array.from(mediaList.querySelectorAll(".mediaItem")).forEach((item, index) => {
+        const numero = item.querySelector(".mediaOrderNumber");
+
+        if (numero) {
+            numero.textContent = index + 1;
+        }
+    });
+}
+
+/**
+ * Coleta a configuração de um card específico.
+ */
+function coletarConfiguracaoDoItem(item) {
+    if (!item) return null;
+
+    const checkbox = item.querySelector(".mediaActive");
+
+    if (!checkbox) return null;
+
+    return coletarConfiguracoesDaTela().find((midia) => midia.nome === checkbox.dataset.arquivo) || null;
+}
+
+/**
+ * Salva uma única mídia após confirmação.
+ */
+async function confirmarESalvarMidia(item, mensagem = "Deseja salvar esta alteração?") {
+    const configuracao = coletarConfiguracaoDoItem(item);
+
+    if (!configuracao) return false;
+
+    const confirmou = await confirmarAcaoModal({
+        titulo: "Salvar alteração",
+        mensagem,
+        confirmar: "Salvar"
+    });
+
+    if (!confirmou) {
+        await carregarMidias();
+        return false;
+    }
+
+    try {
+        mostrarMensagemPlaylist("Salvando alteração...", "info");
+
+        const resposta = await fetchComSessao(
+            `/api/midias/${encodeURIComponent(configuracao.nome)}/config`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(configuracao)
+            }
+        );
+
+        const dados = await resposta.json();
+
+        if (!resposta.ok || dados.erro) {
+            throw new Error(dados.mensagem || "Erro ao salvar mídia.");
+        }
+
+        mostrarMensagemPlaylist("Alteração salva e playlist atualizada automaticamente.", "sucesso");
+        await executarPreservandoScroll(async () => {
+            await carregarMidias();
+            await carregarPlaylistAtual();
+        });
+        return true;
+    } catch (erro) {
+        mostrarMensagemPlaylist(erro.message || "Erro ao salvar mídia.", "erro");
+        await carregarMidias();
+        console.error(erro);
+        return false;
+    }
+}
+
+/**
+ * Salva uma mídia sem modal, para ações rápidas como prioridade.
+ */
+async function salvarMidiaRapida(item) {
+    const configuracao = coletarConfiguracaoDoItem(item);
+
+    if (!configuracao) return false;
+
+    try {
+        const resposta = await fetchComSessao(
+            `/api/midias/${encodeURIComponent(configuracao.nome)}/config`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(configuracao)
+            }
+        );
+
+        const dados = await resposta.json();
+
+        if (!resposta.ok || dados.erro) {
+            throw new Error(dados.mensagem || "Erro ao salvar mídia.");
+        }
+
+        mostrarMensagemPlaylist("Alteração salva automaticamente.", "sucesso");
+        await executarPreservandoScroll(async () => {
+            await carregarMidias();
+            await carregarPlaylistAtual();
+        });
+        return true;
+    } catch (erro) {
+        mostrarMensagemPlaylist(erro.message || "Erro ao salvar mídia.", "erro");
+        await carregarMidias();
+        console.error(erro);
+        return false;
+    }
+}
+
+
+/* =========================================================
+   VALIDADE / DATA DE EXIBIÇÃO
+   ========================================================= */
+
+/**
+ * Atualiza os campos de validade de uma mídia.
+ *
+ * Quando "Exibir por tempo indeterminado" está marcado:
+ * - limpa data inicial;
+ * - limpa data final;
+ * - desabilita os campos de data.
+ *
+ * Quando está desmarcado:
+ * - libera os campos para edição.
+ */
+function atualizarCamposValidade(item) {
+    if (!item) return;
+
+    const checkboxIndefinido = item.querySelector(".mediaIndefinite");
+    const inputInicio = item.querySelector(".mediaStartDate");
+    const inputFim = item.querySelector(".mediaEndDate");
+    const dateFields = item.querySelector(".mediaDateFields");
+    const scheduleSummary = item.querySelector(".mediaScheduleMenu summary small");
+
+    if (!checkboxIndefinido || !inputInicio || !inputFim) return;
+
+    const indefinido = checkboxIndefinido.checked;
+
+    if (indefinido) {
+        inputInicio.value = "";
+        inputFim.value = "";
+
+        if (dateFields) {
+            dateFields.classList.add("disabledDates");
+        }
+    } else {
+        if (dateFields) {
+            dateFields.classList.remove("disabledDates");
+        }
+    }
+
+    if (scheduleSummary) {
+        scheduleSummary.textContent = indefinido ? "Tempo indeterminado" : "Com data definida";
+    }
+}
+
+/**
+ * Ativa datas quando o usuário interage com o datepicker.
+ */
+function ativarPeriodoPorData(input) {
+    const item = input ? input.closest(".mediaItem") : null;
+    const checkboxIndefinido = item ? item.querySelector(".mediaIndefinite") : null;
+
+    if (!checkboxIndefinido || !checkboxIndefinido.checked) return;
+
+    checkboxIndefinido.checked = false;
+    atualizarCamposValidade(item);
+}
+
+
+/* =========================================================
+   LOGOUT
+   ========================================================= */
+
+/**
+ * Encerra a sessão administrativa.
+ */
+async function sairDoAdmin() {
+    try {
+        await fetchComSessao("/api/logout", {
+            method: "POST"
+        });
+
+        window.location.href = "/admin/login";
+    } catch (erro) {
+        console.error("Erro ao sair:", erro);
+        window.location.href = "/admin/login";
+    }
+}
+
+
+/* =========================================================
+   EVENTOS
+   ========================================================= */
+
+if (btnReload) {
+    btnReload.addEventListener("click", carregarMidias);
+}
+
+if (uploadForm) {
+    uploadForm.addEventListener("submit", enviarArquivo);
+}
+
+if (inputArquivo) {
+    inputArquivo.addEventListener("change", atualizarNomeSelecionado);
+}
+
+if (uploadForm) {
+    uploadForm.addEventListener("dragenter", (event) => {
+        event.preventDefault();
+        uploadForm.classList.add("uploadFormDragging");
+    });
+
+    uploadForm.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        uploadForm.classList.add("uploadFormDragging");
+    });
+
+    uploadForm.addEventListener("dragleave", (event) => {
+        if (uploadForm.contains(event.relatedTarget)) return;
+
+        uploadForm.classList.remove("uploadFormDragging");
+    });
+
+    uploadForm.addEventListener("drop", receberArquivoArrastado);
+}
+
+if (btnGerarPlaylist) {
+    btnGerarPlaylist.addEventListener("click", gerarPlaylist);
+}
+
+if (selectAllMedia) {
+    selectAllMedia.addEventListener("change", alternarSelecionarTodas);
+}
+
+if (btnDeleteSelected) {
+    btnDeleteSelected.addEventListener("click", excluirMidiasSelecionadas);
+}
+
+if (btnLogout) {
+    btnLogout.addEventListener("click", sairDoAdmin);
+}
+
+if (btnSalvarTudo) {
+    btnSalvarTudo.addEventListener("click", salvarTodasConfiguracoes);
+}
+
+if (mediaSearch) {
+    mediaSearch.addEventListener("input", aplicarFiltrosMidia);
+}
+
+if (mediaStatusFilter) {
+    mediaStatusFilter.addEventListener("change", aplicarFiltrosMidia);
+}
+
+[mediaTypeFilter, mediaPeriodFilter, mediaPriorityFilter, mediaRepeatFilter]
+    .filter(Boolean)
+    .forEach((filtro) => {
+        filtro.addEventListener("change", aplicarFiltrosMidia);
+    });
+
+/*
+  Delegação de clique na lista de mídias.
+
+  Como os botões de subir/descer são criados dinamicamente,
+  ouvimos o clique no container principal.
+*/
+mediaList.addEventListener("click", (event) => {
+    const itemClicado = event.target.closest(".mediaItem");
+    const botaoSalvarDoItemClicado = itemClicado
+        ? itemClicado.querySelector(".mediaSaveButton")
+        : null;
+    const salvarEstavaOculto = Boolean(
+        botaoSalvarDoItemClicado &&
+        botaoSalvarDoItemClicado.classList.contains("hidden")
+    );
+    const limparCliqueNeutro = () => {
+        if (!itemClicado || !salvarEstavaOculto) return;
+
+        window.setTimeout(() => {
+            itemClicado.classList.remove("mediaItemChanged");
+            botaoSalvarDoItemClicado.classList.add("hidden");
+        }, 0);
+    };
+
+    if (event.target.closest(".mediaDragHandle")) {
+        limparCliqueNeutro();
+        return;
+    }
+
+    const botaoMover = event.target.closest(".btnMoveMedia");
+    const botaoExcluir = event.target.closest(".mediaDeleteButton");
+    const botaoSalvarItem = event.target.closest(".mediaSaveButton");
+    const botaoPrioridade = event.target.closest("[data-prioridade]");
+
+    if (botaoMover) {
+        const nomeArquivo = botaoMover.dataset.arquivo;
+        const direcao = botaoMover.dataset.direcao;
+
+        if (!nomeArquivo || !direcao) return;
+
+        moverMidia(nomeArquivo, direcao);
+        return;
+    }
+
+    if (botaoExcluir) {
+        excluirMidiaIndividual(botaoExcluir.dataset.arquivo);
+        return;
+    }
+
+    if (botaoSalvarItem) {
+        confirmarESalvarMidia(
+            botaoSalvarItem.closest(".mediaItem"),
+            "Deseja salvar as alterações desta mídia?"
+        );
+        return;
+    }
+
+    if (botaoPrioridade) {
+        const itemPrioridade = botaoPrioridade.closest(".mediaItem");
+        const selectPrioridade = itemPrioridade
+            ? itemPrioridade.querySelector(".mediaPriority")
+            : null;
+
+        if (!itemPrioridade || !selectPrioridade) return;
+
+        selectPrioridade.value = botaoPrioridade.dataset.prioridade;
+        itemPrioridade.querySelector(".mediaPriorityMenu").removeAttribute("open");
+        processarAlteracaoDeMidia(selectPrioridade);
+        return;
+    }
+
+    const item = event.target.closest(".mediaItem");
+    const checkbox = item ? item.querySelector(".mediaSelect") : null;
+
+    if (
+        !item ||
+        event.target.closest("input, select, textarea, button, a, summary, label, .mediaBadge, .mediaScheduleMenu, .mediaDetailsHover, .mediaStatusToggle, .mediaPreview, .mediaDragHandle")
+    ) {
+        return;
+    }
+
+    if (!checkbox) return;
+
+    if (event.target !== item && !event.target.closest(".mediaOrder")) {
+        return;
+    }
+
+    checkbox.checked = !checkbox.checked;
+    atualizarEstadoAcoesEmLote();
+    limparCliqueNeutro();
+});
+
+mediaList.addEventListener("dragstart", (event) => {
+    const item = event.target.closest(".mediaItem");
+
+    if (!item || event.target.closest("input, select, textarea, button")) {
+        event.preventDefault();
+        return;
+    }
+
+    const itens = Array.from(mediaList.querySelectorAll(".mediaItem"));
+
+    mediaArrastada = {
+        elemento: item,
+        arquivo: item.dataset.arquivo,
+        indiceInicial: itens.indexOf(item),
+        ultimoY: event.clientY
+    };
+
+    item.classList.add("mediaItemDragging");
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", item.dataset.arquivo || "");
+});
+
+mediaList.addEventListener("dragover", (event) => {
+    if (!mediaArrastada) return;
+
+    event.preventDefault();
+
+    const itemDepois = obterItemDepoisDoArraste(event.clientY);
+
+    if (itemDepois) {
+        mediaList.insertBefore(mediaArrastada.elemento, itemDepois);
+    } else {
+        mediaList.appendChild(mediaArrastada.elemento);
+    }
+
+    mediaArrastada.ultimoY = event.clientY;
+    atualizarNumerosDaPlaylist();
+});
+
+mediaList.addEventListener("drop", (event) => {
+    if (mediaArrastada) {
+        event.preventDefault();
+    }
+});
+
+mediaList.addEventListener("dragend", () => {
+    if (!mediaArrastada) return;
+
+    const { elemento, arquivo, indiceInicial } = mediaArrastada;
+    const itens = Array.from(mediaList.querySelectorAll(".mediaItem"));
+    const indiceFinal = itens.indexOf(elemento);
+
+    elemento.classList.remove("mediaItemDragging");
+    mediaArrastada = null;
+
+    if (indiceFinal >= 0 && indiceInicial !== indiceFinal) {
+        moverMidiaParaIndice(arquivo, indiceInicial, indiceFinal);
+    }
+});
+
+mediaList.addEventListener("mouseover", (event) => {
+    const preview = event.target.closest(".mediaPreviewVideo");
+
+    if (!preview || preview.dataset.previewing === "true") return;
+
+    const video = preview.querySelector("video");
+
+    if (!video) return;
+
+    preview.dataset.previewing = "true";
+    window.clearTimeout(Number(preview.dataset.previewTimer || 0));
+
+    try {
+        video.currentTime = 0;
+    } catch (erro) {
+        // Alguns navegadores bloqueiam seek antes do metadata; o play ainda funciona.
+    }
+
+    video.play().catch(() => { });
+
+    preview.dataset.previewTimer = String(window.setTimeout(() => {
+        video.pause();
+
+        try {
+            video.currentTime = 0;
+        } catch (erro) {
+            // Sem acao necessaria.
+        }
+
+        preview.dataset.previewing = "false";
+    }, 8000));
+});
+
+mediaList.addEventListener("mouseout", (event) => {
+    const preview = event.target.closest(".mediaPreviewVideo");
+
+    if (!preview || preview.contains(event.relatedTarget)) return;
+
+    const video = preview.querySelector("video");
+
+    window.clearTimeout(Number(preview.dataset.previewTimer || 0));
+    preview.dataset.previewing = "false";
+
+    if (!video) return;
+
+    video.pause();
+
+    try {
+        video.currentTime = 0;
+    } catch (erro) {
+        // Sem acao necessaria.
+    }
+});
+
+async function processarAlteracaoDeMidia(alvo) {
+    const mudouConfig =
+        alvo.classList.contains("mediaActive") ||
+        alvo.classList.contains("mediaDuration") ||
+        alvo.classList.contains("mediaPriority") ||
+        alvo.classList.contains("mediaRepeatEvery") ||
+        alvo.classList.contains("mediaStartDate") ||
+        alvo.classList.contains("mediaEndDate") ||
+        alvo.classList.contains("mediaIndefinite") ||
+        alvo.classList.contains("mediaTitleInput");
+
+    if (!mudouConfig) return;
+
+    const item = alvo.closest(".mediaItem");
+    const emModoLote = obterMidiasSelecionadas().length > 0;
+
+    if (alvo.classList.contains("mediaIndefinite")) {
+        atualizarCamposValidade(item);
+    }
+
+    if (alvo.classList.contains("mediaActive")) {
+        const statusToggle = alvo.closest(".mediaStatusToggle");
+        const statusText = statusToggle ? statusToggle.querySelector("span") : null;
+
+        if (statusToggle) {
+            statusToggle.classList.toggle("isActive", alvo.checked);
+            statusToggle.classList.toggle("isInactive", !alvo.checked);
+        }
+
+        if (statusText) {
+            statusText.textContent = alvo.checked ? "Ativo" : "Inativo";
+        }
+    }
+
+    if (item) {
+        item.classList.add("mediaItemChanged");
+    }
+
+    if (emModoLote) {
+        marcarAlteracoesPendentes();
+        return;
+    }
+
+    const botaoSalvar = item ? item.querySelector(".mediaSaveButton") : null;
+
+    if (botaoSalvar) {
+        botaoSalvar.classList.remove("hidden");
+    }
+}
+
+mediaList.addEventListener("change", (event) => {
+    const alvo = event.target;
+
+    if (alvo.classList.contains("mediaSelect")) {
+        atualizarEstadoAcoesEmLote();
+        return;
+    }
+
+    if (alvo.classList.contains("mediaTitleInput")) {
+        return;
+    }
+
+    processarAlteracaoDeMidia(alvo);
+});
+
+mediaList.addEventListener("focusin", (event) => {
+    const alvo = event.target;
+
+    if (
+        alvo.classList.contains("mediaStartDate") ||
+        alvo.classList.contains("mediaEndDate")
+    ) {
+        ativarPeriodoPorData(alvo);
+    }
+});
+
+mediaList.addEventListener("click", (event) => {
+    const alvo = event.target;
+
+    if (
+        alvo.classList.contains("mediaStartDate") ||
+        alvo.classList.contains("mediaEndDate")
+    ) {
+        ativarPeriodoPorData(alvo);
+    }
+});
+
+/*
+  Detecta digitação no nome amigável.
+ */
+mediaList.addEventListener("input", (event) => {
+    const alvo = event.target;
+
+    if (!alvo.classList.contains("mediaTitleInput")) return;
+
+    const item = alvo.closest(".mediaItem");
+
+    if (item) {
+        item.classList.add("mediaItemChanged");
+    }
+
+    if (obterMidiasSelecionadas().length) {
+        marcarAlteracoesPendentes();
+        return;
+    }
+
+    const botaoSalvar = item ? item.querySelector(".mediaSaveButton") : null;
+
+    if (botaoSalvar) {
+        botaoSalvar.classList.remove("hidden");
+    }
+});
+
+/* =========================================================
+   START DO ADMIN
+   ========================================================= */
+
+carregarUsuarioLogado();
+carregarMidias();
+carregarPlaylistAtual();
+carregarResumoAdmin();
+carregarUsuarioSessao();
+limparAlteracoesPendentes();

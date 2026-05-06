@@ -1,0 +1,37 @@
+# Dependências
+node_modules/
+
+# Ambiente / segredos
+.env
+
+# Dados vivos do sistema
+data/
+
+# Playlist gerada automaticamente
+playlist.json
+
+# Banco SQLite local
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# Backups automáticos
+backups/
+
+# Mídias enviadas
+midia/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Zips locais
+*.zip
+
+# Fontes locais / licenciadas
+*.ttf
+*.otf
