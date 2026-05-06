@@ -3439,3 +3439,798 @@ body::before {
         background: inherit;
     }
 }
+
+/* =========================================================
+   ÁREA DE USUÁRIOS DO SISTEMA
+   =========================================================
+   Estilos da seção de gerenciamento de usuários.
+
+   Esta área permite:
+   - listar usuários;
+   - criar novo usuário;
+   - editar usuário;
+   - ativar/desativar;
+   - resetar senha.
+
+   O visual segue o padrão dos cards administrativos
+   já usados no painel.
+   ========================================================= */
+
+.usersCard {
+    margin-top: 24px;
+}
+
+/* Ações no cabeçalho do card de usuários */
+.usersActions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Botão principal da seção */
+.primaryAction,
+.secondaryAction,
+.successAction,
+.warningAction,
+.dangerAction {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    border: none;
+    border-radius: 12px;
+
+    padding: 11px 14px;
+
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        filter 0.18s ease,
+        background 0.18s ease;
+}
+
+.primaryAction {
+    background: linear-gradient(135deg, #0f70c4, #084a83);
+    color: #ffffff;
+    box-shadow: 0 12px 28px rgba(15, 112, 196, 0.22);
+}
+
+.secondaryAction {
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #dbe7f3;
+}
+
+.successAction {
+    background: linear-gradient(135deg, #16a34a, #0f7a38);
+    color: #ffffff;
+    box-shadow: 0 12px 28px rgba(22, 163, 74, 0.20);
+}
+
+.warningAction {
+    background: #fffbeb;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+.dangerAction {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.primaryAction:hover,
+.secondaryAction:hover,
+.successAction:hover,
+.warningAction:hover,
+.dangerAction:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.02);
+}
+
+.primaryAction:disabled,
+.secondaryAction:disabled,
+.successAction:disabled,
+.warningAction:disabled,
+.dangerAction:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* =========================================================
+   FORMULÁRIO DE USUÁRIO
+   ========================================================= */
+
+.userFormPanel {
+    margin: 18px 0;
+
+    padding: 18px;
+
+    border: 1px solid #dbe7f3;
+    border-radius: 18px;
+
+    background:
+        linear-gradient(135deg, rgba(15, 112, 196, 0.05), rgba(31, 163, 68, 0.04)),
+        #ffffff;
+
+    box-shadow: 0 18px 46px rgba(17, 32, 51, 0.08);
+}
+
+.userFormPanel.hidden {
+    display: none;
+}
+
+.userFormHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    margin-bottom: 16px;
+}
+
+.userFormHeader h3 {
+    margin: 0;
+
+    color: #082f4f;
+
+    font-size: 18px;
+    font-weight: 950;
+}
+
+.iconButton {
+    width: 36px;
+    height: 36px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+    border-radius: 999px;
+
+    background: #f1f5f9;
+    color: #334155;
+
+    cursor: pointer;
+}
+
+.iconButton:hover {
+    background: #e2e8f0;
+}
+
+/* Grid do formulário */
+.userForm {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.userForm label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+
+    color: #19324d;
+
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.userForm input,
+.userForm select {
+    width: 100%;
+
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+
+    padding: 11px 12px;
+
+    background: #ffffff;
+    color: #0f172a;
+
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.userForm input:focus,
+.userForm select:focus {
+    outline: 3px solid rgba(15, 112, 196, 0.20);
+    border-color: #0f70c4;
+}
+
+.userActiveLabel {
+    justify-content: center;
+
+    min-height: 44px;
+
+    flex-direction: row !important;
+    align-items: center;
+
+    padding: 11px 12px;
+
+    border: 1px solid #dbe7f3;
+    border-radius: 12px;
+
+    background: #f8fafc;
+}
+
+.userActiveLabel input {
+    width: 17px;
+    height: 17px;
+}
+
+.userFormActions {
+    grid-column: 1 / -1;
+
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+
+    padding-top: 4px;
+}
+
+/* =========================================================
+   LISTA DE USUÁRIOS
+   ========================================================= */
+
+.usersList {
+    display: grid;
+    gap: 10px;
+
+    margin-top: 16px;
+}
+
+.userItem {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px;
+    align-items: center;
+
+    padding: 16px;
+
+    border: 1px solid #dbe7f3;
+    border-radius: 16px;
+
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(244, 248, 252, 0.94));
+
+    box-shadow: 0 14px 34px rgba(17, 32, 51, 0.06);
+}
+
+.userItemInactive {
+    opacity: 0.68;
+    background: #f8fafc;
+}
+
+.userInfo {
+    display: grid;
+    gap: 8px;
+}
+
+.userMainLine {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.userName {
+    color: #082f4f;
+
+    font-size: 16px;
+    font-weight: 950;
+}
+
+.userLogin {
+    color: #64748b;
+
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.userMeta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.userBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    padding: 6px 9px;
+
+    border-radius: 999px;
+
+    font-size: 11px;
+    font-weight: 950;
+    text-transform: uppercase;
+}
+
+.userBadge.role-superadmin {
+    background: #ede9fe;
+    color: #5b21b6;
+}
+
+.userBadge.role-admin {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.userBadge.role-editor {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.userBadge.role-viewer {
+    background: #f1f5f9;
+    color: #334155;
+}
+
+.userBadge.status-active {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.userBadge.status-inactive {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.userActions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.userActions button {
+    white-space: nowrap;
+}
+
+/* =========================================================
+   RESPONSIVO - USUÁRIOS
+   ========================================================= */
+
+@media (max-width: 900px) {
+    .userForm {
+        grid-template-columns: 1fr;
+    }
+
+    .userItem {
+        grid-template-columns: 1fr;
+    }
+
+    .userActions {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 640px) {
+    .usersActions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .primaryAction,
+    .secondaryAction,
+    .successAction,
+    .warningAction,
+    .dangerAction {
+        width: 100%;
+    }
+
+    .userFormActions {
+        justify-content: stretch;
+    }
+
+    .userFormActions button {
+        width: 100%;
+    }
+}
+
+/* =========================================================
+   AJUSTE DE ESPAÇAMENTO - ÁREA DE USUÁRIOS
+   =========================================================
+   Dá respiro visual entre a biblioteca de mídias e a área
+   de gerenciamento de usuários.
+   ========================================================= */
+
+.usersCard {
+    margin-top: 16px !important;
+}
+
+/*
+  Linha/respiração antes da seção de usuários.
+  Ajuda a separar visualmente da biblioteca de mídias.
+*/
+.usersCard::before {
+    content: "";
+
+    display: block;
+
+    width: 100%;
+    height: 1px;
+
+    margin-bottom: 22px;
+
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(15, 112, 196, 0.22),
+            rgba(31, 163, 68, 0.18),
+            transparent);
+}
+
+/* =========================================================
+   MODAIS DO SISTEMA
+   =========================================================
+   Usados para CRUDs pontuais:
+   - novo usuário;
+   - editar usuário;
+   - resetar senha;
+   - futuras secretarias/canais.
+   ========================================================= */
+
+body.modal-open {
+    overflow: hidden;
+}
+
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 24px;
+
+    background: rgba(8, 47, 79, 0.46);
+    backdrop-filter: blur(8px);
+}
+
+.modalOverlay.hidden {
+    display: none !important;
+}
+
+.modalCard {
+    width: min(720px, 100%);
+    max-height: calc(100vh - 48px);
+
+    overflow: auto;
+
+    border-radius: 24px;
+    border: 1px solid rgba(219, 231, 243, 0.95);
+
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(244, 248, 252, 0.98));
+
+    box-shadow:
+        0 28px 80px rgba(8, 47, 79, 0.28),
+        0 0 0 1px rgba(255, 255, 255, 0.65);
+
+    animation: modalEntrada 0.22s ease forwards;
+}
+
+.userModalCard {
+    padding: 22px;
+}
+
+.modalHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+
+    margin-bottom: 18px;
+}
+
+.modalHeader h3 {
+    margin: 4px 0 6px;
+
+    color: #082f4f;
+
+    font-size: 24px;
+    font-weight: 950;
+}
+
+.modalHeader p {
+    margin: 0;
+
+    color: #64748b;
+
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+@keyframes modalEntrada {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Fecha modal confortavelmente no mobile */
+@media (max-width: 640px) {
+    .modalOverlay {
+        align-items: flex-end;
+        padding: 12px;
+    }
+
+    .modalCard {
+        max-height: calc(100vh - 24px);
+        border-radius: 20px;
+    }
+
+    .userModalCard {
+        padding: 18px;
+    }
+}
+
+/* =========================================================
+   AJUSTES DO MODAL DE USUÁRIO
+   ========================================================= */
+
+/*
+  Campo de senha com botão de mostrar/ocultar.
+*/
+.userPasswordField {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.userPasswordField input {
+    padding-right: 50px !important;
+}
+
+.userPasswordField .btnTogglePassword {
+    position: absolute;
+    right: 10px;
+
+    width: 36px;
+    height: 36px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none;
+    border-radius: 12px;
+
+    background: transparent;
+    color: #334155;
+
+    cursor: pointer;
+}
+
+.userPasswordField .btnTogglePassword:hover {
+    background: rgba(15, 112, 196, 0.10);
+    color: #0f70c4;
+}
+
+/*
+  Texto auxiliar de campo.
+*/
+.fieldHint {
+    margin-top: -2px;
+
+    color: #64748b;
+
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.3;
+}
+
+.fieldHint.erro {
+    color: #991b1b;
+}
+
+.fieldHint.sucesso {
+    color: #166534;
+}
+
+/*
+  Validação visual dos campos.
+*/
+.userForm input.fieldInvalid {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14);
+}
+
+.userForm input.fieldValid {
+    border-color: #22c55e !important;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.14);
+}
+
+/*
+  Em alguns navegadores, o select nativo respeita melhor
+  o espaço lateral quando a aparência padrão é mantida.
+  Então não removemos totalmente o appearance por enquanto.
+*/
+#userRole {
+    min-height: 46px;
+}
+
+/* =========================================================
+   SELECT CUSTOMIZADO - MODAL DE USUÁRIO
+   =========================================================
+   Remove a seta nativa do navegador e usa uma seta própria,
+   com espaçamento controlado.
+   ========================================================= */
+
+.selectField {
+    position: relative;
+    width: 100%;
+}
+
+.selectField select {
+    width: 100%;
+
+    /*
+      Remove a aparência nativa do select.
+      Isso permite controlar a posição da seta.
+    */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+
+    padding-right: 58px !important;
+}
+
+.selectFieldIcon {
+    position: absolute;
+    top: 50%;
+    right: 22px;
+
+    transform: translateY(-50%);
+
+    color: #0f172a;
+
+    font-size: 14px;
+
+    pointer-events: none;
+}
+
+/*
+  Remove setinha antiga do Internet Explorer/Edge antigo.
+  Não atrapalha navegadores modernos.
+*/
+.selectField select::-ms-expand {
+    display: none;
+}
+
+/* =========================================================
+   ANIMAÇÃO DA SETA DO SELECT CUSTOMIZADO
+   ========================================================= */
+
+.selectFieldIcon {
+    transition: transform 0.18s ease;
+}
+
+.selectField.isOpen .selectFieldIcon {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+/* =========================================================
+   DROPDOWN - LISTA DE USUÁRIOS
+   =========================================================
+   A lista de usuários começa fechada por padrão,
+   igual à biblioteca de mídias.
+   ========================================================= */
+
+.usersDropdown {
+    margin-top: 18px;
+
+    border: 1px solid #dbe7f3;
+    border-radius: 18px;
+
+    background: rgba(255, 255, 255, 0.78);
+
+    overflow: hidden;
+
+    box-shadow: 0 14px 34px rgba(17, 32, 51, 0.05);
+}
+
+.usersDropdownSummary {
+    min-height: 76px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    padding: 16px 18px;
+
+    cursor: pointer;
+    list-style: none;
+}
+
+.usersDropdownSummary::-webkit-details-marker {
+    display: none;
+}
+
+.usersDropdownSummary strong {
+    display: block;
+
+    color: #082f4f;
+
+    font-size: 16px;
+    font-weight: 950;
+}
+
+.usersDropdownSummary span {
+    display: block;
+
+    margin-top: 4px;
+
+    color: #64748b;
+
+    font-size: 13px;
+    font-weight: 850;
+}
+
+.usersDropdown .dropdownToggleIcon {
+    width: 42px;
+    height: 42px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 999px;
+
+    background: #eff6ff;
+    color: #0f70c4;
+
+    font-size: 16px;
+
+    transition:
+        transform 0.18s ease,
+        background 0.18s ease;
+}
+
+.usersDropdown[open] .dropdownToggleIcon {
+    transform: rotate(180deg);
+    background: #dbeafe;
+}
+
+.usersDropdown .usersList {
+    padding: 0 18px 18px;
+}
+
+.usersDropdown[open] .usersList {
+    animation: usersDropdownEntrada 0.22s ease;
+}
+
+@keyframes usersDropdownEntrada {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

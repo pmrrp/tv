@@ -70,6 +70,43 @@ const adminUserName = document.getElementById("adminUserName");
 const toastContainer = document.getElementById("toastContainer");
 
 /* =========================================================
+   ELEMENTOS - USUÁRIOS
+   ========================================================= */
+
+const usersCard = document.getElementById("usersCard");
+const usersList = document.getElementById("usersList");
+const usersMessage = document.getElementById("usersMessage");
+
+const btnNewUser = document.getElementById("btnNewUser");
+const btnReloadUsers = document.getElementById("btnReloadUsers");
+
+const userModal = document.getElementById("userModal");
+const userForm = document.getElementById("userForm");
+const userFormTitle = document.getElementById("userFormTitle");
+const btnCancelUserForm = document.getElementById("btnCancelUserForm");
+
+const userIdInput = document.getElementById("userId");
+const userNameInput = document.getElementById("userName");
+const userEmailInput = document.getElementById("userEmail");
+const userPasswordInput = document.getElementById("userPassword");
+const userPasswordLabel = document.getElementById("userPasswordLabel");
+const userRoleInput = document.getElementById("userRole");
+const userActiveInput = document.getElementById("userActive");
+
+const btnToggleUserPassword = document.getElementById("btnToggleUserPassword");
+const btnToggleUserPasswordIcon = btnToggleUserPassword
+    ? btnToggleUserPassword.querySelector("i")
+    : null;
+
+const userPasswordHint = document.getElementById("userPasswordHint");
+
+const userRoleField = userRoleInput
+    ? userRoleInput.closest(".selectField")
+    : null;
+
+const usersDropdown = document.getElementById("usersDropdown");
+const usersDropdownCount = document.getElementById("usersDropdownCount");
+/* =========================================================
    USUÁRIO LOGADO - UTILITÁRIO SEGURO
    ========================================================= */
 
@@ -139,6 +176,649 @@ async function fetchComSessao(url, opcoes = {}) {
     }
 
     return resposta;
+}
+
+/* =========================================================
+   DROPDOWNS - SCROLL AUTOMÁTICO COM RESPIRO
+   ========================================================= */
+
+/**
+ * Rola até um elemento deixando uma margem superior.
+ */
+function rolarAteElementoComOffset(elemento, offset = 24) {
+    if (!elemento) return;
+
+    const posicao =
+        elemento.getBoundingClientRect().top + window.scrollY - offset;
+
+    window.scrollTo({
+        top: posicao,
+        behavior: "smooth"
+    });
+}
+
+/**
+ * Ao abrir um dropdown/details, rola a página suavemente
+ * até a seção aberta.
+ */
+function configurarScrollAoAbrirDropdowns() {
+    const dropdowns = document.querySelectorAll(
+        ".libraryDropdown, .usersDropdown"
+    );
+
+    dropdowns.forEach((dropdown) => {
+        dropdown.addEventListener("toggle", () => {
+            if (!dropdown.open) return;
+
+            setTimeout(() => {
+                rolarAteElementoComOffset(dropdown, 24);
+            }, 120);
+        });
+    });
+}
+
+/* =========================================================
+   USUÁRIOS - HELPERS VISUAIS
+   ========================================================= */
+
+/**
+ * Retorna um rótulo amigável para cada perfil.
+ */
+function obterLabelRole(role) {
+    const labels = {
+        superadmin: "Superadmin",
+        admin: "Administrador",
+        editor: "Editor",
+        viewer: "Visualizador"
+    };
+
+    return labels[role] || "Usuário";
+}
+
+/**
+ * Retorna um ícone Font Awesome para cada perfil.
+ */
+function obterIconeRole(role) {
+    const icones = {
+        superadmin: "fa-user-shield",
+        admin: "fa-user-gear",
+        editor: "fa-pen-to-square",
+        viewer: "fa-eye"
+    };
+
+    return icones[role] || "fa-user";
+}
+
+/**
+ * Mostra mensagem simples dentro da área de usuários.
+ */
+function mostrarMensagemUsuarios(texto, tipo = "info") {
+    mostrarToast(texto, tipo);
+
+    if (!usersMessage) return;
+
+    usersMessage.textContent = texto;
+    usersMessage.className = `uploadMessage ${tipo} hidden`;
+}
+
+/**
+ * Renderiza estado vazio da lista de usuários.
+ */
+function renderizarUsuariosVazio() {
+    if (!usersList) return;
+
+    usersList.innerHTML = `
+        <div class="emptyState">
+            Nenhum usuário cadastrado.
+        </div>
+    `;
+}
+
+/* =========================================================
+   USUÁRIOS - RENDERIZAÇÃO
+   ========================================================= */
+
+/**
+ * Renderiza a lista de usuários retornada pela API.
+ */
+function renderizarUsuarios(usuarios) {
+    if (!usersList) return;
+
+    const totalUsuarios = Array.isArray(usuarios) ? usuarios.length : 0;
+    const totalAtivos = Array.isArray(usuarios)
+        ? usuarios.filter((usuario) => Number(usuario.ativo) === 1).length
+        : 0;
+
+    if (usersDropdownCount) {
+        usersDropdownCount.textContent =
+            `${totalUsuarios} usuário(s) • ${totalAtivos} ativo(s)`;
+    }
+
+    usersList.innerHTML = "";
+
+    if (!Array.isArray(usuarios) || usuarios.length === 0) {
+        renderizarUsuariosVazio();
+        return;
+    }
+
+    usuarios.forEach((usuario) => {
+        const item = document.createElement("div");
+
+        item.className = [
+            "userItem",
+            Number(usuario.ativo) === 1 ? "" : "userItemInactive"
+        ].filter(Boolean).join(" ");
+
+        item.dataset.userId = usuario.id;
+        item.dataset.role = usuario.role;
+        item.dataset.active = Number(usuario.ativo) === 1 ? "true" : "false";
+
+        const nome = escaparHtml(usuario.nome || "Usuário");
+        const email = escaparHtml(usuario.email || "");
+        const role = escaparHtml(usuario.role || "viewer");
+        const roleLabel = obterLabelRole(usuario.role);
+        const roleIcon = obterIconeRole(usuario.role);
+
+        const ativo = Number(usuario.ativo) === 1;
+        const statusLabel = ativo ? "Ativo" : "Inativo";
+        const statusClass = ativo ? "status-active" : "status-inactive";
+
+        const secretariaNome = usuario.secretariaNome
+            ? escaparHtml(usuario.secretariaNome)
+            : "Sem secretaria vinculada";
+
+        item.innerHTML = `
+            <div class="userInfo">
+                <div class="userMainLine">
+                    <strong class="userName">${nome}</strong>
+                    <span class="userLogin">${email}</span>
+                </div>
+
+                <div class="userMeta">
+                    <span class="userBadge role-${role}">
+                        <i class="fa-solid ${roleIcon}" aria-hidden="true"></i>
+                        ${roleLabel}
+                    </span>
+
+                    <span class="userBadge ${statusClass}">
+                        <i class="fa-solid ${ativo ? "fa-circle-check" : "fa-circle-xmark"}" aria-hidden="true"></i>
+                        ${statusLabel}
+                    </span>
+
+                    <span class="userBadge role-viewer">
+                        <i class="fa-solid fa-building" aria-hidden="true"></i>
+                        ${secretariaNome}
+                    </span>
+                </div>
+            </div>
+
+            <div class="userActions">
+                <button
+                    class="secondaryAction btnEditUser"
+                    type="button"
+                    data-user-id="${usuario.id}"
+                >
+                    <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                    Editar
+                </button>
+
+                <button
+                    class="warningAction btnResetUserPassword"
+                    type="button"
+                    data-user-id="${usuario.id}"
+                    data-user-name="${nome}"
+                >
+                    <i class="fa-solid fa-key" aria-hidden="true"></i>
+                    Resetar Senha
+                </button>
+
+                <button
+                    class="${ativo ? "dangerAction" : "successAction"} btnToggleUserStatus"
+                    type="button"
+                    data-user-id="${usuario.id}"
+                    data-active="${ativo ? "true" : "false"}"
+                >
+                    <i class="fa-solid ${ativo ? "fa-user-slash" : "fa-user-check"}" aria-hidden="true"></i>
+                    ${ativo ? "Desativar" : "Ativar"}
+                </button>
+            </div>
+        `;
+
+        usersList.appendChild(item);
+    });
+}
+
+/* =========================================================
+   USUÁRIOS - API
+   ========================================================= */
+
+/**
+ * Carrega os usuários cadastrados no sistema.
+ */
+async function carregarUsuarios() {
+    if (!usersList) return;
+
+    if (usersDropdownCount) {
+        usersDropdownCount.textContent = "Carregando usuários...";
+    }
+
+    usersList.innerHTML = `
+    <div class="message">
+        Carregando usuários...
+    </div>
+    `;
+
+    if (btnReloadUsers) {
+        btnReloadUsers.disabled = true;
+    }
+
+    try {
+        const resposta = await fetchComSessao("/api/admin/users");
+
+        const dados = await resposta.json();
+
+        if (!resposta.ok || dados.erro) {
+            throw new Error(dados.mensagem || "Erro ao carregar usuários.");
+        }
+
+        renderizarUsuarios(dados.usuarios || []);
+    } catch (erro) {
+        console.error("Erro ao carregar usuários:", erro);
+
+        usersList.innerHTML = `
+            <div class="emptyState">
+                Não foi possível carregar os usuários.
+            </div>
+        `;
+
+        mostrarMensagemUsuarios(
+            erro.message || "Erro ao carregar usuários.",
+            "erro"
+        );
+    } finally {
+        if (btnReloadUsers) {
+            btnReloadUsers.disabled = false;
+        }
+    }
+}
+
+/* =========================================================
+   USUÁRIOS - FORMULÁRIO
+   ========================================================= */
+
+/**
+ * Limpa todos os campos do formulário de usuário.
+ */
+function limparFormularioUsuario() {
+    if (userIdInput) userIdInput.value = "";
+    if (userNameInput) userNameInput.value = "";
+    if (userEmailInput) userEmailInput.value = "";
+    if (userPasswordInput) {
+        userPasswordInput.value = "";
+        userPasswordInput.type = "password";
+        userPasswordInput.classList.remove("fieldInvalid");
+        userPasswordInput.classList.remove("fieldValid");
+    }
+
+    if (btnToggleUserPasswordIcon) {
+        btnToggleUserPasswordIcon.className = "fa-solid fa-eye";
+    }
+
+    if (btnToggleUserPassword) {
+        btnToggleUserPassword.setAttribute("aria-label", "Mostrar senha");
+    }
+
+    if (userPasswordHint) {
+        userPasswordHint.classList.remove("erro");
+        userPasswordHint.classList.remove("sucesso");
+        userPasswordHint.textContent = "A senha deve ter pelo menos 6 caracteres.";
+    }
+
+    if (userRoleInput) userRoleInput.value = "viewer";
+    if (userActiveInput) {
+        if (userActiveInput.type === "checkbox") {
+            userActiveInput.checked = true;
+        } else {
+            userActiveInput.value = "true";
+        }
+    }
+}
+
+/* =========================================================
+   USUÁRIOS - MODAL DO FORMULÁRIO
+   ========================================================= */
+
+/**
+ * Limpa todos os campos do formulário de usuário.
+ */
+function limparFormularioUsuario() {
+    if (userIdInput) userIdInput.value = "";
+    if (userNameInput) userNameInput.value = "";
+    if (userEmailInput) userEmailInput.value = "";
+    if (userPasswordInput) userPasswordInput.value = "";
+    if (userRoleInput) userRoleInput.value = "viewer";
+    if (userActiveInput) userActiveInput.checked = true;
+}
+
+/**
+ * Abre o modal de usuário.
+ */
+function abrirModalUsuario() {
+    if (!userModal) return;
+
+    userModal.classList.remove("hidden");
+    userModal.setAttribute("aria-hidden", "false");
+
+    document.body.classList.add("modal-open");
+}
+
+/**
+ * Fecha o modal de usuário.
+ */
+function fecharModalUsuario() {
+    if (!userModal) return;
+
+    userModal.classList.add("hidden");
+    userModal.setAttribute("aria-hidden", "true");
+
+    document.body.classList.remove("modal-open");
+}
+
+/**
+ * Abre o formulário no modo "novo usuário".
+ */
+function abrirFormularioNovoUsuario() {
+    limparFormularioUsuario();
+
+    if (userFormTitle) {
+        userFormTitle.textContent = "Novo usuário";
+    }
+
+    /*
+      Para criação de usuário, a senha inicial é obrigatória.
+    */
+    if (userPasswordLabel) {
+        userPasswordLabel.classList.remove("hidden");
+    }
+
+    if (userPasswordInput) {
+        userPasswordInput.required = true;
+        userPasswordInput.placeholder = "Mínimo 6 caracteres";
+    }
+
+    abrirModalUsuario();
+
+    setTimeout(() => {
+        if (userNameInput) userNameInput.focus();
+    }, 180);
+}
+
+/**
+ * Fecha o formulário de usuário.
+ */
+function fecharFormularioUsuario() {
+    limparFormularioUsuario();
+    fecharModalUsuario();
+}
+
+/* =========================================================
+   SELECT CUSTOMIZADO - PERFIL DO USUÁRIO
+   ========================================================= */
+
+/**
+ * Controla a animação da setinha do select de perfil.
+ *
+ * Observação:
+ * o navegador não dá um evento perfeito para "select abriu/fechou",
+ * então usamos uma aproximação visual:
+ * - pointerdown/click: vira a seta;
+ * - change/blur/Escape: volta a seta.
+ */
+function abrirIndicadorSelectPerfil() {
+    if (!userRoleField) return;
+
+    userRoleField.classList.add("isOpen");
+}
+
+function fecharIndicadorSelectPerfil() {
+    if (!userRoleField) return;
+
+    userRoleField.classList.remove("isOpen");
+}
+
+/* =========================================================
+   USUÁRIOS - SENHA DO MODAL
+   ========================================================= */
+
+/**
+ * Alterna a visibilidade da senha no modal de usuário.
+ */
+function alternarVisibilidadeSenhaUsuario() {
+    if (!userPasswordInput || !btnToggleUserPassword || !btnToggleUserPasswordIcon) return;
+
+    const senhaEstaOculta = userPasswordInput.type === "password";
+
+    userPasswordInput.type = senhaEstaOculta ? "text" : "password";
+
+    btnToggleUserPasswordIcon.className = senhaEstaOculta
+        ? "fa-solid fa-eye-slash"
+        : "fa-solid fa-eye";
+
+    btnToggleUserPassword.setAttribute(
+        "aria-label",
+        senhaEstaOculta ? "Ocultar senha" : "Mostrar senha"
+    );
+}
+
+/**
+ * Valida visualmente o campo de senha do modal.
+ *
+ * No modo novo usuário, a senha é obrigatória.
+ * No modo edição, a senha não será usada aqui, porque resetar senha
+ * terá modal próprio depois.
+ */
+function validarSenhaUsuarioVisualmente() {
+    if (!userPasswordInput || !userPasswordHint) return true;
+
+    const senha = userPasswordInput.value;
+    const senhaValida = senha.length >= 6;
+
+    /*
+      Se o campo não for obrigatório e estiver vazio,
+      não marcamos como erro.
+    */
+    if (!userPasswordInput.required && senha.length === 0) {
+        userPasswordInput.classList.remove("fieldInvalid");
+        userPasswordInput.classList.remove("fieldValid");
+        userPasswordHint.classList.remove("erro");
+        userPasswordHint.classList.remove("sucesso");
+        userPasswordHint.textContent = "Deixe em branco para não alterar a senha.";
+        return true;
+    }
+
+    if (senhaValida) {
+        userPasswordInput.classList.remove("fieldInvalid");
+        userPasswordInput.classList.add("fieldValid");
+        userPasswordHint.classList.remove("erro");
+        userPasswordHint.classList.add("sucesso");
+        userPasswordHint.textContent = "Senha válida.";
+        return true;
+    }
+
+    userPasswordInput.classList.remove("fieldValid");
+    userPasswordInput.classList.add("fieldInvalid");
+    userPasswordHint.classList.remove("sucesso");
+    userPasswordHint.classList.add("erro");
+    userPasswordHint.textContent = "A senha precisa ter pelo menos 6 caracteres.";
+    return false;
+}
+
+/* =========================================================
+   USUÁRIOS - COLETA DE DADOS DO FORMULÁRIO
+   ========================================================= */
+
+/**
+ * Coleta os dados preenchidos no modal de usuário.
+ */
+function coletarDadosFormularioUsuario() {
+    const id = userIdInput ? userIdInput.value.trim() : "";
+
+    const nome = userNameInput ? userNameInput.value.trim() : "";
+    const email = userEmailInput ? userEmailInput.value.trim().toLowerCase() : "";
+    const senha = userPasswordInput ? userPasswordInput.value : "";
+    const role = userRoleInput ? userRoleInput.value : "viewer";
+
+    /*
+      No modo "novo usuário", removemos o checkbox visual de ativo
+      e deixamos o hidden sempre true.
+    */
+    const ativo = userActiveInput
+        ? userActiveInput.type === "checkbox"
+            ? userActiveInput.checked
+            : userActiveInput.value !== "false"
+        : true;
+
+    return {
+        id,
+        nome,
+        email,
+        senha,
+        role,
+        ativo,
+        secretariaId: null
+    };
+}
+
+/* =========================================================
+   USUÁRIOS - VALIDAÇÃO DO FORMULÁRIO
+   ========================================================= */
+
+/**
+ * Valida os campos antes de enviar para a API.
+ */
+function validarFormularioUsuario(dados) {
+    if (!dados.nome) {
+        mostrarToast("Informe o nome do usuário.", "erro");
+        if (userNameInput) userNameInput.focus();
+        return false;
+    }
+
+    if (!dados.email) {
+        mostrarToast("Informe o e-mail/login de acesso.", "erro");
+        if (userEmailInput) userEmailInput.focus();
+        return false;
+    }
+
+    /*
+      Se for novo usuário, senha é obrigatória.
+      Se for edição, senha não entra aqui.
+    */
+    const criandoNovoUsuario = !dados.id;
+
+    if (criandoNovoUsuario) {
+        if (!dados.senha || dados.senha.length < 6) {
+            mostrarToast("Informe uma senha com pelo menos 6 caracteres.", "erro");
+
+            if (userPasswordInput) {
+                userPasswordInput.focus();
+                validarSenhaUsuarioVisualmente();
+            }
+
+            return false;
+        }
+    }
+
+    const rolesPermitidas = ["superadmin", "admin", "editor", "viewer"];
+
+    if (!rolesPermitidas.includes(dados.role)) {
+        mostrarToast("Perfil de usuário inválido.", "erro");
+        return false;
+    }
+
+    return true;
+}
+
+/* =========================================================
+   USUÁRIOS - SALVAR
+   ========================================================= */
+
+/**
+ * Salva usuário.
+ *
+ * Por enquanto:
+ * - se não tiver ID, cria novo usuário via POST.
+ *
+ * Depois vamos usar a mesma função para editar via PUT.
+ */
+async function salvarUsuarioPeloFormulario(event) {
+    event.preventDefault();
+
+    const dados = coletarDadosFormularioUsuario();
+
+    if (!validarFormularioUsuario(dados)) {
+        return;
+    }
+
+    const criandoNovoUsuario = !dados.id;
+
+    const payload = {
+        nome: dados.nome,
+        email: dados.email,
+        role: dados.role,
+        ativo: dados.ativo,
+        secretariaId: dados.secretariaId
+    };
+
+    if (criandoNovoUsuario) {
+        payload.senha = dados.senha;
+    }
+
+    const btnSaveUser = document.getElementById("btnSaveUser");
+    const textoOriginalBotao = btnSaveUser ? btnSaveUser.innerHTML : "";
+
+    if (btnSaveUser) {
+        btnSaveUser.disabled = true;
+        btnSaveUser.innerHTML = `
+            <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+            Salvando...
+        `;
+    }
+
+    try {
+        const resposta = await fetchComSessao("/api/admin/users", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const resultado = await resposta.json();
+
+        if (!resposta.ok || resultado.erro) {
+            throw new Error(resultado.mensagem || "Erro ao salvar usuário.");
+        }
+
+        mostrarToast("Usuário criado com sucesso.", "sucesso");
+
+        fecharFormularioUsuario();
+
+        await carregarUsuarios();
+        await carregarResumoAdmin();
+
+    } catch (erro) {
+        console.error("Erro ao salvar usuário:", erro);
+
+        mostrarToast(
+            erro.message || "Erro ao salvar usuário.",
+            "erro"
+        );
+    } finally {
+        if (btnSaveUser) {
+            btnSaveUser.disabled = false;
+            btnSaveUser.innerHTML = textoOriginalBotao;
+        }
+    }
 }
 
 /* =========================================================
@@ -2092,6 +2772,80 @@ async function sairDoAdmin() {
    EVENTOS
    ========================================================= */
 
+/* =========================================================
+   EVENTOS - USUÁRIOS
+   ========================================================= */
+
+if (btnReloadUsers) {
+    btnReloadUsers.addEventListener("click", carregarUsuarios);
+}
+
+/*
+  Abre o modal de novo usuário.
+*/
+if (btnNewUser) {
+    btnNewUser.addEventListener("click", abrirFormularioNovoUsuario);
+}
+
+/*
+  Fecha o modal pelo botão X.
+*/
+if (btnCancelUserForm) {
+    btnCancelUserForm.addEventListener("click", fecharFormularioUsuario);
+}
+
+/*
+  Fecha o modal ao clicar fora do card.
+*/
+if (userModal) {
+    userModal.addEventListener("click", (event) => {
+        if (event.target === userModal) {
+            fecharFormularioUsuario();
+        }
+    });
+}
+
+/*
+  Fecha o modal com ESC.
+*/
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && userModal && !userModal.classList.contains("hidden")) {
+        fecharFormularioUsuario();
+    }
+});
+
+if (btnToggleUserPassword) {
+    btnToggleUserPassword.addEventListener("click", alternarVisibilidadeSenhaUsuario);
+}
+
+if (userPasswordInput) {
+    userPasswordInput.addEventListener("input", validarSenhaUsuarioVisualmente);
+}
+
+if (userRoleInput) {
+    userRoleInput.addEventListener("pointerdown", () => {
+        if (userRoleField && userRoleField.classList.contains("isOpen")) {
+            fecharIndicadorSelectPerfil();
+        } else {
+            abrirIndicadorSelectPerfil();
+        }
+    });
+
+    userRoleInput.addEventListener("change", fecharIndicadorSelectPerfil);
+    userRoleInput.addEventListener("blur", fecharIndicadorSelectPerfil);
+}
+
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+        fecharIndicadorSelectPerfil();
+    }
+});
+
+if (userForm) {
+    userForm.addEventListener("submit", salvarUsuarioPeloFormulario);
+}
+
+
 if (btnReload) {
     btnReload.addEventListener("click", carregarMidias);
 }
@@ -2482,8 +3236,9 @@ mediaList.addEventListener("input", (event) => {
    ========================================================= */
 
 carregarUsuarioLogado();
+carregarResumoAdmin();
 carregarMidias();
 carregarPlaylistAtual();
-carregarResumoAdmin();
-carregarUsuarioSessao();
+carregarUsuarios();
 limparAlteracoesPendentes();
+configurarScrollAoAbrirDropdowns();

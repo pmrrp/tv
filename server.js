@@ -2042,6 +2042,631 @@ setInterval(() => {
     }
 }, INTERVALO_PUBLICACAO_AUTOMATICA_MS);
 
+/* =========================================================
+   API ADMIN: LISTAR USUÁRIOS
+   =========================================================
+   Lista os usuários cadastrados no banco SQLite.
+
+   Segurança:
+   - exige login;
+   - exige perfil administrativo;
+   - não retorna senha nem senha_hash.
+   ========================================================= */
+
+app.get("/api/admin/users", exigirLogin, exigirAdmin, (req, res) => {
+    try {
+        const usuarios = db.prepare(`
+            SELECT
+                users.id,
+                users.nome,
+                users.email,
+                users.role,
+                users.secretaria_id AS secretariaId,
+                users.ativo,
+                users.criado_em AS criadoEm,
+                users.atualizado_em AS atualizadoEm,
+                secretarias.nome AS secretariaNome
+            FROM users
+            LEFT JOIN secretarias
+                ON secretarias.id = users.secretaria_id
+            ORDER BY users.id ASC
+        `).all();
+
+        res.json({
+            sucesso: true,
+            total: usuarios.length,
+            usuarios
+        });
+    } catch (erro) {
+        console.error("Erro ao listar usuários:", erro);
+
+        res.status(500).json({
+            erro: true,
+            mensagem: "Erro ao listar usuários."
+        });
+    }
+});
+
+/* =========================================================
+   API ADMIN: CRIAR USUÁRIO
+   =========================================================
+   Cria um novo usuário administrativo no sistema.
+
+   Segurança:
+   - exige login;
+   - exige perfil administrativo;
+   - salva senha com hash bcrypt;
+   - não retorna senha nem senha_hash na resposta.
+   ========================================================= */
+
+app.post("/api/admin/users", exigirLogin, exigirAdmin, (req, res) => {
+    try {
+        const nome = String(req.body.nome || "").trim();
+        const email = String(req.body.email || "").trim().toLowerCase();
+        const senha = String(req.body.senha || "");
+        const role = String(req.body.role || "viewer").trim().toLowerCase();
+
+        const secretariaIdBruto = req.body.secretariaId ?? req.body.secretaria_id ?? null;
+
+        const secretariaId = secretariaIdBruto
+            ? Number(secretariaIdBruto)
+            : null;
+
+        const ativo = req.body.ativo === false ? 0 : 1;
+
+        /*
+          Roles permitidas neste primeiro momento.
+        */
+        const rolesPermitidas = ["superadmin", "admin", "editor", "viewer"];
+
+        if (!nome) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Informe o nome do usuário."
+            });
+        }
+
+        if (!email) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Informe o usuário/e-mail."
+            });
+        }
+
+        if (!senha || senha.length < 6) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Informe uma senha com pelo menos 6 caracteres."
+            });
+        }
+
+        if (!rolesPermitidas.includes(role)) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Perfil de usuário inválido."
+            });
+        }
+
+        if (secretariaId !== null && (!Number.isInteger(secretariaId) || secretariaId <= 0)) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Secretaria inválida."
+            });
+        }
+
+        /*
+          Evita usuário/e-mail duplicado.
+        */
+        const usuarioExistente = db.prepare(`
+            SELECT id
+            FROM users
+            WHERE LOWER(email) = ?
+            LIMIT 1
+        `).get(email);
+
+        if (usuarioExistente) {
+            return res.status(409).json({
+                erro: true,
+                mensagem: "Já existe um usuário com este login/e-mail."
+            });
+        }
+
+        /*
+          Se secretariaId foi enviada, verifica se ela existe.
+          Por enquanto provavelmente será null, mas já deixamos pronto.
+        */
+        if (secretariaId !== null) {
+            const secretariaExiste = db.prepare(`
+                SELECT id
+                FROM secretarias
+                WHERE id = ?
+                LIMIT 1
+            `).get(secretariaId);
+
+            if (!secretariaExiste) {
+                return res.status(400).json({
+                    erro: true,
+                    mensagem: "Secretaria informada não existe."
+                });
+            }
+        }
+
+        const senhaHash = bcrypt.hashSync(senha, 10);
+        const agora = new Date().toISOString();
+
+        const resultado = db.prepare(`
+            INSERT INTO users (
+                nome,
+                email,
+                senha_hash,
+                role,
+                secretaria_id,
+                ativo,
+                criado_em,
+                atualizado_em
+            ) VALUES (
+                @nome,
+                @email,
+                @senha_hash,
+                @role,
+                @secretaria_id,
+                @ativo,
+                @criado_em,
+                @atualizado_em
+            )
+        `).run({
+            nome,
+            email,
+            senha_hash: senhaHash,
+            role,
+            secretaria_id: secretariaId,
+            ativo,
+            criado_em: agora,
+            atualizado_em: agora
+        });
+
+        const usuarioCriado = db.prepare(`
+            SELECT
+                id,
+                nome,
+                email,
+                role,
+                secretaria_id AS secretariaId,
+                ativo,
+                criado_em AS criadoEm,
+                atualizado_em AS atualizadoEm
+            FROM users
+            WHERE id = ?
+        `).get(resultado.lastInsertRowid);
+
+        res.status(201).json({
+            sucesso: true,
+            mensagem: "Usuário criado com sucesso.",
+            usuario: usuarioCriado
+        });
+    } catch (erro) {
+        console.error("Erro ao criar usuário:", erro);
+
+        res.status(500).json({
+            erro: true,
+            mensagem: "Erro ao criar usuário."
+        });
+    }
+});
+
+/* =========================================================
+   API ADMIN: EDITAR USUÁRIO
+   =========================================================
+   Atualiza dados básicos de um usuário.
+
+   Esta rota NÃO altera senha.
+   Para senha, usaremos uma rota separada de reset.
+
+   Segurança:
+   - exige login;
+   - exige perfil administrativo;
+   - não permite remover o próprio superadmin de forma perigosa.
+   ========================================================= */
+
+app.put("/api/admin/users/:id", exigirLogin, exigirAdmin, (req, res) => {
+    try {
+        const id = Number(req.params.id);
+
+        if (!Number.isInteger(id) || id <= 0) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "ID de usuário inválido."
+            });
+        }
+
+        const usuarioAtual = db.prepare(`
+            SELECT
+                id,
+                nome,
+                email,
+                role,
+                secretaria_id,
+                ativo
+            FROM users
+            WHERE id = ?
+            LIMIT 1
+        `).get(id);
+
+        if (!usuarioAtual) {
+            return res.status(404).json({
+                erro: true,
+                mensagem: "Usuário não encontrado."
+            });
+        }
+
+        const nome = String(req.body.nome || "").trim();
+        const email = String(req.body.email || "").trim().toLowerCase();
+        const role = String(req.body.role || "viewer").trim().toLowerCase();
+
+        const secretariaIdBruto = req.body.secretariaId ?? req.body.secretaria_id ?? null;
+
+        const secretariaId = secretariaIdBruto
+            ? Number(secretariaIdBruto)
+            : null;
+
+        const ativo = req.body.ativo === false ? 0 : 1;
+
+        const rolesPermitidas = ["superadmin", "admin", "editor", "viewer"];
+
+        if (!nome) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Informe o nome do usuário."
+            });
+        }
+
+        if (!email) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Informe o usuário/e-mail."
+            });
+        }
+
+        if (!rolesPermitidas.includes(role)) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Perfil de usuário inválido."
+            });
+        }
+
+        if (secretariaId !== null && (!Number.isInteger(secretariaId) || secretariaId <= 0)) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Secretaria inválida."
+            });
+        }
+
+        /*
+          Evita duplicar login/e-mail em outro usuário.
+        */
+        const usuarioMesmoEmail = db.prepare(`
+            SELECT id
+            FROM users
+            WHERE LOWER(email) = ?
+              AND id <> ?
+            LIMIT 1
+        `).get(email, id);
+
+        if (usuarioMesmoEmail) {
+            return res.status(409).json({
+                erro: true,
+                mensagem: "Já existe outro usuário com este login/e-mail."
+            });
+        }
+
+        /*
+          Se secretariaId foi enviada, verifica se ela existe.
+        */
+        if (secretariaId !== null) {
+            const secretariaExiste = db.prepare(`
+                SELECT id
+                FROM secretarias
+                WHERE id = ?
+                LIMIT 1
+            `).get(secretariaId);
+
+            if (!secretariaExiste) {
+                return res.status(400).json({
+                    erro: true,
+                    mensagem: "Secretaria informada não existe."
+                });
+            }
+        }
+
+        /*
+          Proteção simples:
+          o usuário logado não pode se desativar.
+          Isso evita você se trancar para fora do sistema.
+        */
+        const usuarioLogado = obterUsuarioDaSessao(req);
+
+        if (usuarioLogado && Number(usuarioLogado.id) === id && ativo === 0) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Você não pode desativar o próprio usuário logado."
+            });
+        }
+
+        /*
+          Proteção simples:
+          o usuário logado não pode tirar o próprio superadmin.
+        */
+        if (
+            usuarioLogado &&
+            Number(usuarioLogado.id) === id &&
+            usuarioAtual.role === "superadmin" &&
+            role !== "superadmin"
+        ) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Você não pode remover o próprio perfil superadmin."
+            });
+        }
+
+        const agora = new Date().toISOString();
+
+        db.prepare(`
+            UPDATE users
+            SET
+                nome = @nome,
+                email = @email,
+                role = @role,
+                secretaria_id = @secretaria_id,
+                ativo = @ativo,
+                atualizado_em = @atualizado_em
+            WHERE id = @id
+        `).run({
+            id,
+            nome,
+            email,
+            role,
+            secretaria_id: secretariaId,
+            ativo,
+            atualizado_em: agora
+        });
+
+        const usuarioAtualizado = db.prepare(`
+            SELECT
+                id,
+                nome,
+                email,
+                role,
+                secretaria_id AS secretariaId,
+                ativo,
+                criado_em AS criadoEm,
+                atualizado_em AS atualizadoEm
+            FROM users
+            WHERE id = ?
+        `).get(id);
+
+        /*
+          Se o usuário editado for o próprio usuário logado,
+          atualizamos também a sessão.
+        */
+        if (usuarioLogado && Number(usuarioLogado.id) === id) {
+            req.session.user = {
+                ...req.session.user,
+                nome: usuarioAtualizado.nome,
+                email: usuarioAtualizado.email,
+                role: usuarioAtualizado.role,
+                secretariaId: usuarioAtualizado.secretariaId || null
+            };
+        }
+
+        res.json({
+            sucesso: true,
+            mensagem: "Usuário atualizado com sucesso.",
+            usuario: usuarioAtualizado
+        });
+    } catch (erro) {
+        console.error("Erro ao editar usuário:", erro);
+
+        res.status(500).json({
+            erro: true,
+            mensagem: "Erro ao editar usuário."
+        });
+    }
+});
+
+/* =========================================================
+   API ADMIN: ATIVAR / DESATIVAR USUÁRIO
+   =========================================================
+   Altera somente o status de um usuário.
+
+   Em vez de excluir usuários, usamos ativo/inativo.
+   Isso preserva histórico e evita perder referência futura.
+
+   Segurança:
+   - exige login;
+   - exige perfil administrativo;
+   - impede o usuário logado de desativar a si mesmo.
+   ========================================================= */
+
+app.patch("/api/admin/users/:id/status", exigirLogin, exigirAdmin, (req, res) => {
+    try {
+        const id = Number(req.params.id);
+
+        if (!Number.isInteger(id) || id <= 0) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "ID de usuário inválido."
+            });
+        }
+
+        const usuario = db.prepare(`
+            SELECT
+                id,
+                nome,
+                email,
+                role,
+                ativo
+            FROM users
+            WHERE id = ?
+            LIMIT 1
+        `).get(id);
+
+        if (!usuario) {
+            return res.status(404).json({
+                erro: true,
+                mensagem: "Usuário não encontrado."
+            });
+        }
+
+        const usuarioLogado = obterUsuarioDaSessao(req);
+
+        /*
+          Proteção:
+          ninguém pode desativar o próprio usuário logado.
+          Isso evita você se trancar para fora do sistema.
+        */
+        if (usuarioLogado && Number(usuarioLogado.id) === id) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Você não pode alterar o status do próprio usuário logado."
+            });
+        }
+
+        /*
+          Aceita true/false.
+          Qualquer valor diferente de false será tratado como ativo.
+        */
+        const ativo = req.body.ativo === false ? 0 : 1;
+        const agora = new Date().toISOString();
+
+        db.prepare(`
+            UPDATE users
+            SET
+                ativo = @ativo,
+                atualizado_em = @atualizado_em
+            WHERE id = @id
+        `).run({
+            id,
+            ativo,
+            atualizado_em: agora
+        });
+
+        const usuarioAtualizado = db.prepare(`
+            SELECT
+                id,
+                nome,
+                email,
+                role,
+                secretaria_id AS secretariaId,
+                ativo,
+                criado_em AS criadoEm,
+                atualizado_em AS atualizadoEm
+            FROM users
+            WHERE id = ?
+        `).get(id);
+
+        res.json({
+            sucesso: true,
+            mensagem: ativo
+                ? "Usuário ativado com sucesso."
+                : "Usuário desativado com sucesso.",
+            usuario: usuarioAtualizado
+        });
+    } catch (erro) {
+        console.error("Erro ao alterar status do usuário:", erro);
+
+        res.status(500).json({
+            erro: true,
+            mensagem: "Erro ao alterar status do usuário."
+        });
+    }
+});
+
+/* =========================================================
+   API ADMIN: RESETAR SENHA DE USUÁRIO
+   =========================================================
+   Redefine a senha de um usuário existente.
+
+   Segurança:
+   - exige login;
+   - exige perfil administrativo;
+   - salva a nova senha com hash bcrypt;
+   - não retorna senha nem hash na resposta.
+   ========================================================= */
+
+app.post("/api/admin/users/:id/reset-password", exigirLogin, exigirAdmin, (req, res) => {
+    try {
+        const id = Number(req.params.id);
+
+        if (!Number.isInteger(id) || id <= 0) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "ID de usuário inválido."
+            });
+        }
+
+        const novaSenha = String(req.body.senha || req.body.novaSenha || "");
+
+        if (!novaSenha || novaSenha.length < 6) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Informe uma nova senha com pelo menos 6 caracteres."
+            });
+        }
+
+        const usuario = db.prepare(`
+            SELECT
+                id,
+                nome,
+                email,
+                role,
+                ativo
+            FROM users
+            WHERE id = ?
+            LIMIT 1
+        `).get(id);
+
+        if (!usuario) {
+            return res.status(404).json({
+                erro: true,
+                mensagem: "Usuário não encontrado."
+            });
+        }
+
+        const senhaHash = bcrypt.hashSync(novaSenha, 10);
+        const agora = new Date().toISOString();
+
+        db.prepare(`
+            UPDATE users
+            SET
+                senha_hash = @senha_hash,
+                atualizado_em = @atualizado_em
+            WHERE id = @id
+        `).run({
+            id,
+            senha_hash: senhaHash,
+            atualizado_em: agora
+        });
+
+        res.json({
+            sucesso: true,
+            mensagem: "Senha redefinida com sucesso.",
+            usuario: {
+                id: usuario.id,
+                nome: usuario.nome,
+                email: usuario.email,
+                role: usuario.role,
+                ativo: usuario.ativo
+            }
+        });
+    } catch (erro) {
+        console.error("Erro ao redefinir senha:", erro);
+
+        res.status(500).json({
+            erro: true,
+            mensagem: "Erro ao redefinir senha."
+        });
+    }
+});
 
 /* =========================================================
    START DO SERVIDOR
