@@ -2606,7 +2606,6 @@ app.put("/api/admin/users/:id", exigirLogin, exigirAdmin, (req, res) => {
         });
     }
 });
-
 /* =========================================================
    API ADMIN: ATIVAR / DESATIVAR USUÁRIO
    =========================================================
@@ -2618,9 +2617,9 @@ app.put("/api/admin/users/:id", exigirLogin, exigirAdmin, (req, res) => {
    Segurança:
    - exige login;
    - exige perfil administrativo;
-   - impede o usuário logado de desativar a si mesmo.
+   - impede o usuário logado de alterar o próprio status;
+   - impede admin comum de ativar/desativar superadmin.
    ========================================================= */
-
 app.patch("/api/admin/users/:id/status", exigirLogin, exigirAdmin, (req, res) => {
     try {
         const id = Number(req.params.id);
@@ -2631,6 +2630,25 @@ app.patch("/api/admin/users/:id/status", exigirLogin, exigirAdmin, (req, res) =>
                 mensagem: "ID de usuário inválido."
             });
         }
+
+        /*
+          Usuário logado na sessão.
+
+          Precisamos dele para:
+          - impedir autodesativação;
+          - saber se ele é superadmin;
+          - bloquear admin comum tentando alterar superadmin.
+        */
+        const usuarioLogado = obterUsuarioDaSessao(req);
+
+        if (!usuarioLogado) {
+            return res.status(401).json({
+                erro: true,
+                mensagem: "Sessão inválida. Faça login novamente."
+            });
+        }
+
+        const usuarioLogadoEhSuperadmin = usuarioLogado.role === "superadmin";
 
         const usuario = db.prepare(`
             SELECT
@@ -2651,17 +2669,32 @@ app.patch("/api/admin/users/:id/status", exigirLogin, exigirAdmin, (req, res) =>
             });
         }
 
-        const usuarioLogado = obterUsuarioDaSessao(req);
+        /*
+          Proteção:
+          ninguém pode alterar o status do próprio usuário logado.
+
+          Mesmo que esteja tentando "ativar" a si mesmo, não faz sentido
+          permitir essa rota para o próprio cadastro.
+        */
+        if (Number(usuarioLogado.id) === id) {
+            return res.status(403).json({
+                erro: true,
+                mensagem: "Você não pode alterar o status do próprio usuário logado."
+            });
+        }
 
         /*
           Proteção:
-          ninguém pode desativar o próprio usuário logado.
-          Isso evita você se trancar para fora do sistema.
+          admin comum não pode ativar/desativar superadmin.
+
+          Motivo:
+          se um admin pudesse desativar o superadmin, ele poderia
+          bloquear a conta principal do sistema.
         */
-        if (usuarioLogado && Number(usuarioLogado.id) === id) {
-            return res.status(400).json({
+        if (usuario.role === "superadmin" && !usuarioLogadoEhSuperadmin) {
+            return res.status(403).json({
                 erro: true,
-                mensagem: "Você não pode alterar o status do próprio usuário logado."
+                mensagem: "Somente um superadmin pode alterar o status de outro superadmin."
             });
         }
 
