@@ -126,88 +126,6 @@ const btnToggleResetPasswordIcon = btnToggleResetPassword
     ? btnToggleResetPassword.querySelector("i")
     : null;
 
-/**
-* Envia a nova senha para a API.
-*/
-async function salvarResetSenha(event) {
-    event.preventDefault();
-
-    const idUsuario = resetPasswordUserIdInput
-        ? resetPasswordUserIdInput.value
-        : "";
-
-    const novaSenha = resetPasswordInput
-        ? resetPasswordInput.value
-        : "";
-
-    if (!idUsuario) {
-        mostrarToast("Usuário inválido para reset de senha.", "erro");
-        return;
-    }
-
-    if (!novaSenha || novaSenha.length < 6) {
-        mostrarToast("Informe uma senha com pelo menos 6 caracteres.", "erro");
-
-        if (resetPasswordInput) {
-            resetPasswordInput.focus();
-            validarResetSenhaVisualmente();
-        }
-
-        return;
-    }
-
-    const textoOriginalBotao = btnSaveResetPassword
-        ? btnSaveResetPassword.innerHTML
-        : "";
-
-    if (btnSaveResetPassword) {
-        btnSaveResetPassword.disabled = true;
-        btnSaveResetPassword.innerHTML = `
-            <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
-            Salvando...
-        `;
-    }
-
-    try {
-        const resposta = await fetchComSessao(
-            `/api/admin/users/${encodeURIComponent(idUsuario)}/reset-password`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    senha: novaSenha
-                })
-            }
-        );
-
-        const resultado = await resposta.json();
-
-        if (!resposta.ok || resultado.erro) {
-            throw new Error(resultado.mensagem || "Erro ao resetar senha.");
-        }
-
-        mostrarToast("Senha redefinida com sucesso.", "sucesso");
-
-        fecharModalResetSenha();
-
-        await carregarUsuarios();
-    } catch (erro) {
-        console.error("Erro ao resetar senha:", erro);
-
-        mostrarToast(
-            erro.message || "Erro ao resetar senha.",
-            "erro"
-        );
-    } finally {
-        if (btnSaveResetPassword) {
-            btnSaveResetPassword.disabled = false;
-            btnSaveResetPassword.innerHTML = textoOriginalBotao;
-        }
-    }
-}
-
 /* =========================================================
    ELEMENTOS - ALTERAR STATUS DO USUÁRIO
    ========================================================= */
@@ -251,6 +169,105 @@ function definirNomeUsuarioLogado(valor) {
     definirNomeUsuarioLogado("usuário");
 }
 
+/* =========================================================
+   PERMISSÕES VISUAIS DO ADMIN
+   =========================================================
+   Importante:
+   - isso melhora a experiência visual da tela;
+   - a segurança real continua sendo feita no backend.
+   ========================================================= */
+
+/**
+ * Retorna a role/perfil do usuário logado.
+ *
+ * Se por algum motivo o usuário ainda não tiver carregado,
+ * assumimos "viewer" por segurança visual.
+ */
+function obterRoleUsuarioLogado() {
+    return usuarioLogado && usuarioLogado.role
+        ? usuarioLogado.role
+        : "viewer";
+}
+
+/**
+ * Superadmin e admin podem gerenciar usuários.
+ */
+function usuarioPodeGerenciarUsuarios() {
+    return ["superadmin", "admin"].includes(obterRoleUsuarioLogado());
+}
+
+/**
+ * Superadmin, admin e editor podem gerenciar mídias.
+ */
+function usuarioPodeEditarMidias() {
+    return ["superadmin", "admin", "editor"].includes(obterRoleUsuarioLogado());
+}
+
+/**
+ * Aplica classes no body conforme as permissões.
+ *
+ * O CSS usa essas classes para esconder/mostrar partes da interface.
+ */
+function aplicarClassesDePermissao() {
+    const role = obterRoleUsuarioLogado();
+
+    document.body.classList.remove(
+        "role-superadmin",
+        "role-admin",
+        "role-editor",
+        "role-viewer",
+        "can-edit-media",
+        "can-manage-users"
+    );
+
+    document.body.classList.add(`role-${role}`);
+
+    if (usuarioPodeEditarMidias()) {
+        document.body.classList.add("can-edit-media");
+    }
+
+    if (usuarioPodeGerenciarUsuarios()) {
+        document.body.classList.add("can-manage-users");
+    }
+}
+
+/**
+ * Verifica se o usuário pode editar mídias.
+ *
+ * Se não puder, mostra um aviso e retorna false.
+ * Usamos isso antes de ações sensíveis no frontend.
+ */
+function garantirPermissaoParaEditarMidias() {
+    if (usuarioPodeEditarMidias()) {
+        return true;
+    }
+
+    mostrarToast(
+        "Seu perfil não tem permissão para alterar mídias.",
+        "erro"
+    );
+
+    return false;
+}
+
+/**
+ * Verifica se o usuário pode gerenciar usuários.
+ *
+ * Se não puder, mostra um aviso e retorna false.
+ */
+function garantirPermissaoParaGerenciarUsuarios() {
+    if (usuarioPodeGerenciarUsuarios()) {
+        return true;
+    }
+
+    mostrarToast(
+        "Seu perfil não tem permissão para gerenciar usuários.",
+        "erro"
+    );
+
+    return false;
+}
+
 
 /* =========================================================
    ESTADO GLOBAL DO ADMIN
@@ -269,6 +286,7 @@ let uploadMessageTimer = null;
 let playlistMessageTimer = null;
 let modalConfirmacao = null;
 let usuariosCarregados = [];
+let usuarioLogado = null;
 
 
 /* =========================================================
@@ -437,12 +455,98 @@ function renderizarUsuarios(usuarios) {
         const roleIcon = obterIconeRole(usuario.role);
 
         const ativo = Number(usuario.ativo) === 1;
+        const usuarioEhAtual =
+            usuarioLogado && Number(usuario.id) === Number(usuarioLogado.id);
+
+        const usuarioLogadoEhSuperadmin =
+            usuarioLogado && usuarioLogado.role === "superadmin";
+
+        const usuarioDaListaEhSuperadmin =
+            usuario.role === "superadmin";
+
+        const podeGerenciarEsteUsuario =
+            usuarioLogadoEhSuperadmin || !usuarioDaListaEhSuperadmin;
+
         const statusLabel = ativo ? "Ativo" : "Inativo";
         const statusClass = ativo ? "status-active" : "status-inactive";
 
         const secretariaNome = usuario.secretariaNome
             ? escaparHtml(usuario.secretariaNome)
             : "Sem secretaria vinculada";
+
+        const botaoStatusUsuario = usuarioEhAtual
+            ? `
+        <button
+            class="secondaryAction btnCurrentUser"
+            type="button"
+            disabled
+            title="Você não pode desativar seu próprio usuário"
+        >
+            <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+            Usuário atual
+        </button>
+    `
+            : !podeGerenciarEsteUsuario
+                ? `
+            <button
+                class="secondaryAction btnProtectedUser"
+                type="button"
+                disabled
+                title="Somente um superadmin pode alterar este usuário"
+            >
+                <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                Protegido
+            </button>
+        `
+                : `
+            <button
+                class="${ativo ? "dangerAction" : "successAction"} btnToggleUserStatus"
+                type="button"
+                data-user-id="${usuario.id}"
+                data-user-name="${nome}"
+                data-active="${ativo ? "true" : "false"}"
+            >
+                <i class="fa-solid ${ativo ? "fa-user-slash" : "fa-user-check"}" aria-hidden="true"></i>
+                ${ativo ? "Desativar" : "Ativar"}
+            </button>
+        `;
+
+        const botaoEditarUsuario = podeGerenciarEsteUsuario
+            ? `
+        <button
+            class="secondaryAction btnEditUser"
+            type="button"
+            data-user-id="${usuario.id}"
+        >
+            <i class="fa-solid fa-pen" aria-hidden="true"></i>
+            Editar
+        </button>
+    `
+            : `
+        <button
+            class="secondaryAction btnProtectedUser"
+            type="button"
+            disabled
+            title="Somente um superadmin pode editar este usuário"
+        >
+            <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+            Protegido
+        </button>
+    `;
+
+        const botaoResetSenhaUsuario = podeGerenciarEsteUsuario
+            ? `
+        <button
+            class="warningAction btnResetUserPassword"
+            type="button"
+            data-user-id="${usuario.id}"
+            data-user-name="${nome}"
+        >
+            <i class="fa-solid fa-key" aria-hidden="true"></i>
+            Resetar Senha
+        </button>
+    `
+            : "";
 
         item.innerHTML = `
             <div class="userInfo">
@@ -470,35 +574,9 @@ function renderizarUsuarios(usuarios) {
             </div>
 
             <div class="userActions">
-                <button
-                    class="secondaryAction btnEditUser"
-                    type="button"
-                    data-user-id="${usuario.id}"
-                >
-                    <i class="fa-solid fa-pen" aria-hidden="true"></i>
-                    Editar
-                </button>
-
-                <button
-                    class="warningAction btnResetUserPassword"
-                    type="button"
-                    data-user-id="${usuario.id}"
-                    data-user-name="${nome}"
-                >
-                    <i class="fa-solid fa-key" aria-hidden="true"></i>
-                    Resetar Senha
-                </button>
-
-                <button
-                    class="${ativo ? "dangerAction" : "successAction"} btnToggleUserStatus"
-                    type="button"
-                    data-user-id="${usuario.id}"
-                    data-user-name="${nome}"
-                    data-active="${ativo ? "true" : "false"}"
-                >
-                    <i class="fa-solid ${ativo ? "fa-user-slash" : "fa-user-check"}" aria-hidden="true"></i>
-                    ${ativo ? "Desativar" : "Ativar"}
-                </button>
+                ${botaoEditarUsuario}
+                ${botaoResetSenhaUsuario}
+                ${botaoStatusUsuario}
             </div>
         `;
 
@@ -603,22 +681,6 @@ function limparFormularioUsuario() {
     }
 }
 
-/* =========================================================
-   USUÁRIOS - MODAL DO FORMULÁRIO
-   ========================================================= */
-
-/**
- * Limpa todos os campos do formulário de usuário.
- */
-function limparFormularioUsuario() {
-    if (userIdInput) userIdInput.value = "";
-    if (userNameInput) userNameInput.value = "";
-    if (userEmailInput) userEmailInput.value = "";
-    if (userPasswordInput) userPasswordInput.value = "";
-    if (userRoleInput) userRoleInput.value = "viewer";
-    if (userActiveInput) userActiveInput.checked = true;
-}
-
 /**
  * Abre o modal de usuário.
  */
@@ -647,6 +709,7 @@ function fecharModalUsuario() {
  * Abre o formulário no modo "novo usuário".
  */
 function abrirFormularioNovoUsuario() {
+    if (!garantirPermissaoParaGerenciarUsuarios()) return;
     limparFormularioUsuario();
 
     if (userFormTitle) {
@@ -969,17 +1032,21 @@ async function carregarUsuarioLogado() {
 
         const dados = await resposta.json();
 
-        const nomeUsuario =
-            dados &&
-                dados.usuario &&
-                typeof dados.usuario.nome === "string"
-                ? dados.usuario.nome
-                : "usuário";
+        usuarioLogado = dados.usuario || null;
 
-        definirNomeUsuarioLogado(nomeUsuario);
+        definirNomeUsuarioLogado(usuarioLogado || "usuário");
+
+        aplicarClassesDePermissao();
+
+        if (usuarioPodeGerenciarUsuarios()) {
+            await carregarUsuarios();
+        }
     } catch (erro) {
         console.error("Erro ao carregar usuário logado:", erro);
+
+        usuarioLogado = null;
         definirNomeUsuarioLogado("usuário");
+        aplicarClassesDePermissao();
     }
 }
 
@@ -1323,6 +1390,7 @@ function esconderMensagemPlaylist() {
  * - reset de senha terá modal próprio depois.
  */
 function abrirFormularioEditarUsuario(idUsuario) {
+    if (!garantirPermissaoParaGerenciarUsuarios()) return;
     const id = Number(idUsuario);
 
     const usuario = usuariosCarregados.find((item) => Number(item.id) === id);
@@ -1434,6 +1502,7 @@ function limparFormularioResetSenha() {
  * Abre o modal de reset de senha.
  */
 function abrirModalResetSenha(idUsuario, nomeUsuario = "usuário") {
+    if (!garantirPermissaoParaGerenciarUsuarios()) return;
     if (!resetPasswordModal) return;
 
     limparFormularioResetSenha();
@@ -1613,6 +1682,7 @@ async function salvarResetSenha(event) {
  * Abre o modal para confirmar ativação/desativação de usuário.
  */
 function abrirModalStatusUsuario(idUsuario, nomeUsuario, usuarioEstaAtivo) {
+    if (!garantirPermissaoParaGerenciarUsuarios()) return;
     if (!userStatusModal) return;
 
     const novoStatus = !usuarioEstaAtivo;
@@ -1961,7 +2031,13 @@ async function executarPreservandoScroll(callback) {
 function destacarMidiaNaLista(nomeArquivo) {
     if (!nomeArquivo) return;
 
-    const seletor = `.mediaItem[data-arquivo="${CSS.escape(nomeArquivo)}"]`;
+    /*
+      Monta um seletor seguro para localizar o card da mídia.
+      Usamos escaparSeletorCss() em vez de CSS.escape() direto
+      para manter compatibilidade com navegadores que não suportem
+      CSS.escape nativamente.
+    */
+    const seletor = `.mediaItem[data-arquivo="${escaparSeletorCss(nomeArquivo)}"]`;
     const item = document.querySelector(seletor);
 
     if (!item) return;
@@ -2077,6 +2153,7 @@ async function gerarPlaylist() {
  */
 function renderizarMidias(midias) {
     mediaList.innerHTML = "";
+    const podeEditarMidias = usuarioPodeEditarMidias();
 
     if (libraryDropdownMeta) {
         libraryDropdownMeta.textContent = `${formatarQuantidade(midias.length, "mídia cadastrada", "mídias cadastradas")}`;
@@ -2102,7 +2179,7 @@ function renderizarMidias(midias) {
             midia.ativo ? "" : "mediaItemInactive"
         ].filter(Boolean).join(" ");
         item.style.setProperty("--item-index", index);
-        item.draggable = true;
+        item.draggable = podeEditarMidias;
 
         /*
         Identifica este card pelo nome real do arquivo.
@@ -2117,11 +2194,72 @@ function renderizarMidias(midias) {
         const extensao = escaparHtml(midia.extensao || "");
         const tipo = escaparHtml(midia.tipo || "arquivo");
         const prioridade = escaparHtml(midia.prioridade || "normal");
+
         const prioridadeLabel = midia.prioridade === "urgente"
             ? "Urgente"
             : midia.prioridade === "alta"
                 ? "Alta"
                 : "Normal";
+
+        const controleTitulo = podeEditarMidias
+            ? `
+        <label class="mediaTitleLabel">
+            Nome
+            <input
+                type="text"
+                class="mediaTitleInput"
+                data-arquivo="${nomeArquivo}"
+                value="${tituloMidia}"
+                placeholder="Ex: Campanha de Vacinação 2026"
+            />
+        </label>
+    `
+            : `
+        <div class="mediaTitleReadOnly">
+            <span>Nome</span>
+            <strong>${tituloMidia}</strong>
+        </div>
+    `;
+
+        const controlePrioridadeSelect = podeEditarMidias
+            ? `
+        <select class="mediaPriority" data-arquivo="${nomeArquivo}" aria-label="Prioridade da mídia ${nomeArquivo}">
+            <option value="normal" ${midia.prioridade === "normal" ? "selected" : ""}>Normal</option>
+            <option value="alta" ${midia.prioridade === "alta" ? "selected" : ""}>Alta</option>
+            <option value="urgente" ${midia.prioridade === "urgente" ? "selected" : ""}>Urgente</option>
+        </select>
+    `
+            : "";
+
+        const prioridadeBadge = podeEditarMidias
+            ? `
+        <details class="mediaPriorityMenu">
+            <summary class="mediaBadge ${prioridade}">
+                <i class="fa-solid ${midia.prioridade === "urgente" ? "fa-triangle-exclamation" : midia.prioridade === "alta" ? "fa-bolt" : "fa-circle-check"}" aria-hidden="true"></i>
+                <span>${prioridadeLabel}</span>
+            </summary>
+            <div class="mediaPriorityOptions">
+                <button type="button" data-prioridade="normal" data-arquivo="${nomeArquivo}">
+                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                    Normal
+                </button>
+                <button type="button" data-prioridade="alta" data-arquivo="${nomeArquivo}">
+                    <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+                    Alta
+                </button>
+                <button type="button" data-prioridade="urgente" data-arquivo="${nomeArquivo}">
+                    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                    Urgente
+                </button>
+            </div>
+        </details>
+    `
+            : `
+        <span class="mediaBadge ${prioridade} mediaBadgeStatic">
+            <i class="fa-solid ${midia.prioridade === "urgente" ? "fa-triangle-exclamation" : midia.prioridade === "alta" ? "fa-bolt" : "fa-circle-check"}" aria-hidden="true"></i>
+            <span>${prioridadeLabel}</span>
+        </span>
+    `;
 
         const semValidadeDefinida = !midia.inicio && !midia.fim;
 
@@ -2178,16 +2316,7 @@ function renderizarMidias(midias) {
             ${renderizarPreviewMidia(midia)}
 
             <div class="mediaInfo">
-                <label class="mediaTitleLabel">
-                    Nome
-                    <input
-                        type="text"
-                        class="mediaTitleInput"
-                        data-arquivo="${nomeArquivo}"
-                        value="${tituloMidia}"
-                        placeholder="Ex: Campanha de Vacinação 2026"
-                    />
-                </label>
+                ${controleTitulo}
 
                 <div class="mediaConfigRow">
                     <label class="mediaStatusToggle ${midia.ativo ? "isActive" : "isInactive"}">
@@ -2246,11 +2375,7 @@ function renderizarMidias(midias) {
                         </div>
                     </details>
 
-                    <select class="mediaPriority" data-arquivo="${nomeArquivo}" aria-label="Prioridade da mídia ${nomeArquivo}">
-                            <option value="normal" ${midia.prioridade === "normal" ? "selected" : ""}>Normal</option>
-                            <option value="alta" ${midia.prioridade === "alta" ? "selected" : ""}>Alta</option>
-                            <option value="urgente" ${midia.prioridade === "urgente" ? "selected" : ""}>Urgente</option>
-                    </select>
+                    ${controlePrioridadeSelect}
 
                     <label class="mediaConfigLabel">
                         Repetir
@@ -2266,26 +2391,7 @@ function renderizarMidias(midias) {
 
                 <div class="mediaFooterActions">
                     <div class="mediaBadges">
-                        <details class="mediaPriorityMenu">
-                            <summary class="mediaBadge ${prioridade}">
-                                <i class="fa-solid ${midia.prioridade === "urgente" ? "fa-triangle-exclamation" : midia.prioridade === "alta" ? "fa-bolt" : "fa-circle-check"}" aria-hidden="true"></i>
-                                <span>${prioridadeLabel}</span>
-                            </summary>
-                            <div class="mediaPriorityOptions">
-                                <button type="button" data-prioridade="normal" data-arquivo="${nomeArquivo}">
-                                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-                                    Normal
-                                </button>
-                                <button type="button" data-prioridade="alta" data-arquivo="${nomeArquivo}">
-                                    <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-                                    Alta
-                                </button>
-                                <button type="button" data-prioridade="urgente" data-arquivo="${nomeArquivo}">
-                                    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-                                    Urgente
-                                </button>
-                            </div>
-                        </details>
+                        ${prioridadeBadge}
                     </div>
 
                     <div class="mediaDetailsHover">
@@ -2533,6 +2639,7 @@ function receberArquivoArrastado(event) {
  */
 async function enviarArquivo(event) {
     event.preventDefault();
+    if (!garantirPermissaoParaEditarMidias()) return;
 
     esconderMensagemUpload();
 
@@ -2734,6 +2841,7 @@ function coletarConfiguracoesDaTela() {
  * Salva todas as configurações de uma vez.
  */
 async function salvarTodasConfiguracoes() {
+    if (!garantirPermissaoParaEditarMidias()) return;
     const selecionadas = obterMidiasSelecionadas();
     const midias = selecionadas.length
         ? coletarConfiguracoesDaTela().filter((midia) => selecionadas.includes(midia.nome))
@@ -2897,6 +3005,7 @@ function alternarSelecionarTodas() {
  * Exclui todas as mídias selecionadas.
  */
 async function excluirMidiasSelecionadas() {
+    if (!garantirPermissaoParaEditarMidias()) return;
     const arquivos = obterMidiasSelecionadas();
 
     if (!arquivos.length) {
@@ -2965,6 +3074,7 @@ async function excluirMidiasSelecionadas() {
  * Move uma mídia para cima ou para baixo na ordem da playlist.
  */
 async function moverMidia(nomeArquivo, direcao) {
+    if (!garantirPermissaoParaEditarMidias()) return;
     try {
         const resposta = await fetchComSessao(
             `/api/midias/${encodeURIComponent(nomeArquivo)}/mover`,
@@ -3008,6 +3118,7 @@ async function moverMidia(nomeArquivo, direcao) {
  * Exclui uma única mídia diretamente pelo card.
  */
 async function excluirMidiaIndividual(nomeArquivo) {
+    if (!garantirPermissaoParaEditarMidias()) return;
     if (!nomeArquivo) return;
 
     const confirmar = await confirmarAcaoModal({
@@ -3060,6 +3171,7 @@ async function excluirMidiaIndividual(nomeArquivo) {
  * Move uma mídia várias posições usando a API de ordenação existente.
  */
 async function moverMidiaParaIndice(nomeArquivo, indiceInicial, indiceFinal) {
+    if (!garantirPermissaoParaEditarMidias()) return;
     if (!nomeArquivo || indiceInicial === indiceFinal) return;
 
     const direcao = indiceFinal < indiceInicial ? "up" : "down";
@@ -3169,6 +3281,7 @@ function coletarConfiguracaoDoItem(item) {
  * Salva uma única mídia após confirmação.
  */
 async function confirmarESalvarMidia(item, mensagem = "Deseja salvar esta alteração?") {
+    if (!garantirPermissaoParaEditarMidias()) return false;
     const configuracao = coletarConfiguracaoDoItem(item);
 
     if (!configuracao) return false;
@@ -3222,6 +3335,7 @@ async function confirmarESalvarMidia(item, mensagem = "Deseja salvar esta altera
  * Salva uma mídia sem modal, para ações rápidas como prioridade.
  */
 async function salvarMidiaRapida(item) {
+    if (!garantirPermissaoParaEditarMidias()) return false;
     const configuracao = coletarConfiguracaoDoItem(item);
 
     if (!configuracao) return false;
@@ -3378,10 +3492,12 @@ if (userModal) {
 }
 
 /*
-  Fecha o modal com ESC.
+  Fecha modais e reseta indicadores visuais ao pressionar ESC.
 */
 document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
+
+    fecharIndicadorSelectPerfil();
 
     if (userModal && !userModal.classList.contains("hidden")) {
         fecharFormularioUsuario();
@@ -3419,12 +3535,6 @@ if (userRoleInput) {
     userRoleInput.addEventListener("change", fecharIndicadorSelectPerfil);
     userRoleInput.addEventListener("blur", fecharIndicadorSelectPerfil);
 }
-
-document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-        fecharIndicadorSelectPerfil();
-    }
-});
 
 if (userForm) {
     userForm.addEventListener("submit", salvarUsuarioPeloFormulario);
@@ -3896,10 +4006,15 @@ mediaList.addEventListener("input", (event) => {
    START DO ADMIN
    ========================================================= */
 
-carregarUsuarioLogado();
-carregarResumoAdmin();
-carregarMidias();
-carregarPlaylistAtual();
-carregarUsuarios();
-limparAlteracoesPendentes();
-configurarScrollAoAbrirDropdowns();
+async function iniciarAdmin() {
+    await carregarUsuarioLogado();
+
+    await carregarResumoAdmin();
+    await carregarMidias();
+    await carregarPlaylistAtual();
+
+    limparAlteracoesPendentes();
+    configurarScrollAoAbrirDropdowns();
+}
+
+iniciarAdmin();

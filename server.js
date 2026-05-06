@@ -1007,6 +1007,85 @@ function exigirRole(...rolesPermitidas) {
     };
 }
 
+/* =========================================================
+   PROTEÇÕES DE USUÁRIOS ADMINISTRATIVOS
+   ========================================================= */
+
+/**
+ * Retorna true se o usuário logado for superadmin.
+ */
+function usuarioSessaoEhSuperadmin(req) {
+    return req.session &&
+        req.session.usuario &&
+        req.session.usuario.role === "superadmin";
+}
+
+/**
+ * Retorna true se o usuário logado estiver tentando agir
+ * sobre o próprio cadastro.
+ */
+function usuarioEstaAlterandoASiMesmo(req, idAlvo) {
+    const idUsuarioLogado = req.session && req.session.usuario
+        ? Number(req.session.usuario.id)
+        : null;
+
+    return Number(idAlvo) === idUsuarioLogado;
+}
+
+/**
+ * Verifica se o usuário alvo é superadmin.
+ *
+ * Usa callback porque o sqlite3 trabalha de forma assíncrona.
+ */
+function verificarUsuarioAlvo(req, res, idUsuario, callback) {
+    db.get(
+        `
+        SELECT id, nome, email, role, ativo
+        FROM usuarios
+        WHERE id = ?
+        `,
+        [idUsuario],
+        (erro, usuarioAlvo) => {
+            if (erro) {
+                console.error("Erro ao verificar usuário alvo:", erro);
+
+                return res.status(500).json({
+                    erro: true,
+                    mensagem: "Erro ao verificar usuário."
+                });
+            }
+
+            if (!usuarioAlvo) {
+                return res.status(404).json({
+                    erro: true,
+                    mensagem: "Usuário não encontrado."
+                });
+            }
+
+            callback(usuarioAlvo);
+        }
+    );
+}
+
+/**
+ * Impede que admin comum altere superadmin.
+ */
+function bloquearAdminAlterandoSuperadmin(req, res, usuarioAlvo) {
+    const alvoEhSuperadmin = usuarioAlvo.role === "superadmin";
+    const logadoEhSuperadmin = usuarioSessaoEhSuperadmin(req);
+
+    if (alvoEhSuperadmin && !logadoEhSuperadmin) {
+        res.status(403).json({
+            erro: true,
+            mensagem: "Somente um superadmin pode alterar outro superadmin."
+        });
+
+        return true;
+    }
+
+    return false;
+}
+
 /**
  * Atalho para rotas administrativas sensíveis.
  *
@@ -2279,6 +2358,26 @@ app.put("/api/admin/users/:id", exigirLogin, exigirAdmin, (req, res) => {
             });
         }
 
+        /*
+          Usuário logado na sessão.
+          Esta função já existe no seu projeto, então reaproveitamos ela.
+        */
+        const usuarioLogado = obterUsuarioDaSessao(req);
+
+        if (!usuarioLogado) {
+            return res.status(401).json({
+                erro: true,
+                mensagem: "Sessão inválida. Faça login novamente."
+            });
+        }
+
+        const usuarioLogadoEhSuperadmin = usuarioLogado.role === "superadmin";
+
+        /*
+          Busca o usuário que será editado.
+          Chamamos ele de "usuarioAtual" porque representa o estado atual
+          antes da edição.
+        */
         const usuarioAtual = db.prepare(`
             SELECT
                 id,
@@ -2299,12 +2398,32 @@ app.put("/api/admin/users/:id", exigirLogin, exigirAdmin, (req, res) => {
             });
         }
 
+        const usuarioAlvoEhSuperadmin = usuarioAtual.role === "superadmin";
+        const usuarioEditandoASiMesmo = Number(usuarioLogado.id) === id;
+
+        /*
+          REGRA DE OURO:
+          Somente um superadmin pode alterar outro superadmin.
+
+          Isso impede que um admin comum:
+          - edite o nome/login de um superadmin;
+          - troque o perfil do superadmin;
+          - desative o superadmin;
+          - vincule secretaria;
+          - faça qualquer alteração sensível no usuário superadmin.
+        */
+        if (usuarioAlvoEhSuperadmin && !usuarioLogadoEhSuperadmin) {
+            return res.status(403).json({
+                erro: true,
+                mensagem: "Somente um superadmin pode alterar outro superadmin."
+            });
+        }
+
         const nome = String(req.body.nome || "").trim();
         const email = String(req.body.email || "").trim().toLowerCase();
         const role = String(req.body.role || "viewer").trim().toLowerCase();
 
         const secretariaIdBruto = req.body.secretariaId ?? req.body.secretaria_id ?? null;
-
         const secretariaId = secretariaIdBruto
             ? Number(secretariaIdBruto)
             : null;
@@ -2338,6 +2457,51 @@ app.put("/api/admin/users/:id", exigirLogin, exigirAdmin, (req, res) => {
             return res.status(400).json({
                 erro: true,
                 mensagem: "Secretaria inválida."
+            });
+        }
+
+        /*
+          REGRA DE ELEVAÇÃO DE PRIVILÉGIO:
+          Apenas superadmin pode criar/transformar alguém em superadmin.
+
+          Sem isso, um admin comum poderia editar outro admin/editor/viewer
+          e promover para superadmin. Aí o sistema vira festa junina:
+          todo mundo pulando a fogueira da permissão.
+        */
+        if (role === "superadmin" && !usuarioLogadoEhSuperadmin) {
+            return res.status(403).json({
+                erro: true,
+                mensagem: "Somente um superadmin pode definir outro usuário como superadmin."
+            });
+        }
+
+        /*
+          Proteção:
+          o usuário logado não pode se desativar.
+          Isso evita você se trancar para fora do sistema.
+        */
+        if (usuarioEditandoASiMesmo && ativo === 0) {
+            return res.status(403).json({
+                erro: true,
+                mensagem: "Você não pode desativar o próprio usuário logado."
+            });
+        }
+
+        /*
+          Proteção:
+          o usuário logado não pode remover o próprio perfil superadmin.
+
+          Mesmo sendo superadmin, ele não pode editar a si mesmo e trocar
+          sua role para admin/editor/viewer.
+        */
+        if (
+            usuarioEditandoASiMesmo &&
+            usuarioAtual.role === "superadmin" &&
+            role !== "superadmin"
+        ) {
+            return res.status(403).json({
+                erro: true,
+                mensagem: "Você não pode remover o próprio perfil superadmin."
             });
         }
 
@@ -2378,36 +2542,6 @@ app.put("/api/admin/users/:id", exigirLogin, exigirAdmin, (req, res) => {
             }
         }
 
-        /*
-          Proteção simples:
-          o usuário logado não pode se desativar.
-          Isso evita você se trancar para fora do sistema.
-        */
-        const usuarioLogado = obterUsuarioDaSessao(req);
-
-        if (usuarioLogado && Number(usuarioLogado.id) === id && ativo === 0) {
-            return res.status(400).json({
-                erro: true,
-                mensagem: "Você não pode desativar o próprio usuário logado."
-            });
-        }
-
-        /*
-          Proteção simples:
-          o usuário logado não pode tirar o próprio superadmin.
-        */
-        if (
-            usuarioLogado &&
-            Number(usuarioLogado.id) === id &&
-            usuarioAtual.role === "superadmin" &&
-            role !== "superadmin"
-        ) {
-            return res.status(400).json({
-                erro: true,
-                mensagem: "Você não pode remover o próprio perfil superadmin."
-            });
-        }
-
         const agora = new Date().toISOString();
 
         db.prepare(`
@@ -2446,9 +2580,9 @@ app.put("/api/admin/users/:id", exigirLogin, exigirAdmin, (req, res) => {
 
         /*
           Se o usuário editado for o próprio usuário logado,
-          atualizamos também a sessão.
+          atualizamos também a sessão para refletir nome/e-mail/role novos.
         */
-        if (usuarioLogado && Number(usuarioLogado.id) === id) {
+        if (usuarioEditandoASiMesmo) {
             req.session.user = {
                 ...req.session.user,
                 nome: usuarioAtualizado.nome,

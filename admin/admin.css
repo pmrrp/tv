@@ -4308,3 +4308,172 @@ body.modal-open {
         width: 100%;
     }
 }
+
+/* =========================================================
+   PERMISSÕES VISUAIS POR PERFIL
+   =========================================================
+   A segurança real fica no backend.
+   Este CSS apenas limpa a interface conforme a role do usuário.
+   ========================================================= */
+
+/*
+  Por padrão, a área de usuários fica escondida.
+  Ela só aparece para admin/superadmin.
+*/
+#usersCard {
+    display: none;
+}
+
+body.can-manage-users #usersCard {
+    display: block;
+}
+
+/*
+  Usuário sem permissão de editar mídia:
+  - não vê upload;
+  - não vê ações de exclusão;
+  - não vê botão de salvar;
+  - não vê alça de arrastar;
+  - não vê seleção em lote.
+*/
+body:not(.can-edit-media) .uploadSection,
+body:not(.can-edit-media) .uploadCard,
+body:not(.can-edit-media) #uploadForm,
+body:not(.can-edit-media) #btnSalvarTudo,
+body:not(.can-edit-media) #pendingChanges,
+body:not(.can-edit-media) #selectAllMedia,
+body:not(.can-edit-media) #btnDeleteSelected,
+body:not(.can-edit-media) .selectAllLabel,
+body:not(.can-edit-media) .mediaSelectArea,
+body:not(.can-edit-media) .mediaDragHandle,
+body:not(.can-edit-media) .mediaDeleteButton,
+body:not(.can-edit-media) .mediaSaveButton {
+    display: none !important;
+}
+
+/*
+  Para viewer, campos de mídia ficam somente leitura visual.
+*/
+body:not(.can-edit-media) .mediaTitleInput,
+body:not(.can-edit-media) .mediaActive,
+body:not(.can-edit-media) .mediaDuration,
+body:not(.can-edit-media) .mediaPriority,
+body:not(.can-edit-media) .mediaRepeatEvery,
+body:not(.can-edit-media) .mediaStartDate,
+body:not(.can-edit-media) .mediaEndDate,
+body:not(.can-edit-media) .mediaIndefinite {
+    pointer-events: none;
+    opacity: 0.72;
+}
+
+/*
+  Evita aparência de item arrastável para viewer.
+*/
+body:not(.can-edit-media) .mediaItem {
+    cursor: default !important;
+}
+
+/* =========================================================
+   VIEWER - STATUS DA MÍDIA SOMENTE COMO BADGE
+   =========================================================
+   Para usuários sem permissão de edição, o status Ativo/Inativo
+   aparece apenas como etiqueta visual, sem checkbox.
+   ========================================================= */
+
+body:not(.can-edit-media) .mediaStatusToggle input {
+    display: none !important;
+}
+
+body:not(.can-edit-media) .mediaStatusToggle {
+    pointer-events: none;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 34px;
+
+    padding: 8px 12px;
+
+    border-radius: 999px;
+
+    font-size: 13px;
+    font-weight: 900;
+}
+
+/* Status ativo para visualizador */
+body:not(.can-edit-media) .mediaStatusToggle.isActive {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid rgba(22, 101, 52, 0.16);
+}
+
+/* Status inativo para visualizador */
+body:not(.can-edit-media) .mediaStatusToggle.isInactive {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid rgba(153, 27, 27, 0.16);
+}
+
+/* =========================================================
+   VIEWER - TÍTULO DA MÍDIA COMO TEXTO FIXO
+   ========================================================= */
+
+.mediaTitleReadOnly {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    margin-bottom: 10px;
+}
+
+.mediaTitleReadOnly span {
+    font-size: 13px;
+    font-weight: 900;
+    color: #334155;
+}
+
+.mediaTitleReadOnly strong {
+    display: block;
+
+    padding-bottom: 8px;
+
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+
+    background: transparent;
+    color: #0f172a;
+
+    font-size: 16px;
+    font-weight: 950;
+    line-height: 1.3;
+
+    word-break: break-word;
+}
+
+/* =========================================================
+   USUÁRIOS - BOTÃO DO USUÁRIO LOGADO
+   ========================================================= */
+
+.btnCurrentUser {
+    opacity: 0.78;
+    cursor: not-allowed !important;
+}
+
+.btnCurrentUser:disabled {
+    filter: grayscale(0.1);
+}
+
+/* =========================================================
+   USUÁRIOS - USUÁRIO PROTEGIDO
+   ========================================================= */
+
+.btnProtectedUser {
+    opacity: 0.74;
+    cursor: not-allowed !important;
+}
+
+.btnProtectedUser:disabled {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #64748b;
+}
