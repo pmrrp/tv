@@ -1121,6 +1121,69 @@ document.addEventListener("msfullscreenchange", atualizarBotaoFullscreen);
 window.addEventListener("resize", atualizarModoResponsivo);
 window.addEventListener("orientationchange", atualizarModoResponsivo);
 
+
+/* =========================================================
+   SINCRONIZAÇÃO SILENCIOSA DA PLAYLIST
+   =========================================================
+   Atualiza a playlist sem reiniciar sempre do primeiro item.
+
+   Comportamento:
+   - se a mídia atual ainda existir, mantém o índice nela;
+   - se a mídia atual saiu da playlist, vai para o próximo item válido;
+   - evita interromper o conteúdo atual sem necessidade.
+   ========================================================= */
+
+/**
+ * Retorna uma chave estável para comparar mídias.
+ * Preferimos o caminho do arquivo, pois ele identifica a mídia real.
+ */
+function obterChaveMidia(item) {
+  return item && item.arquivo
+    ? String(item.arquivo)
+    : "";
+}
+
+/**
+ * Atualiza a playlist em memória tentando preservar a mídia atual.
+ */
+function sincronizarPlaylistSemReiniciar(novaPlaylist) {
+  if (!Array.isArray(novaPlaylist) || novaPlaylist.length === 0) {
+    debugMensagem("Nova playlist vazia ou inválida. Mantendo playlist atual.");
+    return;
+  }
+
+  const itemAtual = playlist[indiceAtual];
+  const chaveAtual = obterChaveMidia(itemAtual);
+
+  playlist = novaPlaylist;
+
+  const novoIndiceDoItemAtual = playlist.findIndex((item) => {
+    return obterChaveMidia(item) === chaveAtual;
+  });
+
+  if (novoIndiceDoItemAtual >= 0) {
+    indiceAtual = novoIndiceDoItemAtual;
+    atualizarStatus("Playlist atualizada.");
+    debugMensagem(`Playlist atualizada mantendo item atual no índice ${indiceAtual}.`);
+    preCarregarProximaMidia();
+    return;
+  }
+
+  /*
+    Se o item atual não existe mais, escolhemos um índice seguro.
+    Aqui usamos o índice atual se ainda couber na nova playlist;
+    senão voltamos para zero.
+  */
+  if (indiceAtual >= playlist.length) {
+    indiceAtual = 0;
+  }
+
+  atualizarStatus("Playlist atualizada. Avançando conteúdo...");
+  debugMensagem("Item atual não existe mais na playlist. Avançando para item válido.");
+
+  tocarItemAtual();
+}
+
 /* =========================================================
    ATUALIZAÇÃO AUTOMÁTICA DA PLAYLIST
    =========================================================
@@ -1135,10 +1198,7 @@ setInterval(async () => {
     const novaPlaylist = await resposta.json();
 
     if (JSON.stringify(novaPlaylist) !== JSON.stringify(playlist)) {
-      playlist = novaPlaylist;
-      indiceAtual = 0;
-      atualizarStatus("Conteúdo atualizado.");
-      tocarItemAtual();
+      sincronizarPlaylistSemReiniciar(novaPlaylist);
     }
   } catch (erro) {
     console.error("Erro ao atualizar playlist:", erro);

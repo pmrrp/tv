@@ -1603,6 +1603,111 @@ app.get("/api/admin/backups", exigirLogin, (req, res) => {
 /* =========================================================
    APIs DO ADMIN - ALTERAÇÃO DE MÍDIAS
    ========================================================= */
+/* =========================================================
+   TÍTULO AMIGÁVEL DE MÍDIA
+   =========================================================
+   Usa o nome original enviado no upload para criar um título
+   bonito, corrigindo quando o nome vier com mojibake/encoding quebrado.
+
+   Exemplo:
+   - "AÃ§Ãµes da Sedec.mp4" vira "Ações da Sedec"
+   - "acoes_da_sedec.mp4" vira "Acoes da Sedec"
+   ========================================================= */
+
+/**
+ * Remove extensão do arquivo.
+ */
+function removerExtensaoArquivo(nomeArquivo) {
+    return String(nomeArquivo || "").replace(/\.[^/.]+$/, "");
+}
+
+/**
+ * Corrige textos que chegaram com encoding quebrado.
+ *
+ * Alguns uploads chegam no backend como:
+ * - AÃ§Ãµes
+ * em vez de:
+ * - Ações
+ *
+ * Só tentamos corrigir quando encontramos sinais claros de mojibake.
+ */
+function corrigirEncodingTextoUpload(texto) {
+    const valor = String(texto || "");
+
+    const pareceMojibake = /Ã|Â|�/.test(valor);
+
+    if (!pareceMojibake) {
+        return valor;
+    }
+
+    try {
+        return Buffer.from(valor, "latin1").toString("utf8");
+    } catch (erro) {
+        console.warn("Não foi possível corrigir encoding do texto:", valor);
+        return valor;
+    }
+}
+
+/**
+ * Limpa nome original para virar título amigável.
+ *
+ * Importante:
+ * - tenta corrigir encoding quebrado;
+ * - mantém acentos;
+ * - troca _, -, múltiplos espaços por espaço simples;
+ * - remove padrões comuns de WhatsApp;
+ * - aplica capitalização simples.
+ */
+function gerarTituloAmigavelDoNomeOriginal(nomeOriginal) {
+    let titulo = corrigirEncodingTextoUpload(nomeOriginal);
+
+    titulo = removerExtensaoArquivo(titulo);
+
+    titulo = titulo
+        .replace(/^whatsapp\s+image\s+/i, "")
+        .replace(/^whatsapp\s+video\s+/i, "")
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    if (!titulo) {
+        return "Nova mídia";
+    }
+
+    const palavrasMinusculas = new Set([
+        "a",
+        "as",
+        "o",
+        "os",
+        "da",
+        "de",
+        "do",
+        "das",
+        "dos",
+        "e",
+        "em",
+        "no",
+        "na",
+        "nos",
+        "nas",
+        "para",
+        "por",
+        "com"
+    ]);
+
+    return titulo
+        .split(" ")
+        .map((palavra, index) => {
+            const palavraLower = palavra.toLocaleLowerCase("pt-BR");
+
+            if (index > 0 && palavrasMinusculas.has(palavraLower)) {
+                return palavraLower;
+            }
+
+            return palavraLower.charAt(0).toLocaleUpperCase("pt-BR") + palavraLower.slice(1);
+        })
+        .join(" ");
+}
 
 app.post("/api/upload", exigirLogin, exigirEditor, upload.array("arquivo", 30), (req, res) => {
     try {
@@ -1619,15 +1724,53 @@ app.post("/api/upload", exigirLogin, exigirEditor, upload.array("arquivo", 30), 
             const extensao = path.extname(arquivo.filename).toLowerCase();
             const tipo = obterTipoPorExtensao(extensao);
 
+            const tituloAmigavel = gerarTituloAmigavelDoNomeOriginal(arquivo.originalname);
+            const nomeOriginalCorrigido = corrigirEncodingTextoUpload(arquivo.originalname);
+
             return {
-                nomeOriginal: arquivo.originalname,
+                nomeOriginal: nomeOriginalCorrigido,
                 nomeSalvo: arquivo.filename,
+                titulo: tituloAmigavel,
                 caminho: `midia/${arquivo.filename}`,
                 tipo,
                 extensao,
                 tamanho: arquivo.size
             };
         });
+
+        /*
+  Salva uma configuração inicial para os arquivos enviados,
+  usando o nome original como título amigável.
+*/
+        const configuracoes = lerConfiguracoesDeMidia();
+
+        arquivos.forEach((arquivo) => {
+            const nomeSalvo = arquivo.filename;
+            const extensao = path.extname(nomeSalvo).toLowerCase();
+            const tipo = obterTipoPorExtensao(extensao);
+
+            if (tipo === "outro") return;
+
+            const configuracaoAtual = configuracoes[nomeSalvo] || {};
+
+            configuracoes[nomeSalvo] = {
+                ativo: configuracaoAtual.ativo !== false,
+                duracao: tipo === "imagem"
+                    ? Number(configuracaoAtual.duracao || 8)
+                    : 8,
+                ordem: Number(configuracaoAtual.ordem) > 0
+                    ? Number(configuracaoAtual.ordem)
+                    : 999999,
+                prioridade: configuracaoAtual.prioridade || "normal",
+                repetirACada: Number(configuracaoAtual.repetirACada || 0),
+                titulo: configuracaoAtual.titulo || gerarTituloAmigavelDoNomeOriginal(arquivo.originalname),
+                inicio: configuracaoAtual.inicio || null,
+                fim: configuracaoAtual.fim || null
+            };
+        });
+
+        salvarConfiguracoesDeMidia(configuracoes);
+        normalizarOrdensDasMidias();
 
         const publicacao = publicarPlaylistAutomaticamente();
 

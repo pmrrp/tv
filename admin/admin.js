@@ -2973,8 +2973,13 @@ async function enviarArquivo(event) {
             throw new Error(dados.mensagem || "Erro ao enviar arquivo.");
         }
 
+        const nomeExibicaoUpload =
+            dados.arquivo && (dados.arquivo.titulo || dados.arquivo.nomeOriginal || dados.arquivo.nomeSalvo)
+                ? (dados.arquivo.titulo || dados.arquivo.nomeOriginal || dados.arquivo.nomeSalvo)
+                : "mídia enviada";
+
         mostrarMensagemUpload(
-            `Arquivo enviado e playlist atualizada: ${dados.arquivo.nomeSalvo}`,
+            `Mídia enviada e playlist atualizada: ${nomeExibicaoUpload}`,
             "sucesso"
         );
 
