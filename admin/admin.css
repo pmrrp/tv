@@ -2834,8 +2834,8 @@ body::before {
 .confirmModalBackdrop {
     position: absolute;
     inset: 0;
-    background: rgba(6, 43, 73, 0.28);
-    backdrop-filter: blur(8px);
+    background: rgba(8, 47, 79, 0.38);
+    backdrop-filter: blur(4px) !important;
 }
 
 .confirmModalDialog {
@@ -7488,4 +7488,387 @@ body.mediaSelectionMode .mediaItemSelected {
 body.mediaSelectionMode .mediaDragHandle {
     opacity: 0.24 !important;
     pointer-events: none !important;
+}
+
+/* =========================================================
+   MODAL GENÉRICO PREMIUM
+   =========================================================
+   Padroniza os modais antigos de confirmação para o mesmo
+   visual dos modais de usuários.
+   ========================================================= */
+
+.confirmModal {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 24px;
+}
+
+.confirmModal.hidden {
+    display: none !important;
+}
+
+.confirmModalBackdrop {
+    position: absolute;
+    inset: 0;
+
+    background: rgba(8, 47, 79, 0.46);
+    backdrop-filter: blur(10px);
+}
+
+.confirmModalDialog {
+    position: relative;
+    z-index: 1;
+
+    width: min(560px, 100%);
+
+    padding: 28px;
+
+    border-radius: 28px;
+    border: 1px solid rgba(219, 231, 243, 0.95);
+
+    background:
+        radial-gradient(circle at 88% 18%, rgba(233, 244, 251, 0.88), transparent 34%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.99), rgba(248, 252, 255, 0.98));
+
+    box-shadow:
+        0 30px 90px rgba(8, 47, 79, 0.30),
+        0 0 0 1px rgba(255, 255, 255, 0.72);
+
+    animation: modalPremiumEntrada 0.14s ease-out both !important;
+}
+
+/* Kicker no padrão do projeto */
+.confirmModalDialog::before {
+    content: "Confirmação";
+
+    display: block;
+
+    margin-bottom: 8px;
+
+    color: var(--blue-700);
+    font-size: 11px;
+    font-weight: 950;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.confirmModalDialog h2 {
+    margin: 0;
+
+    color: var(--blue-950);
+    font-family: var(--font-brand);
+    font-size: 30px;
+    font-weight: 500;
+    line-height: 1.08;
+}
+
+.confirmModalDialog p {
+    margin: 14px 0 0;
+
+    max-width: 460px;
+
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+/* Deixa nomes de arquivos longos mais elegantes */
+.confirmModalDialog p strong,
+.confirmModalDialog p code {
+    color: var(--blue-950);
+    font-weight: 900;
+    word-break: break-word;
+}
+
+.confirmModalActions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+
+    margin-top: 28px;
+}
+
+.confirmModalCancel,
+.confirmModalAccept {
+    min-height: 46px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    padding: 0 18px;
+
+    border-radius: 16px;
+
+    font-size: 14px;
+    font-weight: 950;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        background 0.18s ease,
+        border-color 0.18s ease,
+        color 0.18s ease;
+}
+
+.confirmModalCancel {
+    border: 1px solid rgba(219, 231, 243, 0.95);
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--ink);
+}
+
+.confirmModalCancel:hover {
+    transform: translateY(-1px);
+    border-color: rgba(15, 112, 196, 0.22);
+    background: #f8fbff;
+    box-shadow: 0 12px 24px rgba(8, 47, 79, 0.08);
+}
+
+.confirmModalAccept {
+    border: 1px solid transparent;
+    background: linear-gradient(135deg, var(--blue-700), var(--blue-900));
+    color: #ffffff;
+    box-shadow: 0 16px 34px rgba(15, 112, 196, 0.22);
+}
+
+.confirmModalAccept:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 20px 42px rgba(15, 112, 196, 0.28);
+}
+
+/* Quando o modal for de exclusão, deixa o botão principal com cara de perigo */
+.confirmModalDialog[data-variant="danger"] .confirmModalAccept,
+.confirmModalDialog.isDanger .confirmModalAccept {
+    background: linear-gradient(135deg, #dc2626, #991b1b);
+    box-shadow: 0 16px 34px rgba(220, 38, 38, 0.22);
+}
+
+.confirmModalDialog[data-variant="danger"] .confirmModalAccept:hover,
+.confirmModalDialog.isDanger .confirmModalAccept:hover {
+    box-shadow: 0 20px 42px rgba(220, 38, 38, 0.28);
+}
+
+@keyframes modalPremiumEntrada {
+    from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.975);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@media (max-width: 640px) {
+    .confirmModal {
+        align-items: flex-end;
+        padding: 12px;
+    }
+
+    .confirmModalDialog {
+        padding: 22px;
+        border-radius: 24px;
+    }
+
+    .confirmModalDialog h2 {
+        font-size: 26px;
+    }
+
+    .confirmModalActions {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .confirmModalCancel,
+    .confirmModalAccept {
+        width: 100%;
+    }
+}
+
+/* =========================================================
+   MODAL GENÉRICO PREMIUM - ESTRUTURA AVANÇADA
+   ========================================================= */
+
+.confirmModalDialog::before {
+    content: none !important;
+}
+
+.confirmModalHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.confirmModalKicker {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.confirmModalClose {
+    flex: 0 0 auto;
+}
+
+.confirmModalDialog h2 {
+    margin: 0;
+    color: var(--blue-950);
+    font-family: var(--font-brand);
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+}
+
+.confirmModalDialog p {
+    margin: 14px 0 0;
+    max-width: 520px;
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.confirmModalDetail {
+    display: inline-flex;
+    align-items: center;
+
+    max-width: 100%;
+
+    margin-top: 14px !important;
+    padding: 10px 12px;
+
+    border-radius: 14px;
+    border: 1px solid rgba(219, 231, 243, 0.95);
+
+    background: rgba(239, 246, 255, 0.72);
+    color: var(--blue-950) !important;
+
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    line-height: 1.35 !important;
+
+    word-break: break-word;
+}
+
+.confirmModalDetail.hidden {
+    display: none !important;
+}
+
+.confirmModalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 30px;
+}
+
+.confirmModalAccept,
+.confirmModalCancel {
+    min-height: 46px;
+    border-radius: 16px;
+}
+
+/* Variante padrão */
+.confirmModalDialog[data-variant="default"] .confirmModalAccept {
+    background: linear-gradient(135deg, var(--blue-700), var(--blue-900)) !important;
+    color: #ffffff !important;
+    box-shadow: 0 16px 34px rgba(15, 112, 196, 0.22) !important;
+}
+
+/* Variante sucesso */
+.confirmModalDialog[data-variant="success"] .confirmModalAccept {
+    background: linear-gradient(135deg, #22c55e, #15803d) !important;
+    color: #ffffff !important;
+    box-shadow: 0 16px 34px rgba(22, 163, 74, 0.22) !important;
+}
+
+/* Variante perigo */
+.confirmModalDialog[data-variant="danger"] .confirmModalAccept {
+    background: linear-gradient(135deg, #ef4444, #b91c1c) !important;
+    color: #ffffff !important;
+    box-shadow: 0 16px 34px rgba(220, 38, 38, 0.22) !important;
+}
+
+.confirmModalDialog[data-variant="danger"] .confirmModalKicker {
+    color: #dc2626 !important;
+}
+
+/* Variante aviso */
+.confirmModalDialog[data-variant="warning"] .confirmModalAccept {
+    background: linear-gradient(135deg, #f59e0b, #b45309) !important;
+    color: #ffffff !important;
+    box-shadow: 0 16px 34px rgba(245, 158, 11, 0.22) !important;
+}
+
+.confirmModalDialog[data-variant="warning"] .confirmModalKicker {
+    color: #b45309 !important;
+}
+
+@media (max-width: 640px) {
+    .confirmModalHeader {
+        gap: 12px;
+    }
+
+    .confirmModalDialog h2 {
+        font-size: 27px;
+    }
+
+    .confirmModalActions {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .confirmModalAccept,
+    .confirmModalCancel {
+        width: 100%;
+    }
+}
+
+/* =========================================================
+   FIX FINAL - VARIANTES DO MODAL GENÉRICO
+   ========================================================= */
+
+.confirmModalDialog[data-variant="danger"] .confirmModalAccept {
+    background: linear-gradient(135deg, #ef4444, #991b1b) !important;
+    color: #ffffff !important;
+    border-color: transparent !important;
+    box-shadow: 0 16px 34px rgba(220, 38, 38, 0.24) !important;
+}
+
+.confirmModalDialog[data-variant="danger"] .confirmModalAccept:hover {
+    box-shadow: 0 20px 42px rgba(220, 38, 38, 0.32) !important;
+}
+
+.confirmModalDialog[data-variant="success"] .confirmModalAccept {
+    background: linear-gradient(135deg, #22c55e, #15803d) !important;
+    color: #ffffff !important;
+    border-color: transparent !important;
+    box-shadow: 0 16px 34px rgba(22, 163, 74, 0.24) !important;
+}
+
+.confirmModalDialog[data-variant="success"] .confirmModalAccept:hover {
+    box-shadow: 0 20px 42px rgba(22, 163, 74, 0.32) !important;
+}
+
+.confirmModalDialog[data-variant="warning"] .confirmModalAccept {
+    background: linear-gradient(135deg, #f59e0b, #b45309) !important;
+    color: #ffffff !important;
+    border-color: transparent !important;
+    box-shadow: 0 16px 34px rgba(245, 158, 11, 0.24) !important;
+}
+
+.confirmModalDialog[data-variant="warning"] .confirmModalAccept:hover {
+    box-shadow: 0 20px 42px rgba(245, 158, 11, 0.32) !important;
 }

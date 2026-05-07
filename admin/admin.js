@@ -1437,39 +1437,125 @@ function definirBotaoComIcone(botao, icone, texto) {
 
 /**
  * Exibe uma confirmação em modal antes de ações de CRUD.
+ *
+ * Mantém compatibilidade com chamadas antigas:
+ * confirmarAcaoModal({ titulo, mensagem, confirmar, cancelar })
+ *
+ * E permite chamadas novas/premium:
+ * confirmarAcaoModal({
+ *   kicker: "Biblioteca",
+ *   titulo: "Excluir mídia",
+ *   mensagem: "Essa ação remove a mídia...",
+ *   detalhe: "arquivo.mp4",
+ *   confirmar: "Excluir",
+ *   cancelar: "Cancelar",
+ *   variante: "danger"
+ * })
  */
-function confirmarAcaoModal({ titulo, mensagem, confirmar = "Confirmar", cancelar = "Cancelar" }) {
+function confirmarAcaoModal({
+    kicker = "Confirmação",
+    titulo,
+    mensagem,
+    detalhe = "",
+    confirmar = "Confirmar",
+    cancelar = "Cancelar",
+    variante = "default"
+}) {
     if (!modalConfirmacao) {
         modalConfirmacao = document.createElement("div");
         modalConfirmacao.className = "confirmModal hidden";
         modalConfirmacao.innerHTML = `
             <div class="confirmModalBackdrop" data-confirm-cancel></div>
-            <section class="confirmModalDialog" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
-                <h2 id="confirmModalTitle"></h2>
-                <p id="confirmModalText"></p>
+
+            <section
+                class="confirmModalDialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="confirmModalTitle"
+                aria-describedby="confirmModalText"
+            >
+                <div class="confirmModalHeader">
+                    <div>
+                        <span id="confirmModalKicker" class="sectionKicker confirmModalKicker"></span>
+                        <h2 id="confirmModalTitle"></h2>
+                        <p id="confirmModalText"></p>
+                        <p id="confirmModalDetail" class="confirmModalDetail hidden"></p>
+                    </div>
+
+                    <button
+                        class="iconButton confirmModalClose"
+                        type="button"
+                        data-confirm-cancel
+                        aria-label="Fechar confirmação"
+                    >
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    </button>
+                </div>
+
                 <div class="confirmModalActions">
-                    <button class="confirmModalCancel" type="button" data-confirm-cancel></button>
-                    <button class="confirmModalAccept" type="button" data-confirm-accept></button>
+                    <button class="confirmModalCancel secondaryAction" type="button" data-confirm-cancel></button>
+                    <button class="confirmModalAccept primaryAction" type="button" data-confirm-accept></button>
                 </div>
             </section>
         `;
+
         document.body.appendChild(modalConfirmacao);
     }
 
-    modalConfirmacao.querySelector("#confirmModalTitle").textContent = titulo;
-    modalConfirmacao.querySelector("#confirmModalText").textContent = mensagem;
-    modalConfirmacao.querySelector(".confirmModalCancel").textContent = cancelar;
-    modalConfirmacao.querySelector(".confirmModalAccept").textContent = confirmar;
-    modalConfirmacao.classList.remove("hidden");
+    const dialog = modalConfirmacao.querySelector(".confirmModalDialog");
+    const kickerEl = modalConfirmacao.querySelector("#confirmModalKicker");
+    const tituloEl = modalConfirmacao.querySelector("#confirmModalTitle");
+    const mensagemEl = modalConfirmacao.querySelector("#confirmModalText");
+    const detalheEl = modalConfirmacao.querySelector("#confirmModalDetail");
+    const botaoCancelar = modalConfirmacao.querySelector(".confirmModalCancel");
+    const botaoConfirmar = modalConfirmacao.querySelector(".confirmModalAccept");
 
-    const botaoConfirmar = modalConfirmacao.querySelector("[data-confirm-accept]");
+    dialog.dataset.variant = variante;
+
+    kickerEl.textContent = kicker;
+    tituloEl.textContent = titulo;
+    mensagemEl.textContent = mensagem;
+
+    if (detalhe) {
+        detalheEl.textContent = detalhe;
+        detalheEl.classList.remove("hidden");
+    } else {
+        detalheEl.textContent = "";
+        detalheEl.classList.add("hidden");
+    }
+
+    definirBotaoComIcone(
+        botaoCancelar,
+        "fa-solid fa-arrow-left",
+        cancelar
+    );
+
+    const iconeConfirmar = variante === "danger"
+        ? "fa-solid fa-trash-can"
+        : variante === "success"
+            ? "fa-solid fa-check"
+            : "fa-solid fa-check";
+
+    definirBotaoComIcone(
+        botaoConfirmar,
+        iconeConfirmar,
+        confirmar
+    );
+
+    modalConfirmacao.classList.remove("hidden");
+    document.body.classList.add("modalAberto");
+
     const focoAnterior = document.activeElement;
 
-    botaoConfirmar.focus();
+    setTimeout(() => {
+        botaoConfirmar.focus();
+    }, 0);
 
     return new Promise((resolve) => {
         function fechar(resultado) {
             modalConfirmacao.classList.add("hidden");
+            document.body.classList.remove("modalAberto");
+
             modalConfirmacao.removeEventListener("click", aoClicar);
             document.removeEventListener("keydown", aoTeclar);
 
@@ -1494,6 +1580,19 @@ function confirmarAcaoModal({ titulo, mensagem, confirmar = "Confirmar", cancela
         function aoTeclar(event) {
             if (event.key === "Escape") {
                 fechar(false);
+                return;
+            }
+
+            /*
+              Atalho simples de acessibilidade:
+              Enter confirma se o foco não estiver em textarea/input.
+            */
+            if (
+                event.key === "Enter" &&
+                !event.target.closest("input, textarea, select")
+            ) {
+                event.preventDefault();
+                fechar(true);
             }
         }
 
@@ -2961,9 +3060,13 @@ async function enviarArquivo(event) {
     }
 
     const confirmouUpload = await confirmarAcaoModal({
-        titulo: "Enviar mídia",
-        mensagem: `Deseja enviar o arquivo "${arquivo.name}" para a biblioteca?`,
-        confirmar: "Enviar"
+        kicker: "Upload",
+        titulo: "Enviar nova mídia",
+        mensagem: "A mídia será adicionada à biblioteca e a playlist será atualizada automaticamente.",
+        detalhe: arquivo.name,
+        confirmar: "Enviar mídia",
+        cancelar: "Cancelar",
+        variante: "success"
     });
 
     if (!confirmouUpload) return;
@@ -3165,11 +3268,15 @@ async function salvarTodasConfiguracoes() {
     }
 
     const confirmou = await confirmarAcaoModal({
-        titulo: "Salvar alterações em lote",
+        kicker: "Biblioteca",
+        titulo: "Salvar alterações",
         mensagem: selecionadas.length
-            ? `Deseja salvar ${formatarQuantidade(midias.length, "mídia selecionada", "mídias selecionadas")}?`
-            : `Deseja salvar ${formatarQuantidade(midias.length, "alteração pendente", "alterações pendentes")}?`,
-        confirmar: "Salvar"
+            ? `Você está prestes a salvar ${formatarQuantidade(midias.length, "mídia selecionada", "mídias selecionadas")}.`
+            : `Você está prestes a salvar ${formatarQuantidade(midias.length, "alteração pendente", "alterações pendentes")}.`,
+        detalhe: "A playlist publicada será atualizada automaticamente.",
+        confirmar: "Salvar alterações",
+        cancelar: "Cancelar",
+        variante: "success"
     });
 
     if (!confirmou) return;
@@ -3416,9 +3523,13 @@ async function excluirMidiasSelecionadas() {
     }
 
     const confirmar = await confirmarAcaoModal({
-        titulo: "Excluir mídias",
-        mensagem: `Tem certeza que deseja excluir ${formatarQuantidade(arquivos.length, "mídia selecionada", "mídias selecionadas")}?`,
-        confirmar: "Excluir"
+        kicker: "Biblioteca",
+        titulo: "Excluir mídias selecionadas",
+        mensagem: `Essa ação remove ${formatarQuantidade(selecionadas.length, "mídia selecionada", "mídias selecionadas")} da biblioteca e atualiza a playlist publicada automaticamente.`,
+        detalhe: "Essa ação não pode ser desfeita.",
+        confirmar: "Excluir selecionadas",
+        cancelar: "Cancelar",
+        variante: "danger"
     });
 
     if (!confirmar) return;
@@ -3529,9 +3640,13 @@ async function excluirMidiaIndividual(nomeArquivo) {
     if (!nomeArquivo) return;
 
     const confirmar = await confirmarAcaoModal({
+        kicker: "Biblioteca",
         titulo: "Excluir mídia",
-        mensagem: `Tem certeza que deseja excluir a mídia "${nomeArquivo}"?`,
-        confirmar: "Excluir"
+        mensagem: "Essa ação remove a mídia da biblioteca e atualiza a playlist publicada automaticamente.",
+        detalhe: nomeArquivo,
+        confirmar: "Excluir mídia",
+        cancelar: "Cancelar",
+        variante: "danger"
     });
 
     if (!confirmar) return;
@@ -3842,9 +3957,13 @@ async function confirmarESalvarMidia(item, mensagem = "Deseja salvar esta altera
     if (!configuracao) return false;
 
     const confirmou = await confirmarAcaoModal({
-        titulo: "Salvar alteração",
-        mensagem,
-        confirmar: "Salvar"
+        kicker: "Biblioteca",
+        titulo: "Salvar mídia",
+        mensagem: "As alterações desta mídia serão salvas e a playlist publicada será atualizada automaticamente.",
+        detalhe: nomeArquivo,
+        confirmar: "Salvar mídia",
+        cancelar: "Cancelar",
+        variante: "success"
     });
 
     if (!confirmou) {
