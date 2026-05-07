@@ -3145,19 +3145,30 @@ function coletarConfiguracoesDaTela() {
  */
 async function salvarTodasConfiguracoes() {
     if (!garantirPermissaoParaEditarMidias()) return;
+
     const selecionadas = obterMidiasSelecionadas();
+    const todasConfiguracoes = coletarConfiguracoesDaTela();
+
+    const itensAlterados = Array.from(document.querySelectorAll(".mediaItemChanged"));
+    const nomesAlterados = itensAlterados
+        .map((item) => item.dataset.arquivo)
+        .filter(Boolean);
+
     const midias = selecionadas.length
-        ? coletarConfiguracoesDaTela().filter((midia) => selecionadas.includes(midia.nome))
-        : coletarConfiguracoesDaTela();
+        ? todasConfiguracoes.filter((midia) => selecionadas.includes(midia.nome))
+        : todasConfiguracoes.filter((midia) => nomesAlterados.includes(midia.nome));
 
     if (!midias.length) {
-        mostrarMensagemPlaylist("Nenhuma mídia encontrada para salvar.", "erro");
+        mostrarMensagemPlaylist("Nenhuma alteração pendente para salvar.", "erro");
+        sincronizarAlteracoesPendentesGlobais();
         return;
     }
 
     const confirmou = await confirmarAcaoModal({
         titulo: "Salvar alterações em lote",
-        mensagem: `Deseja salvar ${formatarQuantidade(midias.length, "mídia selecionada", "mídias selecionadas")}?`,
+        mensagem: selecionadas.length
+            ? `Deseja salvar ${formatarQuantidade(midias.length, "mídia selecionada", "mídias selecionadas")}?`
+            : `Deseja salvar ${formatarQuantidade(midias.length, "alteração pendente", "alterações pendentes")}?`,
         confirmar: "Salvar"
     });
 
@@ -3165,7 +3176,6 @@ async function salvarTodasConfiguracoes() {
 
     btnSalvarTudo.disabled = true;
     definirBotaoComIcone(btnSalvarTudo, "fa-solid fa-spinner fa-spin", "Salvando...");
-
     mostrarMensagemPlaylist("Salvando alterações, aguarde...", "info");
 
     try {
@@ -3196,6 +3206,8 @@ async function salvarTodasConfiguracoes() {
             await carregarMidias();
             await carregarPlaylistAtual();
         });
+
+        sincronizarAlteracoesPendentesGlobais();
     } catch (erro) {
         mostrarMensagemPlaylist(
             erro.message || "Erro ao salvar alterações.",
@@ -3205,6 +3217,8 @@ async function salvarTodasConfiguracoes() {
         if (btnSalvarTudo) {
             btnSalvarTudo.disabled = false;
         }
+
+        sincronizarAlteracoesPendentesGlobais();
 
         console.error(erro);
     } finally {
@@ -3746,7 +3760,63 @@ function atualizarEstadoVisualAlteracaoDoItem(item) {
         botaoSalvar.classList.toggle("hidden", !alterado);
     }
 
+    /*
+      Sempre que um card muda de estado, atualizamos também
+      o botão global "Salvar alterações" no header.
+    */
+    sincronizarAlteracoesPendentesGlobais();
+
     return alterado;
+}
+
+/* =========================================================
+   ALTERAÇÕES PENDENTES GLOBAIS
+   =========================================================
+   Controla o botão "Salvar alterações" do header e o aviso
+   de saída da página quando houver cards modificados.
+   ========================================================= */
+
+/**
+ * Retorna todos os cards de mídia com alterações reais.
+ */
+function obterItensComAlteracoesPendentes() {
+    return Array.from(document.querySelectorAll(".mediaItemChanged"));
+}
+
+/**
+ * Atualiza o estado global de alterações pendentes.
+ */
+
+function sincronizarAlteracoesPendentesGlobais() {
+    const itensAlterados = obterItensComAlteracoesPendentes();
+    const totalAlterados = itensAlterados.length;
+
+    existemAlteracoesPendentes = totalAlterados > 0;
+
+    if (btnSalvarTudo) {
+        btnSalvarTudo.classList.toggle("hidden", !existemAlteracoesPendentes);
+        btnSalvarTudo.disabled = !existemAlteracoesPendentes;
+
+        definirBotaoComIcone(
+            btnSalvarTudo,
+            "fa-solid fa-floppy-disk",
+            totalAlterados > 1
+                ? `Salvar ${totalAlterados} alterações`
+                : "Salvar alteração"
+        );
+
+        btnSalvarTudo.classList.toggle("hasChanges", existemAlteracoesPendentes);
+    }
+
+    if (pendingChanges) {
+        pendingChanges.classList.toggle("hidden", !existemAlteracoesPendentes);
+
+        if (existemAlteracoesPendentes) {
+            pendingChanges.textContent = totalAlterados > 1
+                ? `${totalAlterados} mídias possuem alterações não salvas.`
+                : "1 mídia possui alteração não salva.";
+        }
+    }
 }
 
 /**
