@@ -1209,6 +1209,42 @@ function formatarTamanho(bytes) {
     return `${kb.toFixed(2)} KB`;
 }
 
+/* =========================================================
+   VÍDEOS - FORMATAÇÃO DE DURAÇÃO
+   =========================================================
+   Converte a duração real do vídeo, em segundos, para um texto
+   amigável no painel administrativo.
+
+   Exemplos:
+   - 8s
+   - 1min 30s
+   - 1h 02min 09s
+   ========================================================= */
+
+/**
+ * Formata segundos em duração amigável.
+ */
+function formatarDuracaoVideo(segundos) {
+    const totalSegundos = Number(segundos);
+
+    if (!Number.isFinite(totalSegundos) || totalSegundos <= 0) {
+        return "Duração indisponível";
+    }
+
+    const horas = Math.floor(totalSegundos / 3600);
+    const minutos = Math.floor((totalSegundos % 3600) / 60);
+    const segundosRestantes = Math.round(totalSegundos % 60);
+
+    if (horas > 0) {
+        return `${horas}h ${String(minutos).padStart(2, "0")}min ${String(segundosRestantes).padStart(2, "0")}s`;
+    }
+
+    if (minutos > 0) {
+        return `${minutos}min ${String(segundosRestantes).padStart(2, "0")}s`;
+    }
+
+    return `${segundosRestantes}s`;
+}
 /**
  * Formata números do resumo administrativo.
  */
@@ -2447,15 +2483,21 @@ function renderizarMidias(midias) {
 
         const detalheDuracao = midia.tipo === "imagem"
             ? `${Number(midia.duracao || 0)}s por exibição`
-            : "Duração automática do vídeo";
+            : "Lendo duração do vídeo...";
 
         const detalhesMidia = `
             <span><strong>Arquivo</strong>${nomeArquivo}</span>
             <span><strong>Tamanho</strong>${formatarTamanho(midia.tamanho)}</span>
             <span><strong>Tipo</strong>${tipo}</span>
             <span><strong>Extensão</strong>${extensao || "sem extensão"}</span>
-            <span><strong>Duração</strong>${detalheDuracao}</span>
-        `;
+            <span><strong>Duração</strong>
+                <span
+                    class="mediaVideoDurationText"
+                    data-video-duration="${midia.tipo === "video" ? nomeArquivo : ""}"
+                >
+                    ${detalheDuracao}
+                </span>
+            </span>        `;
 
         const controleDuracao = midia.tipo === "imagem"
             ? `
@@ -2614,6 +2656,68 @@ function renderizarMidias(midias) {
     });
 
     aplicarFiltrosMidia();
+    atualizarDuracaoRealDosVideos();
+}
+
+/* =========================================================
+   VÍDEOS - LEITURA DE DURAÇÃO REAL
+   =========================================================
+   Lê a duração real dos vídeos renderizados no painel.
+
+   Como funciona:
+   - cada card já possui um <video preload="metadata">;
+   - ao carregar os metadados, o navegador informa video.duration;
+   - atualizamos o popover "Detalhes" daquele card.
+   ========================================================= */
+
+/**
+ * Atualiza nos detalhes do card a duração real do vídeo.
+ */
+function atualizarDuracaoRealDosVideos() {
+    const videos = document.querySelectorAll(".mediaItemVideo video");
+
+    videos.forEach((video) => {
+        const item = video.closest(".mediaItem");
+
+        if (!item) return;
+
+        const nomeArquivo = item.dataset.arquivo || "";
+        const campoDuracao = item.querySelector(".mediaVideoDurationText");
+
+        if (!campoDuracao) return;
+
+        function aplicarDuracao() {
+            const duracaoFormatada = formatarDuracaoVideo(video.duration);
+
+            campoDuracao.textContent = duracaoFormatada;
+            campoDuracao.dataset.durationLoaded = "true";
+        }
+
+        /*
+          Se o navegador já tiver os metadados, atualiza na hora.
+          Caso contrário, espera o evento loadedmetadata.
+        */
+        if (Number.isFinite(video.duration) && video.duration > 0) {
+            aplicarDuracao();
+            return;
+        }
+
+        video.addEventListener("loadedmetadata", aplicarDuracao, {
+            once: true
+        });
+
+        video.addEventListener("error", () => {
+            campoDuracao.textContent = "Duração indisponível";
+            campoDuracao.dataset.durationLoaded = "false";
+
+            console.warn(
+                "Não foi possível ler a duração do vídeo:",
+                nomeArquivo
+            );
+        }, {
+            once: true
+        });
+    });
 }
 
 /**
