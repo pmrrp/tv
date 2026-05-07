@@ -373,7 +373,8 @@ function obterDetailsControlados() {
         ".adminUserDropdown",
         ".mediaScheduleMenu",
         ".mediaPriorityMenu",
-        ".mediaDetailsHover"
+        ".mediaDetailsHover",
+        ".mediaFiltersDropdown"
     ].join(",")));
 }
 
@@ -403,7 +404,7 @@ function fecharDetailsControlados(exceto = null) {
 function configurarDetailsControlados() {
     document.addEventListener("click", (event) => {
         const detailsClicado = event.target.closest(
-            ".adminUserDropdown, .mediaScheduleMenu, .mediaPriorityMenu, .mediaDetailsHover"
+            ".adminUserDropdown, .mediaScheduleMenu, .mediaPriorityMenu, .mediaDetailsHover, .mediaFiltersDropdown"
         );
 
         if (detailsClicado) {
@@ -411,12 +412,24 @@ function configurarDetailsControlados() {
         }
 
         fecharDetailsControlados();
+
+        const dropdownFiltros = document.querySelector(".mediaFiltersDropdown");
+
+        if (dropdownFiltros) {
+            dropdownFiltros.removeAttribute("open");
+        }
     });
 
     document.addEventListener("keydown", (event) => {
         if (event.key !== "Escape") return;
 
         fecharDetailsControlados();
+
+        const dropdownFiltros = document.querySelector(".mediaFiltersDropdown");
+
+        if (dropdownFiltros) {
+            dropdownFiltros.removeAttribute("open");
+        }
     });
 
     document.addEventListener("toggle", (event) => {
@@ -425,7 +438,7 @@ function configurarDetailsControlados() {
         if (!(details instanceof HTMLDetailsElement)) return;
 
         const ehControlado = details.matches(
-            ".adminUserDropdown, .mediaScheduleMenu, .mediaPriorityMenu, .mediaDetailsHover"
+            ".adminUserDropdown, .mediaScheduleMenu, .mediaPriorityMenu, .mediaDetailsHover, .mediaFiltersDropdown"
         );
 
         if (!ehControlado || !details.open) return;

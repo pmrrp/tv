@@ -7173,3 +7173,263 @@ body:not(.can-edit-media) .mediaStatusToggle.isInactive {
     visibility: visible !important;
     transform: translateX(-50%) translateY(0) !important;
 }
+
+/* =========================================================
+   BIBLIOTECA - TOOLBAR CLEAN COM FILTROS RECOLHIDOS
+   ========================================================= */
+
+.mediaToolbarClean {
+    display: grid !important;
+    grid-template-columns: minmax(320px, 1fr) auto !important;
+    align-items: end !important;
+    gap: 12px !important;
+
+    padding: 14px !important;
+
+    border: 1px solid rgba(219, 231, 243, 0.95) !important;
+    border-radius: 18px !important;
+
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(248, 252, 255, 0.92)) !important;
+
+    box-shadow: 0 14px 34px rgba(17, 32, 51, 0.045) !important;
+
+    overflow: visible !important;
+}
+
+.mediaToolbarSearch {
+    width: 100%;
+    min-width: 0;
+}
+
+.mediaToolbarSearch input {
+    width: 100% !important;
+    min-height: 46px !important;
+    border-radius: 16px !important;
+    font-size: 14px !important;
+    font-weight: 850 !important;
+}
+
+.mediaToolbarActions {
+    display: inline-flex;
+    align-items: end;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: nowrap;
+}
+
+/* =========================================================
+   FILTROS EM POPOVER
+   ========================================================= */
+
+.mediaFiltersDropdown {
+    position: relative;
+    z-index: 30;
+}
+
+.mediaFiltersDropdown summary {
+    list-style: none;
+}
+
+.mediaFiltersDropdown summary::-webkit-details-marker {
+    display: none;
+}
+
+.mediaFiltersDropdown summary::marker {
+    content: "";
+}
+
+.mediaFiltersButton,
+#btnReload,
+#btnToggleSelectionMode {
+    min-height: 46px !important;
+    height: 46px !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+
+    padding: 0 15px !important;
+
+    border-radius: 16px !important;
+    white-space: nowrap !important;
+}
+
+.mediaFiltersChevron {
+    font-size: 11px;
+    color: #64748b;
+
+    transition:
+        transform 0.18s ease,
+        color 0.18s ease;
+}
+
+.mediaFiltersDropdown[open] .mediaFiltersChevron {
+    transform: rotate(180deg);
+    color: #0f70c4;
+}
+
+.mediaFiltersPopover {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+    z-index: 10000;
+
+    width: min(520px, calc(100vw - 48px));
+
+    padding: 16px;
+
+    border: 1px solid rgba(219, 231, 243, 0.96);
+    border-radius: 22px;
+
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.99), rgba(248, 252, 255, 0.98));
+
+    box-shadow:
+        0 26px 70px rgba(8, 47, 79, 0.18),
+        0 0 0 1px rgba(255, 255, 255, 0.72);
+
+    animation: mediaFiltersPopoverIn 0.2s ease both;
+}
+
+.mediaFiltersHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+
+    margin-bottom: 14px;
+}
+
+.mediaFiltersHeader strong {
+    display: block;
+    color: #082f4f;
+    font-size: 17px;
+    font-weight: 950;
+    line-height: 1.2;
+}
+
+.mediaFiltersHeader span {
+    display: block;
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 750;
+}
+
+.mediaFiltersGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.mediaFiltersGrid .mediaFilterLabel {
+    width: 100%;
+}
+
+.mediaFiltersGrid .mediaFilterLabel select {
+    width: 100% !important;
+    min-height: 44px !important;
+    border-radius: 14px !important;
+}
+
+.mediaFiltersGrid .mediaFilterLabel:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+}
+
+@keyframes mediaFiltersPopoverIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Garante que o popover não seja cortado */
+.mediaCard,
+.libraryDropdown,
+.libraryDropdownBody,
+.mediaToolbar,
+.mediaToolbarClean {
+    overflow: visible !important;
+}
+
+/* =========================================================
+   RESPONSIVO BÁSICO DA TOOLBAR
+   ========================================================= */
+
+@media (max-width: 980px) {
+    .mediaToolbarClean {
+        grid-template-columns: 1fr !important;
+    }
+
+    .mediaToolbarActions {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 640px) {
+
+    .mediaToolbarActions,
+    .mediaFiltersDropdown,
+    .mediaFiltersButton,
+    #btnReload,
+    #btnToggleSelectionMode,
+    #btnDeleteSelected {
+        width: 100%;
+    }
+
+    .mediaFiltersGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .mediaFiltersPopover {
+        right: auto;
+        left: 0;
+        width: min(100%, calc(100vw - 40px));
+    }
+}
+
+/* =========================================================
+   FIX - POPOVER DE FILTROS ACIMA DA BIBLIOTECA
+   ========================================================= */
+
+.mediaCard,
+.libraryDropdown,
+.libraryDropdownBody,
+.mediaToolbarClean,
+.mediaToolbarActions,
+.mediaFiltersDropdown {
+    position: relative !important;
+    overflow: visible !important;
+}
+
+/* Quando filtros estiver aberto, a biblioteca sobe acima da lista/cards */
+.mediaCard:has(.mediaFiltersDropdown[open]),
+.libraryDropdown:has(.mediaFiltersDropdown[open]),
+.libraryDropdownBody:has(.mediaFiltersDropdown[open]),
+.mediaToolbarClean:has(.mediaFiltersDropdown[open]) {
+    z-index: 20000 !important;
+}
+
+/* O dropdown em si fica acima dos irmãos */
+.mediaFiltersDropdown[open] {
+    z-index: 20010 !important;
+}
+
+/* Caixa do popover acima de tudo dentro da biblioteca */
+.mediaFiltersPopover {
+    z-index: 20020 !important;
+}
+
+/* Evita que os cards de mídia passem na frente do popover */
+.mediaCard:has(.mediaFiltersDropdown[open]) .mediaList,
+.mediaCard:has(.mediaFiltersDropdown[open]) .mediaItem {
+    z-index: 1 !important;
+}
