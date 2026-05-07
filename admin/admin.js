@@ -353,6 +353,88 @@ function configurarScrollAoAbrirDropdowns() {
 }
 
 /* =========================================================
+   DETAILS / POPOVERS - FECHAMENTO INTELIGENTE
+   =========================================================
+   Controla elementos <details> usados como menus/popovers.
+
+   Resolve:
+   - menu "Olá, usuário" não fechar ao clicar fora;
+   - popover de período não fechar ao clicar fora;
+   - menu de prioridade ficar aberto;
+   - ESC não fechar os menus;
+   - vários popovers abertos ao mesmo tempo.
+   ========================================================= */
+
+/**
+ * Retorna todos os <details> que devem se comportar como popover.
+ */
+function obterDetailsControlados() {
+    return Array.from(document.querySelectorAll([
+        ".adminUserDropdown",
+        ".mediaScheduleMenu",
+        ".mediaPriorityMenu",
+        ".mediaDetailsHover"
+    ].join(",")));
+}
+
+/**
+ * Fecha os details controlados.
+ *
+ * O parâmetro "exceto" permite manter aberto o details atual
+ * quando o usuário acabou de clicar nele.
+ */
+function fecharDetailsControlados(exceto = null) {
+    obterDetailsControlados().forEach((details) => {
+        if (details !== exceto) {
+            details.removeAttribute("open");
+        }
+    });
+}
+
+/**
+ * Configura fechamento automático dos popovers/details.
+ *
+ * Comportamentos:
+ * - clicar fora fecha todos;
+ * - ESC fecha todos;
+ * - abrir um fecha os outros;
+ * - clique dentro do próprio details não fecha.
+ */
+function configurarDetailsControlados() {
+    document.addEventListener("click", (event) => {
+        const detailsClicado = event.target.closest(
+            ".adminUserDropdown, .mediaScheduleMenu, .mediaPriorityMenu, .mediaDetailsHover"
+        );
+
+        if (detailsClicado) {
+            return;
+        }
+
+        fecharDetailsControlados();
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") return;
+
+        fecharDetailsControlados();
+    });
+
+    document.addEventListener("toggle", (event) => {
+        const details = event.target;
+
+        if (!(details instanceof HTMLDetailsElement)) return;
+
+        const ehControlado = details.matches(
+            ".adminUserDropdown, .mediaScheduleMenu, .mediaPriorityMenu, .mediaDetailsHover"
+        );
+
+        if (!ehControlado || !details.open) return;
+
+        fecharDetailsControlados(details);
+    }, true);
+}
+
+/* =========================================================
    USUÁRIOS - HELPERS VISUAIS
    ========================================================= */
 
@@ -2399,10 +2481,11 @@ function renderizarMidias(midias) {
                     </div>
 
                     <div class="mediaDetailsHover">
-                        <span class="mediaDetailsTrigger">
+                        <button class="mediaDetailsTrigger" type="button">
                             <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
                             Detalhes
-                        </span>
+                        </button>
+
                         <div class="mediaDetailsPopover" role="tooltip">
                             ${detalhesMidia}
                         </div>
@@ -2434,6 +2517,9 @@ function renderizarMidias(midias) {
         item.dataset.prioridade = midia.prioridade || "normal";
         item.dataset.repeat = Number(midia.repetirACada || 0) > 0 ? "com" : "sem";
         item.dataset.periodo = obterEstadoPeriodo(midia.inicio, midia.fim);
+        item.dataset.configOriginal = JSON.stringify(
+            obterConfiguracaoOriginalDeMidia(midia)
+        );
 
         mediaList.appendChild(item);
     });
@@ -3268,6 +3354,98 @@ function atualizarNumerosDaPlaylist() {
     });
 }
 
+/* =========================================================
+   ALTERAÇÕES REAIS NOS CARDS DE MÍDIA
+   =========================================================
+   Evita falso positivo de alteração.
+
+   Antes:
+   - alguns cliques neutros podiam mostrar o botão Salvar.
+
+   Agora:
+   - cada card guarda a configuração original;
+   - ao interagir, comparamos o estado atual com o original;
+   - o botão Salvar só aparece se algo realmente mudou.
+   ========================================================= */
+
+/**
+ * Normaliza uma configuração para comparação.
+ */
+function normalizarConfiguracaoComparavel(configuracao) {
+    return {
+        ativo: Boolean(configuracao.ativo),
+        duracao: Number(configuracao.duracao || 8),
+        prioridade: String(configuracao.prioridade || "normal"),
+        repetirACada: Number(configuracao.repetirACada || 0),
+        titulo: String(configuracao.titulo || "").trim(),
+        inicio: String(configuracao.inicio || ""),
+        fim: String(configuracao.fim || "")
+    };
+}
+
+/**
+ * Monta a configuração original da mídia usando os dados vindos da API.
+ *
+ * As datas são convertidas para datetime-local porque é esse formato
+ * que os inputs usam na tela.
+ */
+function obterConfiguracaoOriginalDeMidia(midia) {
+    return normalizarConfiguracaoComparavel({
+        ativo: midia.ativo !== false,
+        duracao: midia.tipo === "imagem"
+            ? Number(midia.duracao || 8)
+            : 8,
+        prioridade: midia.prioridade || "normal",
+        repetirACada: Number(midia.repetirACada || 0),
+        titulo: midia.titulo || midia.nome || "",
+        inicio: formatarIsoParaDatetimeLocal(midia.inicio),
+        fim: formatarIsoParaDatetimeLocal(midia.fim)
+    });
+}
+
+/**
+ * Lê a configuração atual do card em um formato comparável.
+ */
+function obterConfiguracaoAtualComparavelDoItem(item) {
+    const configuracao = coletarConfiguracaoDoItem(item);
+
+    if (!configuracao) return null;
+
+    return normalizarConfiguracaoComparavel(configuracao);
+}
+
+/**
+ * Verifica se o card realmente possui alteração.
+ */
+function itemPossuiAlteracaoReal(item) {
+    if (!item || !item.dataset.configOriginal) return false;
+
+    const original = JSON.parse(item.dataset.configOriginal);
+    const atual = obterConfiguracaoAtualComparavelDoItem(item);
+
+    if (!atual) return false;
+
+    return JSON.stringify(original) !== JSON.stringify(atual);
+}
+
+/**
+ * Atualiza visualmente o estado de alteração de um card.
+ */
+function atualizarEstadoVisualAlteracaoDoItem(item) {
+    if (!item) return false;
+
+    const alterado = itemPossuiAlteracaoReal(item);
+    const botaoSalvar = item.querySelector(".mediaSaveButton");
+
+    item.classList.toggle("mediaItemChanged", alterado);
+
+    if (botaoSalvar) {
+        botaoSalvar.classList.toggle("hidden", !alterado);
+    }
+
+    return alterado;
+}
+
 /**
  * Coleta a configuração de um card específico.
  */
@@ -3399,7 +3577,8 @@ function atualizarCamposValidade(item) {
     const inputInicio = item.querySelector(".mediaStartDate");
     const inputFim = item.querySelector(".mediaEndDate");
     const dateFields = item.querySelector(".mediaDateFields");
-    const scheduleSummary = item.querySelector(".mediaScheduleMenu summary small");
+    const scheduleSummary = item.querySelector(".mediaScheduleMenu summary");
+    const scheduleSummarySmall = item.querySelector(".mediaScheduleMenu summary small");
 
     if (!checkboxIndefinido || !inputInicio || !inputFim) return;
 
@@ -3418,8 +3597,21 @@ function atualizarCamposValidade(item) {
         }
     }
 
+    const textoPeriodo = indefinido
+        ? "Tempo indeterminado"
+        : "Com data definida";
+
+    if (scheduleSummarySmall) {
+        scheduleSummarySmall.textContent = textoPeriodo;
+    }
+
+    /*
+      Mesmo que o texto pequeno esteja escondido no CSS,
+      o title ajuda o usuário e facilita debug visual.
+    */
     if (scheduleSummary) {
-        scheduleSummary.textContent = indefinido ? "Tempo indeterminado" : "Com data definida";
+        scheduleSummary.title = textoPeriodo;
+        scheduleSummary.setAttribute("aria-label", `Período de exibição: ${textoPeriodo}`);
     }
 }
 
@@ -3430,10 +3622,16 @@ function ativarPeriodoPorData(input) {
     const item = input ? input.closest(".mediaItem") : null;
     const checkboxIndefinido = item ? item.querySelector(".mediaIndefinite") : null;
 
-    if (!checkboxIndefinido || !checkboxIndefinido.checked) return;
+    if (!item || !checkboxIndefinido || !checkboxIndefinido.checked) return;
 
     checkboxIndefinido.checked = false;
     atualizarCamposValidade(item);
+
+    /*
+      Interagir com os campos de data deve contar como alteração real
+      somente se o estado atual ficou diferente do original.
+    */
+    atualizarEstadoVisualAlteracaoDoItem(item);
 }
 
 
@@ -3907,12 +4105,19 @@ async function processarAlteracaoDeMidia(alvo) {
     if (!mudouConfig) return;
 
     const item = alvo.closest(".mediaItem");
-    const emModoLote = obterMidiasSelecionadas().length > 0;
 
+    if (!item) return;
+
+    /*
+      Atualiza campos e textos auxiliares de período.
+    */
     if (alvo.classList.contains("mediaIndefinite")) {
         atualizarCamposValidade(item);
     }
 
+    /*
+      Atualiza visualmente a tag Ativo/Inativo.
+    */
     if (alvo.classList.contains("mediaActive")) {
         const statusToggle = alvo.closest(".mediaStatusToggle");
         const statusText = statusToggle ? statusToggle.querySelector("span") : null;
@@ -3927,19 +4132,18 @@ async function processarAlteracaoDeMidia(alvo) {
         }
     }
 
-    if (item) {
-        item.classList.add("mediaItemChanged");
-    }
+    /*
+      Só marca como alterado se houve mudança real em comparação
+      com a configuração original carregada pela API.
+    */
+    const alterado = atualizarEstadoVisualAlteracaoDoItem(item);
 
-    if (emModoLote) {
+    /*
+      Se houver seleção em lote, usamos o botão global.
+      Mesmo assim, só ativamos o aviso global se algo realmente mudou.
+    */
+    if (obterMidiasSelecionadas().length > 0 && alterado) {
         marcarAlteracoesPendentes();
-        return;
-    }
-
-    const botaoSalvar = item ? item.querySelector(".mediaSaveButton") : null;
-
-    if (botaoSalvar) {
-        botaoSalvar.classList.remove("hidden");
     }
 }
 
@@ -3990,19 +4194,33 @@ mediaList.addEventListener("input", (event) => {
 
     const item = alvo.closest(".mediaItem");
 
-    if (item) {
-        item.classList.add("mediaItemChanged");
-    }
+    const alterado = atualizarEstadoVisualAlteracaoDoItem(item);
 
-    if (obterMidiasSelecionadas().length) {
+    if (obterMidiasSelecionadas().length > 0 && alterado) {
         marcarAlteracoesPendentes();
+    }
+});
+
+document.addEventListener("click", (event) => {
+    const trigger = event.target.closest(".mediaDetailsTrigger");
+    const detalhes = event.target.closest(".mediaDetailsHover");
+
+    document.querySelectorAll(".mediaDetailsHover.isOpen").forEach((item) => {
+        if (item !== detalhes) {
+            item.classList.remove("isOpen");
+        }
+    });
+
+    if (trigger) {
+        event.preventDefault();
+        detalhes.classList.toggle("isOpen");
         return;
     }
 
-    const botaoSalvar = item ? item.querySelector(".mediaSaveButton") : null;
-
-    if (botaoSalvar) {
-        botaoSalvar.classList.remove("hidden");
+    if (!detalhes) {
+        document.querySelectorAll(".mediaDetailsHover.isOpen").forEach((item) => {
+            item.classList.remove("isOpen");
+        });
     }
 });
 
@@ -4019,6 +4237,7 @@ async function iniciarAdmin() {
 
     limparAlteracoesPendentes();
     configurarScrollAoAbrirDropdowns();
+    configurarDetailsControlados();
 }
 
 iniciarAdmin();

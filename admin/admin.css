@@ -6417,7 +6417,7 @@ body:not(.can-edit-media) .mediaStatusToggle.isInactive {
 
 .mediaItem {
     position: relative;
-    overflow: hidden;
+    overflow: visible !important;
 }
 
 /* Coluna esquerda mais minimalista */
@@ -6884,4 +6884,158 @@ body:not(.can-edit-media) .mediaStatusToggle.isInactive {
         flex-wrap: wrap !important;
         max-width: 100% !important;
     }
+}
+
+/* =========================================================
+   AJUSTE - DETALHES COMO DETAILS CONTROLADO
+   ========================================================= */
+
+.mediaDetailsHover summary {
+    list-style: none;
+}
+
+.mediaDetailsHover summary::-webkit-details-marker {
+    display: none;
+}
+
+.mediaDetailsHover summary::marker {
+    content: "";
+}
+
+/* =========================================================
+   FIX - POPOVERS DAS MÍDIAS
+   ========================================================= */
+
+.mediaItem,
+.mediaList,
+.mediaDetailsHover,
+.mediaPriorityMenu,
+.mediaScheduleMenu {
+    position: relative;
+}
+
+/* Quando abrir, sobe na pilha */
+.mediaPriorityMenu[open],
+.mediaScheduleMenu[open],
+.mediaDetailsHover.isOpen {
+    z-index: 80;
+}
+
+/* Popovers acima de tudo */
+.mediaPriorityPopover,
+.mediaSchedulePopover,
+.mediaDetailsPopover {
+    position: absolute;
+    z-index: 9999 !important;
+}
+
+/* prioridade */
+.mediaPriorityPopover {
+    top: calc(100% + 8px);
+    left: 0;
+}
+
+/* detalhes */
+.mediaDetailsPopover {
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 720px;
+    max-width: min(920px, 92vw);
+}
+
+/* se algum container externo ainda estiver cortando */
+.card,
+.mediaCard,
+.mediaList,
+.mediaItem {
+    overflow: visible !important;
+}
+
+/* =========================================================
+   FIX - DETALHES EM HOVER
+   ========================================================= */
+
+.mediaDetailsHover {
+    position: relative;
+    display: inline-flex;
+}
+
+.mediaDetailsTrigger {
+    cursor: pointer;
+}
+
+.mediaDetailsPopover {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(6px);
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+}
+
+/* abre no hover e também no foco */
+.mediaDetailsHover:hover .mediaDetailsPopover,
+.mediaDetailsHover:focus-within .mediaDetailsPopover,
+.mediaDetailsHover.isOpen .mediaDetailsPopover {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+/* =========================================================
+   FIX - POPOVER DA ÚLTIMA MÍDIA ACIMA DOS USUÁRIOS
+   =========================================================
+   Quando um popover de mídia estiver aberto, a biblioteca sobe
+   acima das seções seguintes da página.
+   ========================================================= */
+
+/* Garante que os cards participem corretamente da pilha */
+.mediaCard,
+.usersCard,
+.mediaItem,
+.libraryDropdown,
+.libraryDropdownBody,
+.mediaList {
+    position: relative;
+}
+
+/* Estado normal */
+.mediaCard {
+    z-index: 10;
+}
+
+.usersCard {
+    z-index: 5;
+}
+
+/* Quando qualquer popover da biblioteca estiver aberto,
+   a seção inteira da biblioteca sobe acima das próximas seções */
+.mediaCard:has(.mediaScheduleMenu[open]),
+.mediaCard:has(.mediaPriorityMenu[open]),
+.mediaCard:has(.mediaDetailsHover.isOpen),
+.mediaCard:has(.mediaDetailsHover:hover) {
+    z-index: 9990 !important;
+}
+
+/* O card da mídia aberto também sobe */
+.mediaItem:has(.mediaScheduleMenu[open]),
+.mediaItem:has(.mediaPriorityMenu[open]),
+.mediaItem:has(.mediaDetailsHover.isOpen),
+.mediaItem:has(.mediaDetailsHover:hover) {
+    z-index: 9991 !important;
+}
+
+/* Popovers em camada máxima dentro da biblioteca */
+.mediaScheduleMenu[open],
+.mediaPriorityMenu[open],
+.mediaDetailsHover.isOpen,
+.mediaDetailsHover:hover {
+    z-index: 9992 !important;
+}
+
+/* Caixa do popover */
+.mediaValidityBox,
+.mediaPriorityOptions,
+.mediaDetailsPopover {
+    z-index: 9993 !important;
 }
