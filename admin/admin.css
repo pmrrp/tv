@@ -4477,3 +4477,487 @@ body:not(.can-edit-media) .mediaStatusToggle.isInactive {
     border-color: #e2e8f0;
     color: #64748b;
 }
+
+/* =========================================================
+   POLIMENTO 01 - BASE PREMIUM ARREDONDADA
+   =========================================================
+   Recupera o visual mais suave/arredondado do painel,
+   sem mexer em HTML nem JavaScript.
+   ========================================================= */
+
+:root {
+    --radius-card-premium: 24px;
+    --radius-inner-premium: 18px;
+    --radius-button-premium: 16px;
+
+    --shadow-premium-card: 0 18px 48px rgba(15, 23, 42, 0.07);
+    --shadow-premium-hover: 0 24px 64px rgba(15, 23, 42, 0.10);
+}
+
+/* Cards principais */
+.adminHeader,
+.summaryCard,
+.card,
+.mediaCard,
+.usersCard,
+.libraryDropdown,
+.usersDropdown {
+    border-radius: var(--radius-card-premium) !important;
+    border-color: rgba(219, 231, 243, 0.88) !important;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 252, 255, 0.94)) !important;
+    box-shadow: var(--shadow-premium-card) !important;
+}
+
+/* Hover leve, sem exagerar */
+.adminHeader:hover,
+.summaryCard:hover,
+.card:hover,
+.mediaCard:hover,
+.usersCard:hover {
+    box-shadow: var(--shadow-premium-hover) !important;
+}
+
+/* Cards de resumo mais macios */
+.summaryCard {
+    border-radius: 22px !important;
+    overflow: hidden;
+}
+
+/* Upload box e dropdowns internos */
+.uploadBox,
+.libraryDropdownSummary,
+.usersDropdownSummary {
+    border-radius: var(--radius-inner-premium) !important;
+}
+
+/* Dropdowns internos */
+.libraryDropdown,
+.usersDropdown {
+    overflow: hidden;
+}
+
+/* Botões principais sem virar bolinha */
+.openPlayerButton,
+.logoutButton,
+.primaryAction,
+.secondaryAction,
+.successAction,
+.warningAction,
+.dangerAction,
+#btnReload,
+#btnUpload,
+#btnSalvarTudo,
+#btnDeleteSelected,
+#btnNewUser,
+#btnReloadUsers {
+    border-radius: var(--radius-button-premium) !important;
+}
+
+/* Botões tipo pílula, quando ficam lado a lado no cabeçalho */
+.adminHeaderActions .openPlayerButton,
+.adminHeaderActions .logoutButton,
+.usersActions #btnNewUser,
+.usersActions #btnReloadUsers {
+    border-radius: 999px !important;
+}
+
+/* Botão de upload retangular premium */
+#btnUpload {
+    min-width: 170px;
+    min-height: 52px;
+    padding: 0 20px;
+    align-self: stretch;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    border-radius: 16px !important;
+
+    background: linear-gradient(135deg, #16a34a, #0f7a38) !important;
+    color: #ffffff !important;
+
+    box-shadow: 0 14px 28px rgba(22, 163, 74, 0.20) !important;
+
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+#btnUpload:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.02);
+}
+
+/* Ícones circulares dos cards */
+.summaryIcon,
+.uploadIcon,
+.libraryDropdownChevron,
+.usersDropdown .dropdownToggleIcon,
+.userAvatar {
+    box-shadow: 0 10px 22px rgba(15, 112, 196, 0.10);
+}
+
+/* Respiro entre cards */
+.operationsGrid,
+.mediaCard,
+.usersCard {
+    margin-top: 18px;
+}
+
+/* Usuários não tão colado na biblioteca */
+.usersCard {
+    margin-top: 24px !important;
+}
+
+/* Footer com respiro */
+.adminFooter {
+    margin-top: 24px;
+}
+
+/* =========================================================
+   POLIMENTO 02 - UPLOAD COM BOTÃO VERTICAL + FAIXA PREMIUM
+   =========================================================
+   Ajusta:
+   - botão Enviar mídia dentro do card;
+   - ícone grande em cima e texto embaixo;
+   - área de seleção com largura adequada;
+   - faixa premium no card de upload e usuários.
+   ========================================================= */
+
+/* Card de upload com espaço interno seguro */
+.uploadCard {
+    position: relative;
+    padding: 22px !important;
+    overflow: hidden;
+}
+
+/* Faixinha premium no upload */
+.uploadCard::before {
+    content: "";
+    display: block;
+    width: 100%;
+    height: 1px;
+    margin-bottom: 20px;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(15, 112, 196, 0.22),
+            rgba(31, 163, 68, 0.18),
+            transparent);
+}
+
+/* Restaura/garante a faixinha premium em usuários */
+.usersCard {
+    position: relative;
+}
+
+.usersCard::before {
+    content: "";
+    display: block;
+    width: 100%;
+    height: 1px;
+    margin-bottom: 22px;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(15, 112, 196, 0.22),
+            rgba(31, 163, 68, 0.18),
+            transparent);
+}
+
+/* Layout do upload: caixa ocupa o espaço, botão cabe ao lado */
+.uploadForm {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 150px;
+    gap: 14px;
+    align-items: stretch;
+}
+
+/* Caixa de seleção um pouco mais compacta */
+.uploadBox {
+    min-width: 0;
+    min-height: 118px;
+    padding: 18px !important;
+    border-radius: 18px !important;
+}
+
+/* Botão vertical, dentro do card, sem estourar */
+#btnUpload {
+    width: 150px !important;
+    min-width: 150px !important;
+    max-width: 150px !important;
+
+    min-height: 118px !important;
+    height: auto !important;
+
+    padding: 16px 12px !important;
+
+    display: inline-flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    border-radius: 18px !important;
+
+    background: linear-gradient(135deg, #16a34a, #0f7a38) !important;
+    color: #ffffff !important;
+
+    box-shadow:
+        0 18px 36px rgba(22, 163, 74, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+
+    font-size: 14px !important;
+    font-weight: 900 !important;
+    line-height: 1.15 !important;
+    text-align: center;
+
+    white-space: normal !important;
+}
+
+/* Ícone grande dentro do botão */
+#btnUpload i {
+    font-size: 28px !important;
+    line-height: 1;
+}
+
+/* Texto embaixo do ícone */
+#btnUpload span {
+    display: block;
+}
+
+/* Hover elegante */
+#btnUpload:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.03);
+    box-shadow:
+        0 22px 44px rgba(22, 163, 74, 0.26),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Responsivo: no celular volta para botão horizontal */
+@media (max-width: 700px) {
+    .uploadForm {
+        grid-template-columns: 1fr;
+    }
+
+    #btnUpload {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        min-height: 52px !important;
+
+        flex-direction: row;
+        border-radius: 16px !important;
+    }
+
+    #btnUpload i {
+        font-size: 16px !important;
+    }
+}
+
+/* =========================================================
+   POLIMENTO 03 - BIBLIOTECA DE MÍDIAS PREMIUM
+   =========================================================
+   Padroniza a Biblioteca com Upload e Usuários:
+   - kicker;
+   - título;
+   - descrição;
+   - faixa premium;
+   - espaçamento mais elegante.
+   ========================================================= */
+
+.mediaCard {
+    position: relative;
+    padding: 22px !important;
+    overflow: hidden;
+}
+
+/* Faixinha premium da biblioteca */
+.mediaCard::before {
+    content: "";
+    display: block;
+    width: 100%;
+    height: 1px;
+    margin-bottom: 20px;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(15, 112, 196, 0.22),
+            rgba(31, 163, 68, 0.18),
+            transparent);
+}
+
+/* Header da biblioteca igual aos outros cards */
+.mediaCard>.cardHeader {
+    padding: 0 !important;
+    margin-bottom: 18px !important;
+}
+
+.mediaCard>.cardHeader h2 {
+    margin-top: 4px;
+    color: var(--blue-950);
+    font-size: 22px;
+    font-weight: 950;
+    line-height: 1.15;
+}
+
+.mediaCard>.cardHeader p {
+    margin-top: 6px;
+    max-width: 780px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+/* Dropdown da biblioteca mais alinhado ao padrão premium */
+.libraryDropdown {
+    margin: 0 !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(219, 231, 243, 0.95) !important;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(248, 252, 255, 0.92)) !important;
+    box-shadow: 0 12px 30px rgba(17, 32, 51, 0.045) !important;
+    overflow: hidden;
+}
+
+.libraryDropdownSummary {
+    min-height: 76px;
+    padding: 16px 18px !important;
+    border-radius: 20px !important;
+}
+
+.libraryDropdownText strong {
+    color: var(--blue-950);
+    font-size: 16px;
+    font-weight: 950;
+}
+
+.libraryDropdownText small {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 850;
+}
+
+/* Corpo do dropdown quando aberto */
+.libraryDropdownBody {
+    padding: 0 18px 18px !important;
+}
+
+/* Chevron padronizada em azul */
+.libraryDropdownChevron {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 auto;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 999px;
+
+    background: #eff6ff !important;
+    color: #0f70c4 !important;
+
+    font-size: 16px;
+
+    transition:
+        transform 0.18s ease,
+        background 0.18s ease,
+        color 0.18s ease;
+}
+
+.libraryDropdown[open] .libraryDropdownChevron {
+    transform: rotate(180deg);
+    background: #e9f4fb !important;
+    color: #063b68 !important;
+}
+
+/* =========================================================
+   POLIMENTO 04 - PADRÃO DE TÍTULOS DOS CARDS
+   =========================================================
+   Padroniza kicker, título e descrição dos cards principais:
+   - Upload
+   - Biblioteca de Mídias
+   - Usuários do sistema
+   ========================================================= */
+
+/* Kicker azul pequeno */
+.uploadCard .sectionKicker,
+.mediaCard .sectionKicker,
+.usersCard .sectionKicker {
+    display: block;
+
+    margin-bottom: 8px;
+
+    color: #0f70c4;
+
+    font-size: 11px;
+    font-weight: 950;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+/* Títulos principais dos cards */
+.uploadCard .cardHeader h2,
+.mediaCard .cardHeader h2,
+.usersCard .cardHeader h2,
+#uploadTitle,
+#mediaTitle {
+    margin: 0;
+
+    color: #082f4f;
+
+    font-size: 22px !important;
+    font-weight: 500 !important;
+    line-height: 1.12 !important;
+    letter-spacing: -0.02em;
+}
+
+/* Descrições abaixo do título */
+.uploadCard .cardHeader p,
+.mediaCard .cardHeader p,
+.usersCard .cardHeader p {
+    margin-top: 10px;
+
+    max-width: 1080px;
+
+    color: #64748b;
+
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.45;
+}
+
+/* Espaçamento padronizado do cabeçalho interno */
+.uploadCard .cardHeader,
+.mediaCard .cardHeader,
+.usersCard .cardHeader {
+    margin-bottom: 22px !important;
+}
+
+/* Quando o card tiver ações à direita, mantém alinhamento bonito */
+.usersCard .cardHeader {
+    align-items: flex-start;
+}
+
+/* Responsivo */
+@media (max-width: 760px) {
+
+    .uploadCard .cardHeader h2,
+    .mediaCard .cardHeader h2,
+    .usersCard .cardHeader h2,
+    #uploadTitle,
+    #mediaTitle {
+        font-size: 22px !important;
+    }
+
+    .uploadCard .cardHeader p,
+    .mediaCard .cardHeader p,
+    .usersCard .cardHeader p {
+        font-size: 14px;
+    }
+}
