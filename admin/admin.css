@@ -793,7 +793,7 @@ button:disabled {
 }
 
 .mediaPreviewVideo::after {
-    content: "VIDEO";
+    content: "VÍDEO";
     position: absolute;
     right: 7px;
     bottom: 7px;
@@ -5312,5 +5312,1576 @@ body:not(.can-edit-media) .mediaStatusToggle.isInactive {
     .mediaSaveButton,
     .mediaDetailsTrigger {
         width: 100%;
+    }
+}
+
+/* =========================================================
+   POLIMENTO 07 - BIBLIOTECA: TOOLBAR DE FILTROS
+   =========================================================
+   Refina a barra de busca/filtros da biblioteca:
+   - campos com mesma altura;
+   - labels mais elegantes;
+   - botão sincronizar alinhado;
+   - visual de painel premium.
+   ========================================================= */
+
+.mediaToolbar {
+    display: grid;
+    grid-template-columns:
+        minmax(220px, 1.3fr) repeat(5, minmax(130px, 0.75fr)) auto auto auto;
+    gap: 12px;
+
+    align-items: end;
+
+    padding: 14px;
+
+    border: 1px solid rgba(219, 231, 243, 0.92);
+    border-radius: 18px;
+
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 252, 255, 0.94));
+
+    box-shadow: 0 10px 26px rgba(17, 32, 51, 0.045);
+}
+
+/* Labels dos filtros */
+.mediaSearchLabel,
+.mediaFilterLabel {
+    display: grid;
+    gap: 7px;
+
+    color: #64748b;
+
+    font-size: 11px;
+    font-weight: 950;
+    line-height: 1;
+
+    text-transform: none;
+}
+
+/* Inputs e selects da toolbar */
+.mediaSearchLabel input,
+.mediaFilterLabel select {
+    width: 100%;
+    height: 42px !important;
+    min-height: 42px !important;
+
+    padding: 0 13px;
+
+    border: 1px solid #dbe7f3;
+    border-radius: 14px;
+
+    background-color: #ffffff;
+    color: #0f172a;
+
+    font-size: 13px;
+    font-weight: 850;
+    line-height: 1;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        0 8px 18px rgba(15, 23, 42, 0.025);
+}
+
+/* Placeholder mais discreto */
+.mediaSearchLabel input::placeholder {
+    color: #8b98aa;
+    font-weight: 750;
+}
+
+/* Hover/focus dos filtros */
+.mediaSearchLabel input:hover,
+.mediaFilterLabel select:hover {
+    border-color: rgba(15, 112, 196, 0.26);
+}
+
+.mediaSearchLabel input:focus,
+.mediaFilterLabel select:focus {
+    outline: none;
+    border-color: rgba(15, 112, 196, 0.55);
+    box-shadow:
+        0 0 0 4px rgba(15, 112, 196, 0.12),
+        0 8px 18px rgba(15, 23, 42, 0.035);
+}
+
+/* Selects com setinha padronizada */
+.mediaFilterLabel select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+
+    padding-right: 36px;
+
+    background-image:
+        url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.2 1.4 6 6.2l4.8-4.8' fill='none' stroke='%23657386' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 13px center;
+    background-size: 12px 8px;
+}
+
+/* Botão sincronizar/atualizar da biblioteca */
+#btnReload {
+    height: 42px !important;
+    min-height: 42px !important;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    padding: 0 15px;
+
+    border: 1px solid #dbe7f3;
+    border-radius: 999px !important;
+
+    background: #ffffff !important;
+    color: #17324d !important;
+
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1;
+
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04) !important;
+}
+
+#btnReload:hover {
+    background: #f1f7fc !important;
+    border-color: rgba(15, 112, 196, 0.24);
+    transform: translateY(-1px);
+}
+
+/* Selecionar tudo */
+.selectAllLabel {
+    height: 42px !important;
+    min-height: 42px !important;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    padding: 0 13px;
+
+    border: 1px solid #dbe7f3;
+    border-radius: 999px;
+
+    background: #ffffff;
+    color: #17324d;
+
+    font-size: 12px;
+    font-weight: 900;
+
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.035);
+}
+
+/* Botão excluir selecionadas */
+#btnDeleteSelected {
+    height: 42px !important;
+    min-height: 42px !important;
+
+    border-radius: 999px !important;
+}
+
+/* Informação de filtro ativo */
+.mediaFilterInfo {
+    margin: 0;
+
+    padding: 10px 12px;
+
+    border-radius: 14px;
+    border: 1px solid rgba(213, 163, 0, 0.24);
+
+    background: #fffbeb;
+    color: #92400e;
+
+    font-size: 12px;
+    font-weight: 850;
+}
+
+/* Responsivo */
+@media (max-width: 1080px) {
+    .mediaToolbar {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .mediaToolbar {
+        grid-template-columns: 1fr;
+    }
+
+    #btnReload,
+    #btnDeleteSelected,
+    .selectAllLabel {
+        width: 100%;
+    }
+}
+
+/* =========================================================
+   CORREÇÃO - RESPEITAR CLASSE HIDDEN
+   =========================================================
+   Garante que elementos ocultos continuem ocultos,
+   mesmo quando outras regras usam display com !important.
+   ========================================================= */
+
+.hidden,
+#btnSalvarTudo.hidden,
+#btnDeleteSelected.hidden,
+.uploadMessage.hidden,
+.pendingChanges.hidden {
+    display: none !important;
+}
+
+/* =========================================================
+   BIBLIOTECA - CONTENÇÃO E PROPORÇÃO DOS CARDS
+   =========================================================
+   Ajusta:
+   - toolbar superior da biblioteca;
+   - largura do campo de nome;
+   - alinhamento do conteúdo do card;
+   - ícones de fundo mais elegantes.
+   ========================================================= */
+
+.libraryDropdownBody,
+.mediaToolbar,
+.mediaList,
+.mediaItem,
+.mediaInfo,
+.mediaTitleLabel,
+.mediaConfigRow,
+.mediaFooterActions {
+    min-width: 0;
+}
+
+/* =========================
+   TOOLBAR DA BIBLIOTECA
+   ========================= */
+.mediaToolbar {
+    display: grid;
+    grid-template-columns:
+        minmax(230px, 2.2fr) repeat(5, minmax(120px, 1fr)) minmax(150px, 0.9fr);
+    gap: 12px;
+    align-items: end;
+}
+
+.mediaToolbar>* {
+    min-width: 0;
+}
+
+.mediaSearchLabel input,
+.mediaFilterLabel select,
+#btnReload {
+    width: 100%;
+}
+
+/* =========================
+   CARD DE MÍDIA
+   ========================= */
+.mediaItem {
+    grid-template-columns: 54px 164px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.mediaPreview {
+    width: 164px;
+    max-width: 100%;
+}
+
+.mediaInfo {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+
+/*
+   Reserva um espaço à direita para o detalhe visual
+   do tipo da mídia (ícone de fundo), evitando que o
+   input "engula" o acabamento do card.
+*/
+.mediaTitleLabel,
+.mediaConfigRow,
+.mediaFooterActions {
+    max-width: min(550px, calc(100% - 120px));
+}
+
+/* Campo do nome mais comportado */
+.mediaTitleInput {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Linha de configurações inferiores */
+.mediaConfigRow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 12px;
+}
+
+/* Rodapé do card */
+.mediaFooterActions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* =========================
+   ÍCONES DE FUNDO MAIS BONITOS
+   =========================
+   Vídeo: fa-film
+   Imagem: fa-camera
+*/
+.mediaItemVideo::after {
+    content: "\f008";
+}
+
+.mediaItemImage::after {
+    content: "\f030";
+}
+
+/* Ajuste fino visual do ícone decorativo */
+.mediaItem::after {
+    right: 24px;
+    opacity: 0.05;
+    font-size: clamp(78px, 8vw, 120px);
+}
+
+/* =========================
+   RESPONSIVO INTERMEDIÁRIO
+   ========================= */
+@media (max-width: 1360px) {
+    .mediaToolbar {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1080px) {
+    .mediaItem {
+        grid-template-columns: 54px 140px minmax(0, 1fr);
+    }
+
+    .mediaPreview {
+        width: 140px;
+    }
+
+    .mediaTitleLabel,
+    .mediaConfigRow,
+    .mediaFooterActions {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 760px) {
+    .mediaToolbar {
+        grid-template-columns: 1fr;
+    }
+
+    .mediaItem {
+        grid-template-columns: 1fr;
+    }
+
+    .mediaPreview {
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .mediaTitleLabel,
+    .mediaConfigRow,
+    .mediaFooterActions {
+        max-width: 100%;
+    }
+}
+
+/* =========================================================
+   TESTE 02 - ÍCONE DECORATIVO INTEIRO EM DIAGONAL
+   ========================================================= */
+
+.mediaItem {
+    overflow: hidden;
+}
+
+.mediaItem::after {
+    top: 50%;
+    right: 26px;
+    left: auto;
+    transform: translateY(-50%) rotate(-18deg);
+    font-size: 160px;
+    opacity: 0.5;
+    max-width: none;
+    z-index: 0;
+}
+
+/* vídeo = claquete */
+.mediaItemVideo::after {
+    content: "\f008";
+    color: rgba(15, 112, 196, 0.14);
+}
+
+/* imagem = fotografia */
+.mediaItemImage::after {
+    content: "\f03e";
+    color: rgba(32, 176, 56, 0.14);
+}
+
+.mediaOrder,
+.mediaPreview,
+.mediaInfo {
+    position: relative;
+    z-index: 1;
+}
+
+/* =========================================================
+   POLIMENTO 08 - STATUS JUNTO DAS TAGS DO CARD
+   ========================================================= */
+
+.mediaBadges {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.mediaBadges .mediaStatusToggle {
+    margin: 0;
+
+    height: 30px !important;
+    min-height: 30px !important;
+
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+
+    padding: 0 12px !important;
+
+    border-radius: 999px;
+
+    font-size: 12px;
+    font-weight: 950;
+    line-height: 1;
+
+    cursor: pointer;
+}
+
+.mediaBadges .mediaStatusToggle input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.mediaBadges .mediaStatusToggle span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mediaBadges .mediaStatusToggle span::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    display: inline-block;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: currentColor;
+}
+
+/* Cores da tag de status */
+.mediaBadges .mediaStatusToggle.isActive {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.mediaBadges .mediaStatusToggle.isInactive {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+/* A linha do meio agora fica dedicada aos controles */
+.mediaConfigRow {
+    align-items: center;
+}
+
+.mediaConfigRow .mediaConfigLabel,
+.mediaConfigRow .mediaScheduleMenu {
+    flex: 0 0 auto;
+}
+
+/* =========================================================
+   POLIMENTO 10 - POPOVER DO PERÍODO MAIS CLEAN
+   ========================================================= */
+
+.mediaScheduleMenu {
+    position: relative;
+    z-index: 40;
+}
+
+.mediaScheduleMenu[open] {
+    z-index: 7000;
+}
+
+.mediaItem:has(.mediaScheduleMenu[open]) {
+    z-index: 6000 !important;
+}
+
+/* Painel flutuante */
+.mediaScheduleMenu .mediaValidityBox {
+    position: absolute !important;
+    top: calc(100% + 12px);
+    left: 0;
+    z-index: 8000;
+
+    width: min(560px, calc(100vw - 120px));
+    padding: 18px;
+
+    border: 1px solid rgba(219, 231, 243, 0.95);
+    border-radius: 24px;
+
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.14);
+
+    animation: schedulePopoverIn 0.18s ease both;
+}
+
+/* remove a setinha/balão */
+.mediaScheduleMenu .mediaValidityBox::before,
+.mediaScheduleMenu .mediaValidityBox::after {
+    display: none !important;
+    content: none !important;
+}
+
+.mediaValidityBox .mediaIndefiniteLabel {
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    width: fit-content;
+    padding: 10px 14px;
+    border-radius: 16px;
+    background: rgba(233, 244, 251, 0.82);
+    color: #082f4f;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.mediaDateFields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 14px;
+}
+
+.mediaDateLabel {
+    display: grid;
+    gap: 8px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 950;
+    text-transform: uppercase;
+}
+
+.mediaStartDate,
+.mediaEndDate {
+    width: 100%;
+    min-height: 48px !important;
+    height: 48px !important;
+    padding: 0 14px;
+    border: 1px solid #dbe7f3;
+    border-radius: 16px;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 850;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.mediaStartDate:focus,
+.mediaEndDate:focus {
+    outline: none;
+    border-color: rgba(15, 112, 196, 0.55);
+    box-shadow: 0 0 0 4px rgba(15, 112, 196, 0.12);
+}
+
+@keyframes schedulePopoverIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* =========================================================
+   POLIMENTO 11 - COLUNA ESQUERDA DOS CARDS DE MÍDIA
+   ========================================================= */
+
+/* estrutura geral do card */
+.mediaItem {
+    grid-template-columns: 86px 190px minmax(0, 1fr);
+    align-items: center;
+    gap: 18px;
+}
+
+/* coluna da ordem */
+.mediaOrder {
+    width: 72px;
+    min-width: 72px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+
+    align-self: center;
+}
+
+/* número da posição */
+.mediaOrderNumber {
+    width: 54px;
+    height: 54px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 18px;
+    border: 1px solid rgba(219, 231, 243, 0.96);
+
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 250, 255, 0.94));
+
+    color: var(--blue-950);
+    font-size: 24px;
+    font-weight: 950;
+    line-height: 1;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.86),
+        0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+/* alça de arrastar */
+.mediaDragHandle {
+    width: auto !important;
+    height: auto !important;
+    min-width: 0;
+    min-height: 0;
+    padding: 0 !important;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+
+    color: #8a98aa;
+    font-size: 20px;
+    line-height: 1;
+
+    cursor: grab;
+    transition: transform 0.18s ease, color 0.18s ease, opacity 0.18s ease;
+}
+
+.mediaDragHandle:hover {
+    color: var(--blue-900);
+    transform: scale(1.08);
+    opacity: 1;
+}
+
+.mediaDragHandle:active {
+    cursor: grabbing;
+    transform: scale(0.96);
+}
+
+/* tira o tooltip antigo, se estiver feioso */
+.mediaDragHandle::before,
+.mediaDragHandle::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* miniatura */
+.mediaPreview {
+    width: 180px;
+    max-width: 100%;
+    align-self: center;
+    justify-self: center;
+    margin: 0 auto;
+}
+
+/* ajuda a centralizar toda a região da thumb */
+.mediaSelectArea,
+.mediaOrder,
+.mediaPreview {
+    align-self: center;
+}
+
+/* preview mais elegante */
+.mediaPreview img,
+.mediaPreview video {
+    border-radius: 14px;
+    display: block;
+}
+
+/* badge VIDEO / IMAGEM em cima da thumb */
+.mediaPreviewHint,
+.mediaPreviewType,
+.mediaPreviewBadge {
+    border-radius: 999px;
+}
+
+/* =========================================================
+   POLIMENTO 12 - INPUTS DE DATA/HORA MAIS COMPACTOS
+   =========================================================
+   Ajusta os campos datetime-local dentro do popover:
+   - menos espaço sobrando à direita;
+   - visual mais limpo;
+   - largura mais proporcional;
+   - calendário nativo menos "cru" dentro do possível.
+   ========================================================= */
+
+.mediaScheduleMenu .mediaValidityBox {
+    width: 620px;
+    max-width: calc(100vw - 120px);
+}
+
+/* Deixa as colunas de início/fim mais compactas */
+.mediaScheduleMenu .mediaDateFields {
+    grid-template-columns: repeat(2, minmax(230px, 260px));
+    justify-content: start;
+    gap: 18px;
+}
+
+/* Campo datetime-local */
+.mediaScheduleMenu .mediaStartDate,
+.mediaScheduleMenu .mediaEndDate {
+    width: 260px !important;
+    max-width: 260px !important;
+
+    height: 46px !important;
+    min-height: 46px !important;
+
+    padding: 0 10px 0 14px !important;
+
+    border: 1px solid #dbe7f3 !important;
+    border-radius: 16px !important;
+
+    background:
+        linear-gradient(180deg, #ffffff, #fbfdff) !important;
+
+    color: #0f172a !important;
+
+    font-family: var(--font-ui);
+    font-size: 13px !important;
+    font-weight: 850 !important;
+    line-height: 1 !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        0 8px 18px rgba(15, 23, 42, 0.035) !important;
+
+    color-scheme: light;
+}
+
+/* Partes internas do datetime-local no Chrome/Edge */
+.mediaScheduleMenu .mediaStartDate::-webkit-datetime-edit,
+.mediaScheduleMenu .mediaEndDate::-webkit-datetime-edit {
+    padding: 0 !important;
+}
+
+.mediaScheduleMenu .mediaStartDate::-webkit-datetime-edit-fields-wrapper,
+.mediaScheduleMenu .mediaEndDate::-webkit-datetime-edit-fields-wrapper {
+    padding: 0 !important;
+}
+
+.mediaScheduleMenu .mediaStartDate::-webkit-datetime-edit-text,
+.mediaScheduleMenu .mediaEndDate::-webkit-datetime-edit-text {
+    color: #94a3b8;
+    padding: 0 2px;
+}
+
+.mediaScheduleMenu .mediaStartDate::-webkit-datetime-edit-day-field,
+.mediaScheduleMenu .mediaStartDate::-webkit-datetime-edit-month-field,
+.mediaScheduleMenu .mediaStartDate::-webkit-datetime-edit-year-field,
+.mediaScheduleMenu .mediaStartDate::-webkit-datetime-edit-hour-field,
+.mediaScheduleMenu .mediaStartDate::-webkit-datetime-edit-minute-field,
+.mediaScheduleMenu .mediaEndDate::-webkit-datetime-edit-day-field,
+.mediaScheduleMenu .mediaEndDate::-webkit-datetime-edit-month-field,
+.mediaScheduleMenu .mediaEndDate::-webkit-datetime-edit-year-field,
+.mediaScheduleMenu .mediaEndDate::-webkit-datetime-edit-hour-field,
+.mediaScheduleMenu .mediaEndDate::-webkit-datetime-edit-minute-field {
+    color: #0f172a;
+    font-weight: 900;
+}
+
+/* Ícone do calendário mais bem encaixado */
+.mediaScheduleMenu .mediaStartDate::-webkit-calendar-picker-indicator,
+.mediaScheduleMenu .mediaEndDate::-webkit-calendar-picker-indicator {
+    width: 20px !important;
+    height: 20px !important;
+
+    margin-left: 4px !important;
+    padding: 5px !important;
+
+    border-radius: 10px !important;
+
+    background-color: #e9f4fb !important;
+
+    cursor: pointer;
+    opacity: 0.9;
+
+    filter: none;
+}
+
+.mediaScheduleMenu .mediaStartDate::-webkit-calendar-picker-indicator:hover,
+.mediaScheduleMenu .mediaEndDate::-webkit-calendar-picker-indicator:hover {
+    background-color: #dbeafe !important;
+    opacity: 1;
+}
+
+/* Foco */
+.mediaScheduleMenu .mediaStartDate:focus,
+.mediaScheduleMenu .mediaEndDate:focus {
+    outline: none !important;
+    border-color: rgba(15, 112, 196, 0.58) !important;
+    box-shadow:
+        0 0 0 4px rgba(15, 112, 196, 0.12),
+        0 8px 18px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Quando estiver desativado pelo "Tempo indeterminado" */
+.mediaScheduleMenu .disabledDates .mediaStartDate,
+.mediaScheduleMenu .disabledDates .mediaEndDate {
+    background: #f8fafc !important;
+    color: #94a3b8 !important;
+    cursor: not-allowed;
+}
+
+/* =========================================================
+   CORREÇÃO - LARGURA REAL DOS CAMPOS DE DATA/HORA
+   =========================================================
+   Diminui o bloco inteiro do label + input datetime-local.
+   ========================================================= */
+
+.mediaScheduleMenu .mediaDateFields {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    gap: 18px !important;
+}
+
+.mediaScheduleMenu .mediaDateLabel {
+    width: 235px !important;
+    min-width: 235px !important;
+    max-width: 235px !important;
+    flex: 0 0 235px !important;
+}
+
+.mediaScheduleMenu .mediaDateLabel .mediaStartDate,
+.mediaScheduleMenu .mediaDateLabel .mediaEndDate,
+.mediaScheduleMenu input.mediaStartDate,
+.mediaScheduleMenu input.mediaEndDate {
+    width: 215px !important;
+    min-width: 215px !important;
+    max-width: 235px !important;
+    box-sizing: border-box !important;
+}
+
+/* =========================================================
+   POLIMENTO 13 - COLUNA ESQUERDA DOS CARDS DE MÍDIA
+   =========================================================
+   Refina número da playlist, alça de arrastar e miniatura.
+   ========================================================= */
+
+.mediaItem {
+    grid-template-columns: 76px 190px minmax(0, 1fr);
+    align-items: center;
+    gap: 20px;
+}
+
+/* Coluna do número + alça */
+.mediaOrder {
+    width: 64px;
+    min-width: 64px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+
+    align-self: center;
+}
+
+/* Número da posição */
+.mediaOrderNumber {
+    width: 50px;
+    height: 50px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 16px;
+    border: 1px solid rgba(219, 231, 243, 0.95);
+
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 248, 253, 0.92));
+
+    color: #082f4f;
+
+    font-size: 22px;
+    font-weight: 950;
+    line-height: 1;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+/* Alça de arrastar mais minimalista */
+.mediaDragHandle {
+    width: 28px !important;
+    height: 34px !important;
+
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 !important;
+
+    border: none !important;
+    border-radius: 0 !important;
+
+    background: transparent !important;
+    box-shadow: none !important;
+
+    color: #94a3b8;
+
+    font-size: 20px;
+    line-height: 1;
+
+    cursor: grab;
+
+    opacity: 0.72;
+
+    transition:
+        color 0.18s ease,
+        opacity 0.18s ease,
+        transform 0.18s ease;
+}
+
+.mediaDragHandle:hover {
+    color: #0f70c4;
+    opacity: 1;
+    transform: scale(1.08);
+}
+
+.mediaDragHandle:active {
+    cursor: grabbing;
+    transform: scale(0.96);
+}
+
+/* Remove tooltip antigo da alça, se ainda existir */
+.mediaDragHandle::before,
+.mediaDragHandle::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* Miniatura centralizada */
+.mediaPreview {
+    width: 190px;
+    max-width: 190px;
+
+    justify-self: center;
+    align-self: center;
+
+    margin: 0 auto;
+
+    border-radius: 16px;
+    overflow: hidden;
+
+    box-shadow:
+        0 12px 28px rgba(15, 23, 42, 0.07),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+
+.mediaPreview img,
+.mediaPreview video {
+    border-radius: 16px;
+}
+
+/* Badge VIDEO/IMAGEM da miniatura mais integrada */
+.mediaPreviewVideo::after {
+    right: 8px;
+    bottom: 8px;
+
+    padding: 5px 8px;
+
+    border-radius: 999px;
+
+    background: rgba(6, 43, 73, 0.84);
+    color: #ffffff;
+
+    font-size: 10px;
+    font-weight: 950;
+}
+
+/* Responsivo básico para não explodir depois */
+@media (max-width: 1080px) {
+    .mediaItem {
+        grid-template-columns: 64px 160px minmax(0, 1fr);
+    }
+
+    .mediaPreview {
+        width: 160px;
+        max-width: 160px;
+    }
+}
+
+/* =========================================================
+   POLIMENTO 14 - BADGES DAS MINIATURAS
+   =========================================================
+   Padroniza a etiqueta da miniatura:
+   - VÍDEO para vídeos;
+   - IMAGEM para imagens;
+   - sobrescreve regras duplicadas anteriores.
+   ========================================================= */
+
+.mediaPreview {
+    position: relative;
+}
+
+/* Base das duas etiquetas */
+.mediaPreviewVideo::after,
+.mediaPreviewImage::after {
+    content: "";
+
+    position: absolute !important;
+    right: 10px !important;
+    bottom: 10px !important;
+    z-index: 5;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 24px;
+
+    padding: 0 10px !important;
+
+    border-radius: 999px !important;
+
+    color: #ffffff !important;
+
+    font-size: 10px !important;
+    font-weight: 950 !important;
+    line-height: 1 !important;
+    letter-spacing: 0.04em !important;
+    text-transform: uppercase;
+
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+
+    pointer-events: none;
+}
+
+/* Vídeo */
+.mediaPreviewVideo::after {
+    content: "VÍDEO" !important;
+    background: rgba(6, 43, 73, 0.88) !important;
+}
+
+/* Imagem */
+.mediaPreviewImage::after {
+    content: "IMAGEM" !important;
+    background: rgba(22, 128, 60, 0.88) !important;
+}
+
+/* =========================================================
+   POLIMENTO 15 - NÚMERO DA ORDEM COMO MARCA D'ÁGUA
+   =========================================================
+   Transforma o número da posição em um detalhe grande,
+   suave e integrado ao card.
+   ========================================================= */
+
+.mediaItem {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Coluna esquerda mais minimalista */
+.mediaOrder {
+    width: 70px;
+    min-width: 70px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    align-self: stretch;
+
+    position: relative;
+    z-index: 3;
+}
+
+/* Número grande, sem caixa */
+.mediaOrderNumber {
+    position: absolute;
+
+    left: 55%;
+    top: 50%;
+
+    transform: translate(-50%, -50%);
+
+    width: 110px !important;
+    height: auto !important;
+
+    min-width: 0 !important;
+    min-height: 0 !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    border: 0 !important;
+    border-radius: 0 !important;
+
+    background: transparent !important;
+    box-shadow: none !important;
+
+    color: rgba(8, 47, 79, 0.055);
+
+    font-size: clamp(72px, 8vw, 100px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.08em;
+
+    text-align: center;
+
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+
+    pointer-events: none;
+    user-select: none;
+
+    z-index: 0;
+}
+
+/* Conteúdos sempre acima do número */
+.mediaDragHandle,
+.mediaPreview,
+.mediaInfo {
+    position: relative;
+    z-index: 4;
+}
+
+/* =========================================================
+   POLIMENTO 16 - ALÇA DE ARRASTAR COM TOOLTIP
+   =========================================================
+   Mantém a alça minimalista e recupera o texto de ajuda.
+   ========================================================= */
+
+.mediaDragHandle {
+    width: 30px !important;
+    height: 36px !important;
+
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 !important;
+
+    border: none !important;
+    border-radius: 0 !important;
+
+    background: transparent !important;
+    box-shadow: none !important;
+
+    color: #a9b7c7;
+
+    font-size: 21px;
+    line-height: 1;
+
+    cursor: grab;
+    opacity: 0.82;
+
+    position: relative;
+    z-index: 10;
+
+    transition:
+        color 0.18s ease,
+        opacity 0.18s ease,
+        transform 0.18s ease;
+}
+
+.mediaDragHandle:hover {
+    color: #0f70c4;
+    opacity: 1;
+    transform: scale(1.08);
+}
+
+.mediaDragHandle:active {
+    cursor: grabbing;
+    transform: scale(0.96);
+}
+
+/* Tooltip */
+.mediaDragHandle::after {
+    content: attr(data-tooltip);
+
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 10px);
+
+    transform: translateX(-50%) translateY(4px);
+
+    width: max-content;
+    max-width: 240px;
+
+    padding: 8px 10px;
+
+    border-radius: 10px;
+
+    background: #172033;
+    color: #ffffff;
+
+    font-size: 11px;
+    font-weight: 850;
+    line-height: 1.2;
+    white-space: nowrap;
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.20);
+
+    transition:
+        opacity 0.16s ease,
+        transform 0.16s ease,
+        visibility 0.16s ease;
+
+    z-index: 9999;
+}
+
+/* Setinha do tooltip */
+.mediaDragHandle::before {
+    content: "";
+
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 4px);
+
+    transform: translateX(-50%) translateY(4px);
+
+    border-width: 6px 6px 0 6px;
+    border-style: solid;
+    border-color: #172033 transparent transparent transparent;
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+
+    transition:
+        opacity 0.16s ease,
+        transform 0.16s ease,
+        visibility 0.16s ease;
+
+    z-index: 9999;
+}
+
+.mediaDragHandle:hover::after,
+.mediaDragHandle:hover::before,
+.mediaDragHandle:focus-visible::after,
+.mediaDragHandle:focus-visible::before {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* =========================================================
+   POLIMENTO - SETINHA NO BOTÃO DE PERÍODO
+   =========================================================
+   Indica visualmente que "Período de exibição" abre opções.
+   ========================================================= */
+
+.mediaScheduleMenu summary {
+    position: relative !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+
+    padding-right: 38px !important;
+}
+
+/* Remove marcador nativo do details */
+.mediaScheduleMenu summary::-webkit-details-marker {
+    display: none;
+}
+
+.mediaScheduleMenu summary::marker {
+    content: "";
+}
+
+/* Setinha fake */
+.mediaScheduleMenu summary::after {
+    content: "\f078";
+
+    position: absolute;
+    right: 14px;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+
+    color: #64748b;
+
+    font-size: 12px;
+    line-height: 1;
+
+    transition:
+        transform 0.18s ease,
+        color 0.18s ease;
+}
+
+/* Quando aberto, gira */
+.mediaScheduleMenu[open] summary::after {
+    transform: translateY(-50%) rotate(180deg);
+    color: #0f70c4;
+}
+
+/* Hoverzinho elegante */
+.mediaScheduleMenu summary:hover::after {
+    color: #0f70c4;
+}
+
+/* =========================================================
+   POLIMENTO FINAL - CONTROLES DOS CARDS DE MÍDIA
+   =========================================================
+   Organiza a linha de controles dos cards:
+   - vídeo: Período + Repetição;
+   - imagem: Duração + Período + Repetição;
+   - campos compactos;
+   - botão de período com setinha;
+   - sem empilhar e sem esticar demais.
+   ========================================================= */
+
+/* Linha principal dos controles */
+.mediaConfigRow {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+
+    max-width: 634px !important;
+    min-width: 0 !important;
+}
+
+/* Todos os filhos ficam compactos */
+.mediaConfigRow>* {
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+}
+
+/* Textos "Duração" e "Repetir" */
+.mediaConfigText,
+.mediaConfigLabel {
+    display: inline-flex !important;
+    align-items: center !important;
+
+    white-space: nowrap !important;
+
+    color: #334155;
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+/* Select de duração das imagens */
+.mediaDuration {
+    width: 72px !important;
+    min-width: 72px !important;
+    max-width: 72px !important;
+
+    height: 42px !important;
+    min-height: 42px !important;
+
+    padding: 0 28px 0 12px !important;
+
+    border-radius: 14px !important;
+
+    font-size: 13px !important;
+    font-weight: 900 !important;
+}
+
+/* Details do período */
+.mediaScheduleMenu {
+    position: relative !important;
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+}
+
+/* Botão "Período de exibição" */
+.mediaScheduleMenu summary {
+    width: 205px !important;
+    min-width: 205px !important;
+    max-width: 205px !important;
+
+    height: 42px !important;
+    min-height: 42px !important;
+
+    position: relative !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+
+    padding: 0 34px 0 13px !important;
+
+    border: 1px solid #dbe7f3 !important;
+    border-radius: 14px !important;
+
+    background: #ffffff !important;
+    color: #082f4f !important;
+
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+
+    white-space: nowrap !important;
+    cursor: pointer;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.85),
+        0 8px 18px rgba(15, 23, 42, 0.03) !important;
+}
+
+/* Remove marcador nativo */
+.mediaScheduleMenu summary::-webkit-details-marker {
+    display: none;
+}
+
+.mediaScheduleMenu summary::marker {
+    content: "";
+}
+
+/* Esconde "Tempo indeterminado" no botão */
+.mediaScheduleMenu summary small,
+.mediaScheduleMenu summary .scheduleStatusText {
+    display: none !important;
+}
+
+/* Texto principal do botão */
+.mediaScheduleMenu summary span {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+
+    min-width: 0 !important;
+
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+/* Setinha do período */
+.mediaScheduleMenu summary::after {
+    content: "\f078";
+
+    position: absolute;
+    right: 13px;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+
+    color: #64748b;
+
+    font-size: 12px;
+    line-height: 1;
+
+    transition:
+        transform 0.18s ease,
+        color 0.18s ease;
+}
+
+.mediaScheduleMenu[open] summary::after {
+    transform: translateY(-50%) rotate(180deg);
+    color: #0f70c4;
+}
+
+.mediaScheduleMenu summary:hover {
+    border-color: rgba(15, 112, 196, 0.26) !important;
+}
+
+.mediaScheduleMenu summary:hover::after {
+    color: #0f70c4;
+}
+
+/* Select de repetição */
+.mediaRepeatEvery {
+    width: 145px !important;
+    min-width: 145px !important;
+    max-width: 145px !important;
+
+    height: 42px !important;
+    min-height: 42px !important;
+
+    padding: 0 32px 0 12px !important;
+
+    border-radius: 14px !important;
+
+    font-size: 13px !important;
+    font-weight: 900 !important;
+}
+
+/* Selects com aparência consistente */
+.mediaDuration,
+.mediaRepeatEvery {
+    border: 1px solid #dbe7f3 !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.85),
+        0 8px 18px rgba(15, 23, 42, 0.03) !important;
+}
+
+.mediaDuration:hover,
+.mediaRepeatEvery:hover {
+    border-color: rgba(15, 112, 196, 0.26) !important;
+}
+
+.mediaDuration:focus,
+.mediaRepeatEvery:focus {
+    outline: none !important;
+    border-color: rgba(15, 112, 196, 0.55) !important;
+    box-shadow:
+        0 0 0 4px rgba(15, 112, 196, 0.12),
+        0 8px 18px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Se em alguma largura não couber, quebra sem destruir o card */
+@media (max-width: 1280px) {
+    .mediaConfigRow {
+        flex-wrap: wrap !important;
+        max-width: 100% !important;
     }
 }

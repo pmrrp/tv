@@ -2231,6 +2231,18 @@ function renderizarMidias(midias) {
     `
             : "";
 
+        const statusBadge = `
+            <label class="mediaStatusToggle ${midia.ativo ? "isActive" : "isInactive"}">
+                <input
+                    type="checkbox"
+                    class="mediaActive"
+                    data-arquivo="${nomeArquivo}"
+                    ${midia.ativo ? "checked" : ""}
+                />
+                <span>${midia.ativo ? "Ativo" : "Inativo"}</span>
+            </label>
+        `;
+
         const prioridadeBadge = podeEditarMidias
             ? `
         <details class="mediaPriorityMenu">
@@ -2319,16 +2331,7 @@ function renderizarMidias(midias) {
                 ${controleTitulo}
 
                 <div class="mediaConfigRow">
-                    <label class="mediaStatusToggle ${midia.ativo ? "isActive" : "isInactive"}">
-                        <input
-                            type="checkbox"
-                            class="mediaActive"
-                            data-arquivo="${nomeArquivo}"
-                            ${midia.ativo ? "checked" : ""}
-                        />
-                        <span>${midia.ativo ? "Ativo" : "Inativo"}</span>
-                    </label>
-
+                    
                     ${controleDuracao}
 
                     <details class="mediaScheduleMenu">
@@ -2391,6 +2394,7 @@ function renderizarMidias(midias) {
 
                 <div class="mediaFooterActions">
                     <div class="mediaBadges">
+                        ${statusBadge}
                         ${prioridadeBadge}
                     </div>
 
