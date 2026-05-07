@@ -5151,3 +5151,166 @@ body:not(.can-edit-media) .mediaStatusToggle.isInactive {
         min-width: 0;
     }
 }
+
+/* =========================================================
+   POLIMENTO 06 - PADRÃO DE ALTURAS: BOTÕES E TAGS
+   =========================================================
+   Padroniza a altura visual de botões, badges e tags
+   para melhorar alinhamento e leitura do painel.
+   ========================================================= */
+
+:root {
+    --control-height-sm: 30px;
+    --control-height-md: 38px;
+    --control-height-lg: 42px;
+
+    --badge-height: 30px;
+}
+
+/* =========================================================
+   BOTÕES DE AÇÃO PEQUENOS
+   ========================================================= */
+
+.mediaDeleteButton,
+.mediaSaveButton,
+.mediaDetailsTrigger,
+.userActions button,
+.confirmModalCancel,
+.confirmModalAccept,
+.userMenuLogoutButton {
+    min-height: var(--control-height-md) !important;
+    height: var(--control-height-md) !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px;
+
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+
+    line-height: 1 !important;
+}
+
+/* Ícones dentro dos botões */
+.mediaDeleteButton i,
+.mediaSaveButton i,
+.mediaDetailsTrigger i,
+.userActions button i,
+.confirmModalCancel i,
+.confirmModalAccept i,
+.userMenuLogoutButton i {
+    width: 15px;
+    height: 15px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 13px;
+    line-height: 1;
+}
+
+/* =========================================================
+   BOTÕES PRINCIPAIS DO TOPO DOS CARDS
+   ========================================================= */
+
+#btnNewUser,
+#btnReloadUsers,
+.openPlayerButton,
+#btnSalvarTudo {
+    min-height: var(--control-height-lg) !important;
+    height: var(--control-height-lg) !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+
+    line-height: 1 !important;
+}
+
+/* =========================================================
+   BADGES / TAGS
+   ========================================================= */
+
+.userBadge,
+.mediaBadge,
+.mediaStatusToggle {
+    min-height: var(--badge-height) !important;
+    height: var(--badge-height) !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px;
+
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+
+    line-height: 1 !important;
+}
+
+/* Ícones das tags */
+.userBadge i,
+.mediaBadge i,
+.mediaStatusToggle i {
+    width: 13px;
+    height: 13px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 11px;
+    line-height: 1;
+}
+
+/* Corrige bolinha do status ativo/inativo da mídia */
+.mediaStatusToggle span {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+}
+
+.mediaStatusToggle span::before {
+    flex: 0 0 auto;
+}
+
+/* =========================================================
+   INPUTS / SELECTS PEQUENOS DA MÍDIA
+   ========================================================= */
+
+.mediaDuration,
+.mediaPriority,
+.mediaRepeatEvery,
+.mediaStartDate,
+.mediaEndDate,
+.mediaScheduleMenu summary {
+    min-height: var(--control-height-md) !important;
+    height: var(--control-height-md) !important;
+
+    display: inline-flex;
+    align-items: center;
+
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+
+    line-height: 1 !important;
+}
+
+/* =========================================================
+   RESPONSIVO
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .userActions button,
+    .mediaDeleteButton,
+    .mediaSaveButton,
+    .mediaDetailsTrigger {
+        width: 100%;
+    }
+}
