@@ -7433,3 +7433,59 @@ body:not(.can-edit-media) .mediaStatusToggle.isInactive {
 .mediaCard:has(.mediaFiltersDropdown[open]) .mediaItem {
     z-index: 1 !important;
 }
+
+/* =========================================================
+   MODO SELEÇÃO DE MÍDIAS
+   ========================================================= */
+
+#btnToggleSelectionMode.selectionModeActive {
+    background: #eef6ff !important;
+    color: #075985 !important;
+    border-color: rgba(15, 112, 196, 0.22) !important;
+}
+
+/* Fora do modo seleção, checkbox fica escondido */
+body:not(.mediaSelectionMode) .mediaSelectArea {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* No modo seleção, checkbox aparece */
+body.mediaSelectionMode .mediaSelectArea {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+/* No modo seleção, o card indica que pode ser clicado */
+body.mediaSelectionMode .mediaItem {
+    cursor: pointer !important;
+}
+
+/* Mas controles internos continuam com cursor normal */
+body.mediaSelectionMode .mediaInfo,
+body.mediaSelectionMode .mediaPreview,
+body.mediaSelectionMode .mediaStatusToggle,
+body.mediaSelectionMode .mediaScheduleMenu,
+body.mediaSelectionMode .mediaDetailsHover,
+body.mediaSelectionMode .mediaPriorityMenu,
+body.mediaSelectionMode input,
+body.mediaSelectionMode select,
+body.mediaSelectionMode button {
+    cursor: default !important;
+}
+
+/* Destaque do item selecionado */
+body.mediaSelectionMode .mediaItemSelected {
+    border-color: rgba(15, 112, 196, 0.42) !important;
+    background:
+        linear-gradient(180deg, rgba(239, 246, 255, 0.96), rgba(255, 255, 255, 0.98)) !important;
+    box-shadow:
+        0 0 0 4px rgba(15, 112, 196, 0.08),
+        0 18px 44px rgba(5, 47, 82, 0.10) !important;
+}
+
+/* No modo seleção, alça fica visualmente desativada */
+body.mediaSelectionMode .mediaDragHandle {
+    opacity: 0.24 !important;
+    pointer-events: none !important;
+}

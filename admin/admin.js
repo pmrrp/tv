@@ -46,6 +46,7 @@ const playlistTotal = document.getElementById("playlistTotal");
 
 const selectAllMedia = document.getElementById("selectAllMedia");
 const btnDeleteSelected = document.getElementById("btnDeleteSelected");
+const btnToggleSelectionMode = document.getElementById("btnToggleSelectionMode");
 
 const summaryTotalMedia = document.getElementById("summaryTotalMedia");
 const summaryActiveMedia = document.getElementById("summaryActiveMedia");
@@ -282,6 +283,7 @@ function garantirPermissaoParaGerenciarUsuarios() {
 */
 let existemAlteracoesPendentes = false;
 let mediaArrastada = null;
+let modoSelecaoMidiasAtivo = false;
 let uploadMessageTimer = null;
 let playlistMessageTimer = null;
 let modalConfirmacao = null;
@@ -3251,24 +3253,41 @@ function obterCheckboxesVisiveis() {
 function atualizarEstadoAcoesEmLote() {
     const selecionadas = obterMidiasSelecionadas();
     const existeSelecao = selecionadas.length > 0;
+
     const selectAllWrapper = selectAllMedia
         ? selectAllMedia.closest(".selectAllLabel")
         : null;
 
-    mediaList.classList.toggle("mediaSelectionMode", existeSelecao);
+    /*
+      O modo seleção é controlado explicitamente pelo botão "Selecionar".
+      Seleção existente não deve ligar/desligar o modo sozinha.
+    */
+    document.body.classList.toggle("mediaSelectionMode", modoSelecaoMidiasAtivo);
+    mediaList.classList.toggle("mediaSelectionMode", modoSelecaoMidiasAtivo);
 
     document.querySelectorAll(".mediaItem").forEach((item) => {
         const checkbox = item.querySelector(".mediaSelect");
-        item.classList.toggle("mediaItemSelected", Boolean(checkbox && checkbox.checked));
+
+        item.classList.toggle(
+            "mediaItemSelected",
+            Boolean(checkbox && checkbox.checked)
+        );
+
+        /*
+          No modo seleção, desativamos o arraste para não conflitar
+          com a seleção em lote.
+        */
+        item.draggable = usuarioPodeEditarMidias() && !modoSelecaoMidiasAtivo;
     });
 
     if (selectAllWrapper) {
-        selectAllWrapper.classList.toggle("hidden", !existeSelecao);
+        selectAllWrapper.classList.toggle("hidden", !modoSelecaoMidiasAtivo);
     }
 
     if (btnDeleteSelected) {
-        btnDeleteSelected.classList.toggle("hidden", !existeSelecao);
+        btnDeleteSelected.classList.toggle("hidden", !modoSelecaoMidiasAtivo);
         btnDeleteSelected.disabled = !existeSelecao;
+
         definirBotaoComIcone(
             btnDeleteSelected,
             "fa-solid fa-trash-can",
@@ -3278,15 +3297,83 @@ function atualizarEstadoAcoesEmLote() {
         );
     }
 
+    if (btnToggleSelectionMode) {
+        definirBotaoComIcone(
+            btnToggleSelectionMode,
+            modoSelecaoMidiasAtivo
+                ? "fa-solid fa-xmark"
+                : "fa-solid fa-check-double",
+            modoSelecaoMidiasAtivo
+                ? "Cancelar seleção"
+                : "Selecionar Itens"
+        );
+
+        btnToggleSelectionMode.classList.toggle(
+            "selectionModeActive",
+            modoSelecaoMidiasAtivo
+        );
+    }
+
     if (selectAllMedia) {
         const todas = obterCheckboxesVisiveis();
+        const selecionadasVisiveis = todas.filter((checkbox) => checkbox.checked);
 
         selectAllMedia.checked =
-            todas.length > 0 && selecionadas.length === todas.length;
+            todas.length > 0 && selecionadasVisiveis.length === todas.length;
 
         selectAllMedia.indeterminate =
-            selecionadas.length > 0 && selecionadas.length < todas.length;
+            selecionadasVisiveis.length > 0 &&
+            selecionadasVisiveis.length < todas.length;
     }
+}
+
+/* =========================================================
+   MODO SELEÇÃO DE MÍDIAS
+   =========================================================
+   Controla seleção em lote sem conflitar com reordenação.
+
+   Fora do modo seleção:
+   - cards não selecionam ao clicar;
+   - arrastar continua funcionando.
+
+   Dentro do modo seleção:
+   - checkboxes aparecem;
+   - clicar em área neutra do card seleciona;
+   - arrastar fica desativado.
+   ========================================================= */
+
+/**
+ * Limpa todas as seleções atuais.
+ */
+function limparSelecaoMidias() {
+    document.querySelectorAll(".mediaSelect:checked").forEach((checkbox) => {
+        checkbox.checked = false;
+    });
+
+    if (selectAllMedia) {
+        selectAllMedia.checked = false;
+        selectAllMedia.indeterminate = false;
+    }
+}
+
+/**
+ * Ativa ou desativa o modo seleção.
+ */
+function definirModoSelecaoMidias(ativo) {
+    modoSelecaoMidiasAtivo = Boolean(ativo);
+
+    if (!modoSelecaoMidiasAtivo) {
+        limparSelecaoMidias();
+    }
+
+    atualizarEstadoAcoesEmLote();
+}
+
+/**
+ * Alterna o modo seleção.
+ */
+function alternarModoSelecaoMidias() {
+    definirModoSelecaoMidias(!modoSelecaoMidiasAtivo);
 }
 
 /**
@@ -3347,9 +3434,14 @@ async function excluirMidiasSelecionadas() {
             "sucesso"
         );
 
+        definirModoSelecaoMidias(false);
+
         await executarPreservandoScroll(async () => {
             await carregarMidias();
             await carregarPlaylistAtual();
+            await carregarResumoAdmin();
+
+            definirModoSelecaoMidias(false);
         });
 
         atualizarEstadoAcoesEmLote();
@@ -4076,6 +4168,10 @@ if (btnDeleteSelected) {
     btnDeleteSelected.addEventListener("click", excluirMidiasSelecionadas);
 }
 
+if (btnToggleSelectionMode) {
+    btnToggleSelectionMode.addEventListener("click", alternarModoSelecaoMidias);
+}
+
 if (btnLogout) {
     btnLogout.addEventListener("click", sairDoAdmin);
 }
@@ -4172,6 +4268,17 @@ mediaList.addEventListener("click", (event) => {
     const item = event.target.closest(".mediaItem");
     const checkbox = item ? item.querySelector(".mediaSelect") : null;
 
+    /*
+      Fora do modo seleção, clique no card não seleciona nada.
+      Isso evita conflito com edição, detalhes, período e arrastar.
+    */
+    if (!modoSelecaoMidiasAtivo) {
+        return;
+    }
+
+    /*
+      Dentro do modo seleção, ignoramos cliques em controles reais.
+    */
     if (
         !item ||
         event.target.closest("input, select, textarea, button, a, summary, label, .mediaBadge, .mediaScheduleMenu, .mediaDetailsHover, .mediaStatusToggle, .mediaPreview, .mediaDragHandle")
@@ -4181,10 +4288,6 @@ mediaList.addEventListener("click", (event) => {
 
     if (!checkbox) return;
 
-    if (event.target !== item && !event.target.closest(".mediaOrder")) {
-        return;
-    }
-
     checkbox.checked = !checkbox.checked;
     atualizarEstadoAcoesEmLote();
     limparCliqueNeutro();
@@ -4193,7 +4296,11 @@ mediaList.addEventListener("click", (event) => {
 mediaList.addEventListener("dragstart", (event) => {
     const item = event.target.closest(".mediaItem");
 
-    if (!item || event.target.closest("input, select, textarea, button")) {
+    if (
+        modoSelecaoMidiasAtivo ||
+        !item ||
+        event.target.closest("input, select, textarea, button")
+    ) {
         event.preventDefault();
         return;
     }
