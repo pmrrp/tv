@@ -1269,6 +1269,92 @@ function obterEstadoPeriodo(inicio, fim) {
     return "programado";
 }
 
+/* =========================================================
+   BADGE DE PERÍODO DA MÍDIA
+   =========================================================
+   Exibe no rodapé do card uma indicação visual do período:
+   - Livre: sem início/fim definidos;
+   - Agendado: começa no futuro;
+   - Vencido: já passou da data final;
+   - Programado: está dentro do período configurado.
+   ========================================================= */
+
+/**
+ * Retorna o texto amigável do período.
+ */
+function obterLabelPeriodo(estadoPeriodo) {
+    const labels = {
+        indeterminado: "Livre",
+        agendado: "Agendado",
+        programado: "Programado",
+        vencido: "Vencido"
+    };
+
+    return labels[estadoPeriodo] || "Livre";
+}
+
+/**
+ * Retorna o ícone Font Awesome do período.
+ */
+function obterIconePeriodo(estadoPeriodo) {
+    const icones = {
+        indeterminado: "fa-infinity",
+        agendado: "fa-clock",
+        programado: "fa-calendar-check",
+        vencido: "fa-calendar-xmark"
+    };
+
+    return icones[estadoPeriodo] || "fa-infinity";
+}
+
+/**
+ * Monta o HTML da badge de período.
+ */
+function renderizarPeriodoBadge(midia) {
+    const estadoPeriodo = obterEstadoPeriodo(midia.inicio, midia.fim);
+    const labelPeriodo = obterLabelPeriodo(estadoPeriodo);
+    const iconePeriodo = obterIconePeriodo(estadoPeriodo);
+
+    return `
+        <span
+            class="mediaBadge periodo periodo-${estadoPeriodo}"
+            data-periodo-badge
+            data-periodo="${estadoPeriodo}"
+            title="Período: ${labelPeriodo}"
+        >
+            <i class="fa-solid ${iconePeriodo}" aria-hidden="true"></i>
+            <span>${labelPeriodo}</span>
+        </span>
+    `;
+}
+
+/**
+ * Atualiza a badge de período de um card já renderizado.
+ */
+function atualizarPeriodoBadgeDoItem(item) {
+    if (!item) return;
+
+    const badge = item.querySelector("[data-periodo-badge]");
+    const inputInicio = item.querySelector(".mediaStartDate");
+    const inputFim = item.querySelector(".mediaEndDate");
+
+    if (!badge || !inputInicio || !inputFim) return;
+
+    const estadoPeriodo = obterEstadoPeriodo(inputInicio.value, inputFim.value);
+    const labelPeriodo = obterLabelPeriodo(estadoPeriodo);
+    const iconePeriodo = obterIconePeriodo(estadoPeriodo);
+
+    badge.className = `mediaBadge periodo periodo-${estadoPeriodo}`;
+    badge.dataset.periodo = estadoPeriodo;
+    badge.title = `Período: ${labelPeriodo}`;
+    badge.innerHTML = `
+        <i class="fa-solid ${iconePeriodo}" aria-hidden="true"></i>
+        <span>${labelPeriodo}</span>
+    `;
+
+    item.dataset.periodo = estadoPeriodo;
+}
+
 /**
  * Normaliza texto para busca local na lista.
  */
@@ -2327,33 +2413,35 @@ function renderizarMidias(midias) {
 
         const prioridadeBadge = podeEditarMidias
             ? `
-        <details class="mediaPriorityMenu">
-            <summary class="mediaBadge ${prioridade}">
+            <details class="mediaPriorityMenu">
+                <summary class="mediaBadge ${prioridade}">
+                    <i class="fa-solid ${midia.prioridade === "urgente" ? "fa-triangle-exclamation" : midia.prioridade === "alta" ? "fa-bolt" : "fa-circle-check"}" aria-hidden="true"></i>
+                    <span>${prioridadeLabel}</span>
+                </summary>
+                <div class="mediaPriorityOptions">
+                    <button type="button" data-prioridade="normal" data-arquivo="${nomeArquivo}">
+                        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                        Normal
+                    </button>
+                    <button type="button" data-prioridade="alta" data-arquivo="${nomeArquivo}">
+                        <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+                        Alta
+                    </button>
+                    <button type="button" data-prioridade="urgente" data-arquivo="${nomeArquivo}">
+                        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                        Urgente
+                    </button>
+                </div>
+            </details>
+            `
+            : `
+            <span class="mediaBadge ${prioridade} mediaBadgeStatic">
                 <i class="fa-solid ${midia.prioridade === "urgente" ? "fa-triangle-exclamation" : midia.prioridade === "alta" ? "fa-bolt" : "fa-circle-check"}" aria-hidden="true"></i>
                 <span>${prioridadeLabel}</span>
-            </summary>
-            <div class="mediaPriorityOptions">
-                <button type="button" data-prioridade="normal" data-arquivo="${nomeArquivo}">
-                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-                    Normal
-                </button>
-                <button type="button" data-prioridade="alta" data-arquivo="${nomeArquivo}">
-                    <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-                    Alta
-                </button>
-                <button type="button" data-prioridade="urgente" data-arquivo="${nomeArquivo}">
-                    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-                    Urgente
-                </button>
-            </div>
-        </details>
-    `
-            : `
-        <span class="mediaBadge ${prioridade} mediaBadgeStatic">
-            <i class="fa-solid ${midia.prioridade === "urgente" ? "fa-triangle-exclamation" : midia.prioridade === "alta" ? "fa-bolt" : "fa-circle-check"}" aria-hidden="true"></i>
-            <span>${prioridadeLabel}</span>
-        </span>
-    `;
+            </span>
+        `;
+
+        const periodoBadge = renderizarPeriodoBadge(midia);
 
         const semValidadeDefinida = !midia.inicio && !midia.fim;
 
@@ -2478,6 +2566,7 @@ function renderizarMidias(midias) {
                     <div class="mediaBadges">
                         ${statusBadge}
                         ${prioridadeBadge}
+                        ${periodoBadge}
                     </div>
 
                     <div class="mediaDetailsHover">
@@ -3613,6 +3702,8 @@ function atualizarCamposValidade(item) {
         scheduleSummary.title = textoPeriodo;
         scheduleSummary.setAttribute("aria-label", `Período de exibição: ${textoPeriodo}`);
     }
+
+    atualizarPeriodoBadgeDoItem(item);
 }
 
 /**
@@ -4113,6 +4204,11 @@ async function processarAlteracaoDeMidia(alvo) {
     */
     if (alvo.classList.contains("mediaIndefinite")) {
         atualizarCamposValidade(item);
+    }
+
+    if (alvo.classList.contains("mediaStartDate") ||
+        alvo.classList.contains("mediaEndDate")) {
+        atualizarPeriodoBadgeDoItem(item);
     }
 
     /*

@@ -5602,7 +5602,7 @@ body:not(.can-edit-media) .mediaStatusToggle.isInactive {
 .mediaTitleLabel,
 .mediaConfigRow,
 .mediaFooterActions {
-    max-width: min(550px, calc(100% - 120px));
+    max-width: min(570px, calc(100% - 120px));
 }
 
 /* Campo do nome mais comportado */
@@ -7038,4 +7038,40 @@ body:not(.can-edit-media) .mediaStatusToggle.isInactive {
 .mediaPriorityOptions,
 .mediaDetailsPopover {
     z-index: 9993 !important;
+}
+
+/* =========================================================
+   BADGE DE PERÍODO DOS CARDS DE MÍDIA
+   ========================================================= */
+
+.mediaBadge.periodo {
+    border: 1px solid transparent;
+}
+
+/* Sem início/fim definidos */
+.mediaBadge.periodo-indeterminado {
+    background: #eef6ff;
+    color: #075985;
+    border-color: rgba(7, 89, 133, 0.12);
+}
+
+/* Começa no futuro */
+.mediaBadge.periodo-agendado {
+    background: #fef3c7;
+    color: #92400e;
+    border-color: rgba(146, 64, 14, 0.14);
+}
+
+/* Dentro do período configurado */
+.mediaBadge.periodo-programado {
+    background: #dcfce7;
+    color: #166534;
+    border-color: rgba(22, 101, 52, 0.14);
+}
+
+/* Período já vencido */
+.mediaBadge.periodo-vencido {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: rgba(153, 27, 27, 0.14);
 }
