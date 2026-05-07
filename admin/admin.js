@@ -3515,6 +3515,7 @@ function alternarSelecionarTodas() {
  */
 async function excluirMidiasSelecionadas() {
     if (!garantirPermissaoParaEditarMidias()) return;
+
     const arquivos = obterMidiasSelecionadas();
 
     if (!arquivos.length) {
@@ -3522,20 +3523,22 @@ async function excluirMidiasSelecionadas() {
         return;
     }
 
-    const confirmar = await confirmarAcaoModal({
+    const confirmou = await confirmarAcaoModal({
         kicker: "Biblioteca",
         titulo: "Excluir mídias selecionadas",
-        mensagem: `Essa ação remove ${formatarQuantidade(selecionadas.length, "mídia selecionada", "mídias selecionadas")} da biblioteca e atualiza a playlist publicada automaticamente.`,
+        mensagem: `Essa ação remove ${formatarQuantidade(arquivos.length, "mídia selecionada", "mídias selecionadas")} da biblioteca e atualiza a playlist publicada automaticamente.`,
         detalhe: "Essa ação não pode ser desfeita.",
         confirmar: "Excluir selecionadas",
         cancelar: "Cancelar",
         variante: "danger"
     });
 
-    if (!confirmar) return;
+    if (!confirmou) return;
 
-    btnDeleteSelected.disabled = true;
-    definirBotaoComIcone(btnDeleteSelected, "fa-solid fa-spinner fa-spin", "Excluindo...");
+    if (btnDeleteSelected) {
+        btnDeleteSelected.disabled = true;
+        definirBotaoComIcone(btnDeleteSelected, "fa-solid fa-spinner fa-spin", "Excluindo...");
+    }
 
     try {
         const resposta = await fetchComSessao("/api/midias/excluir-lote", {
@@ -3555,20 +3558,17 @@ async function excluirMidiasSelecionadas() {
         }
 
         mostrarMensagemUpload(
-            `Mídias excluídas: ${dados.excluidos.length}. Playlist atualizada automaticamente.`,
+            `${formatarQuantidade(dados.excluidos.length, "mídia excluída", "mídias excluídas")}. Playlist atualizada automaticamente.`,
             "sucesso"
         );
-
-        definirModoSelecaoMidias(false);
 
         await executarPreservandoScroll(async () => {
             await carregarMidias();
             await carregarPlaylistAtual();
             await carregarResumoAdmin();
-
-            definirModoSelecaoMidias(false);
         });
 
+        definirModoSelecaoMidias(false);
         atualizarEstadoAcoesEmLote();
     } catch (erro) {
         mostrarMensagemUpload(
@@ -3578,7 +3578,10 @@ async function excluirMidiasSelecionadas() {
 
         console.error(erro);
     } finally {
-        btnDeleteSelected.disabled = false;
+        if (btnDeleteSelected) {
+            btnDeleteSelected.disabled = false;
+        }
+
         atualizarEstadoAcoesEmLote();
     }
 }
@@ -3952,15 +3955,26 @@ function coletarConfiguracaoDoItem(item) {
  */
 async function confirmarESalvarMidia(item, mensagem = "Deseja salvar esta alteração?") {
     if (!garantirPermissaoParaEditarMidias()) return false;
+
     const configuracao = coletarConfiguracaoDoItem(item);
 
     if (!configuracao) return false;
+
+    /*
+      Nome exibido no modal.
+      Prioriza o título amigável digitado no card.
+      Se não houver título, usa o nome real do arquivo.
+    */
+    const nomeMidia =
+        configuracao.titulo ||
+        configuracao.nome ||
+        "mídia selecionada";
 
     const confirmou = await confirmarAcaoModal({
         kicker: "Biblioteca",
         titulo: "Salvar mídia",
         mensagem: "As alterações desta mídia serão salvas e a playlist publicada será atualizada automaticamente.",
-        detalhe: nomeArquivo,
+        detalhe: nomeMidia,
         confirmar: "Salvar mídia",
         cancelar: "Cancelar",
         variante: "success"
@@ -3992,15 +4006,28 @@ async function confirmarESalvarMidia(item, mensagem = "Deseja salvar esta altera
         }
 
         mostrarMensagemPlaylist("Alteração salva e playlist atualizada automaticamente.", "sucesso");
+
         await executarPreservandoScroll(async () => {
             await carregarMidias();
             await carregarPlaylistAtual();
         });
+
+        /*
+          Depois que recarrega, sincroniza o botão global do header.
+          Isso evita o botão "Salvar alterações" ficar preso indevidamente.
+        */
+        sincronizarAlteracoesPendentesGlobais();
+
         return true;
     } catch (erro) {
         mostrarMensagemPlaylist(erro.message || "Erro ao salvar mídia.", "erro");
+
         await carregarMidias();
+
+        sincronizarAlteracoesPendentesGlobais();
+
         console.error(erro);
+
         return false;
     }
 }
