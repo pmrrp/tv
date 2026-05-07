@@ -1007,6 +1007,24 @@ function exigirRole(...rolesPermitidas) {
     };
 }
 
+/**
+ * Atalho para rotas administrativas sensíveis.
+ *
+ * Superadmin e admin podem usar.
+ */
+function exigirAdmin(req, res, next) {
+    return exigirRole("superadmin", "admin")(req, res, next);
+}
+
+/**
+ * Atalho para rotas de edição de conteúdo.
+ *
+ * Superadmin, admin e editor podem usar.
+ */
+function exigirEditor(req, res, next) {
+    return exigirRole("superadmin", "admin", "editor")(req, res, next);
+}
+
 /* =========================================================
    PROTEÇÕES DE USUÁRIOS ADMINISTRATIVOS
    =========================================================
