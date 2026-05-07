@@ -1436,172 +1436,6 @@ function definirBotaoComIcone(botao, icone, texto) {
 }
 
 /**
- * Exibe uma confirmação em modal antes de ações de CRUD.
- *
- * Mantém compatibilidade com chamadas antigas:
- * confirmarAcaoModal({ titulo, mensagem, confirmar, cancelar })
- *
- * E permite chamadas novas/premium:
- * confirmarAcaoModal({
- *   kicker: "Biblioteca",
- *   titulo: "Excluir mídia",
- *   mensagem: "Essa ação remove a mídia...",
- *   detalhe: "arquivo.mp4",
- *   confirmar: "Excluir",
- *   cancelar: "Cancelar",
- *   variante: "danger"
- * })
- */
-function confirmarAcaoModal({
-    kicker = "Confirmação",
-    titulo,
-    mensagem,
-    detalhe = "",
-    confirmar = "Confirmar",
-    cancelar = "Cancelar",
-    variante = "default"
-}) {
-    if (!modalConfirmacao) {
-        modalConfirmacao = document.createElement("div");
-        modalConfirmacao.className = "confirmModal hidden";
-        modalConfirmacao.innerHTML = `
-            <div class="confirmModalBackdrop" data-confirm-cancel></div>
-
-            <section
-                class="confirmModalDialog"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="confirmModalTitle"
-                aria-describedby="confirmModalText"
-            >
-                <div class="confirmModalHeader">
-                    <div>
-                        <span id="confirmModalKicker" class="sectionKicker confirmModalKicker"></span>
-                        <h2 id="confirmModalTitle"></h2>
-                        <p id="confirmModalText"></p>
-                        <p id="confirmModalDetail" class="confirmModalDetail hidden"></p>
-                    </div>
-
-                    <button
-                        class="iconButton confirmModalClose"
-                        type="button"
-                        data-confirm-cancel
-                        aria-label="Fechar confirmação"
-                    >
-                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-                    </button>
-                </div>
-
-                <div class="confirmModalActions">
-                    <button class="confirmModalCancel secondaryAction" type="button" data-confirm-cancel></button>
-                    <button class="confirmModalAccept primaryAction" type="button" data-confirm-accept></button>
-                </div>
-            </section>
-        `;
-
-        document.body.appendChild(modalConfirmacao);
-    }
-
-    const dialog = modalConfirmacao.querySelector(".confirmModalDialog");
-    const kickerEl = modalConfirmacao.querySelector("#confirmModalKicker");
-    const tituloEl = modalConfirmacao.querySelector("#confirmModalTitle");
-    const mensagemEl = modalConfirmacao.querySelector("#confirmModalText");
-    const detalheEl = modalConfirmacao.querySelector("#confirmModalDetail");
-    const botaoCancelar = modalConfirmacao.querySelector(".confirmModalCancel");
-    const botaoConfirmar = modalConfirmacao.querySelector(".confirmModalAccept");
-
-    dialog.dataset.variant = variante;
-
-    kickerEl.textContent = kicker;
-    tituloEl.textContent = titulo;
-    mensagemEl.textContent = mensagem;
-
-    if (detalhe) {
-        detalheEl.textContent = detalhe;
-        detalheEl.classList.remove("hidden");
-    } else {
-        detalheEl.textContent = "";
-        detalheEl.classList.add("hidden");
-    }
-
-    definirBotaoComIcone(
-        botaoCancelar,
-        "fa-solid fa-arrow-left",
-        cancelar
-    );
-
-    const iconeConfirmar = variante === "danger"
-        ? "fa-solid fa-trash-can"
-        : variante === "success"
-            ? "fa-solid fa-check"
-            : "fa-solid fa-check";
-
-    definirBotaoComIcone(
-        botaoConfirmar,
-        iconeConfirmar,
-        confirmar
-    );
-
-    modalConfirmacao.classList.remove("hidden");
-    document.body.classList.add("modalAberto");
-
-    const focoAnterior = document.activeElement;
-
-    setTimeout(() => {
-        botaoConfirmar.focus();
-    }, 0);
-
-    return new Promise((resolve) => {
-        function fechar(resultado) {
-            modalConfirmacao.classList.add("hidden");
-            document.body.classList.remove("modalAberto");
-
-            modalConfirmacao.removeEventListener("click", aoClicar);
-            document.removeEventListener("keydown", aoTeclar);
-
-            if (focoAnterior && typeof focoAnterior.focus === "function") {
-                focoAnterior.focus();
-            }
-
-            resolve(resultado);
-        }
-
-        function aoClicar(event) {
-            if (event.target.closest("[data-confirm-accept]")) {
-                fechar(true);
-                return;
-            }
-
-            if (event.target.closest("[data-confirm-cancel]")) {
-                fechar(false);
-            }
-        }
-
-        function aoTeclar(event) {
-            if (event.key === "Escape") {
-                fechar(false);
-                return;
-            }
-
-            /*
-              Atalho simples de acessibilidade:
-              Enter confirma se o foco não estiver em textarea/input.
-            */
-            if (
-                event.key === "Enter" &&
-                !event.target.closest("input, textarea, select")
-            ) {
-                event.preventDefault();
-                fechar(true);
-            }
-        }
-
-        modalConfirmacao.addEventListener("click", aoClicar);
-        document.addEventListener("keydown", aoTeclar);
-    });
-}
-
-/**
  * Retorna texto curto para o card da mídia.
  */
 function obterTipoVisual(tipo) {
@@ -3029,6 +2863,135 @@ function receberArquivoArrastado(event) {
     }
 
     atualizarNomeSelecionado();
+}
+
+
+/**
+ * Exibe uma confirmação em modal antes de ações de CRUD.
+ *
+ * Mantém compatibilidade com chamadas antigas:
+ * confirmarAcaoModal({ titulo, mensagem, confirmar, cancelar })
+ *
+ * E permite chamadas novas/premium:
+ * confirmarAcaoModal({
+ *   kicker: "Biblioteca",
+ *   titulo: "Excluir mídia",
+ *   mensagem: "Essa ação remove a mídia...",
+ *   detalhe: "arquivo.mp4",
+ *   confirmar: "Excluir",
+ *   cancelar: "Cancelar",
+ *   variante: "danger"
+ * })
+ */
+function confirmarAcaoModal({
+    kicker = "Confirmação",
+    titulo = "Confirmar ação",
+    mensagem = "Confirme se deseja continuar.",
+    detalhe = "",
+    confirmar = "Confirmar",
+    cancelar = "Cancelar",
+    variante = "default"
+}) {
+    const modal = document.getElementById("confirmActionModal");
+    const kickerEl = document.getElementById("confirmActionKicker");
+    const tituloEl = document.getElementById("confirmActionTitle");
+    const mensagemEl = document.getElementById("confirmActionMessage");
+    const detalheEl = document.getElementById("confirmActionDetail");
+    const btnCancelar = document.getElementById("btnDismissConfirmAction");
+    const btnFechar = document.getElementById("btnCancelConfirmAction");
+    const btnConfirmar = document.getElementById("btnAcceptConfirmAction");
+
+    if (!modal || !kickerEl || !tituloEl || !mensagemEl || !detalheEl || !btnCancelar || !btnFechar || !btnConfirmar) {
+        return Promise.resolve(false);
+    }
+
+    modal.dataset.variant = variante;
+
+    kickerEl.textContent = kicker;
+    tituloEl.textContent = titulo;
+    mensagemEl.textContent = mensagem;
+
+    if (detalhe) {
+        detalheEl.textContent = detalhe;
+        detalheEl.classList.remove("hidden");
+    } else {
+        detalheEl.textContent = "";
+        detalheEl.classList.add("hidden");
+    }
+
+    btnCancelar.textContent = cancelar;
+
+    btnConfirmar.className = "";
+    btnConfirmar.id = "btnAcceptConfirmAction";
+    btnConfirmar.type = "button";
+
+    if (variante === "danger") {
+        btnConfirmar.classList.add("dangerAction");
+        definirBotaoComIcone(btnConfirmar, "fa-solid fa-trash-can", confirmar);
+    } else if (variante === "warning") {
+        btnConfirmar.classList.add("warningAction");
+        definirBotaoComIcone(btnConfirmar, "fa-solid fa-triangle-exclamation", confirmar);
+    } else if (variante === "success") {
+        btnConfirmar.classList.add("successAction");
+        definirBotaoComIcone(btnConfirmar, "fa-solid fa-check", confirmar);
+    } else {
+        btnConfirmar.classList.add("primaryAction");
+        definirBotaoComIcone(btnConfirmar, "fa-solid fa-check", confirmar);
+    }
+
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+
+    const focoAnterior = document.activeElement;
+
+    setTimeout(() => {
+        btnConfirmar.focus();
+    }, 0);
+
+    return new Promise((resolve) => {
+        function fechar(resultado) {
+            modal.classList.add("hidden");
+            modal.setAttribute("aria-hidden", "true");
+
+            btnConfirmar.removeEventListener("click", aoConfirmar);
+            btnCancelar.removeEventListener("click", aoCancelar);
+            btnFechar.removeEventListener("click", aoCancelar);
+            modal.removeEventListener("click", aoClicarFora);
+            document.removeEventListener("keydown", aoTeclar);
+
+            if (focoAnterior && typeof focoAnterior.focus === "function") {
+                focoAnterior.focus();
+            }
+
+            resolve(resultado);
+        }
+
+        function aoConfirmar() {
+            fechar(true);
+        }
+
+        function aoCancelar() {
+            fechar(false);
+        }
+
+        function aoClicarFora(event) {
+            if (event.target === modal) {
+                fechar(false);
+            }
+        }
+
+        function aoTeclar(event) {
+            if (event.key === "Escape") {
+                fechar(false);
+            }
+        }
+
+        btnConfirmar.addEventListener("click", aoConfirmar);
+        btnCancelar.addEventListener("click", aoCancelar);
+        btnFechar.addEventListener("click", aoCancelar);
+        modal.addEventListener("click", aoClicarFora);
+        document.addEventListener("keydown", aoTeclar);
+    });
 }
 
 /**

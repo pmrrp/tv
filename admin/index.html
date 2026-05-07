@@ -450,6 +450,47 @@
     </main>
 
     <!-- =====================================================
+     MODAL - CONFIRMAÇÃO GENÉRICA
+     =====================================================
+     Usado para confirmações rápidas:
+     - enviar mídia;
+     - salvar alterações;
+     - excluir mídia;
+     - excluir mídias selecionadas.
+     Segue o mesmo padrão visual dos modais de usuário.
+     ===================================================== -->
+    <div id="confirmActionModal" class="modalOverlay hidden" aria-hidden="true">
+        <section class="modalCard confirmModalCard" role="dialog" aria-modal="true"
+            aria-labelledby="confirmActionTitle">
+            <div class="modalHeader">
+                <div>
+                    <span id="confirmActionKicker" class="sectionKicker">Confirmação</span>
+                    <h3 id="confirmActionTitle">Confirmar ação</h3>
+                    <p id="confirmActionMessage">
+                        Confirme se deseja continuar.
+                    </p>
+                    <p id="confirmActionDetail" class="confirmActionDetail hidden"></p>
+                </div>
+
+                <button id="btnCancelConfirmAction" class="iconButton" type="button" aria-label="Fechar confirmação">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <div class="confirmModalActions">
+                <button id="btnDismissConfirmAction" class="secondaryAction" type="button">
+                    Cancelar
+                </button>
+
+                <button id="btnAcceptConfirmAction" class="primaryAction" type="button">
+                    <i class="fa-solid fa-check" aria-hidden="true"></i>
+                    Confirmar
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <!-- =====================================================
      MODAL - FORMULÁRIO DE USUÁRIO
      =====================================================
      Usado para:
@@ -532,10 +573,6 @@
             </form>
         </section>
     </div>
-
-    <footer class="adminFooter">
-        © 2026 Prefeitura Municipal de Ribas do Rio Pardo - MS. Todos os direitos reservados.
-    </footer>
 
     <!-- =====================================================
      MODAL - RESETAR SENHA DE USUÁRIO
@@ -627,8 +664,13 @@
         </section>
     </div>
 
+    <footer class="adminFooter">
+        © 2026 Prefeitura Municipal de Ribas do Rio Pardo - MS. Todos os direitos reservados.
+    </footer>
+
     <!-- Script principal do painel administrativo -->
     <script src="admin.js"></script>
+
 </body>
 
 </html>
