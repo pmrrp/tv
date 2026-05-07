@@ -98,21 +98,28 @@
                     Por enquanto o backend informa apenas o status básico,
                     mas a estrutura já fica preparada para usuário real no futuro.
                 -->
-                <div class="adminUserMenu" aria-label="Usuário da sessão">
-                    <button id="btnUserProfile" class="userProfileButton" type="button">
+                <details class="adminUserDropdown">
+                    <summary class="adminUserSummary" aria-label="Menu do usuário">
                         <span class="userAvatar" aria-hidden="true">
                             <i class="fa-solid fa-user"></i>
                         </span>
+
                         <span class="userGreeting">
                             Olá, <strong id="adminUserName">usuário</strong>
                         </span>
-                    </button>
 
-                    <button id="btnLogout" class="logoutButton" type="button">
-                        <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
-                        Sair
-                    </button>
-                </div>
+                        <span class="userMenuChevron" aria-hidden="true">
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </span>
+                    </summary>
+
+                    <div class="adminUserDropdownPanel">
+                        <button id="btnLogout" class="userMenuLogoutButton" type="button">
+                            <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
+                            Sair
+                        </button>
+                    </div>
+                </details>
             </div>
         </header>
 
@@ -172,6 +179,10 @@
                     <div>
                         <span class="sectionKicker">Upload</span>
                         <h2 id="uploadTitle">Enviar nova mídia</h2>
+                        <p>
+                            Clique para selecionar um arquivo de seu dispositivo, ou arraste arquivos de imagem ou vídeo
+                            para fazer o upload e inserir na playlist de programação.
+                        </p>
                     </div>
                 </div>
 
