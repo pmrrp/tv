@@ -5626,7 +5626,7 @@ body:not(.can-edit-media) .mediaStatusToggle.isInactive {
 .mediaTitleLabel,
 .mediaConfigRow,
 .mediaFooterActions {
-    max-width: min(570px, calc(100% - 120px));
+    max-width: min(575px, calc(100% - 120px));
 }
 
 /* Campo do nome mais comportado */
@@ -8032,4 +8032,63 @@ body.mediaSelectionMode .mediaItemSelected {
     box-shadow:
         0 0 0 4px rgba(15, 112, 196, 0.09),
         0 18px 44px rgba(5, 47, 82, 0.10) !important;
+}
+
+/* =========================================================
+   PERÍODO DE EXIBIÇÃO - AÇÕES DO POPOVER
+   ========================================================= */
+
+.mediaScheduleActions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+
+    margin-top: 14px;
+    padding-top: 12px;
+
+    border-top: 1px solid rgba(219, 231, 243, 0.85);
+}
+
+.mediaScheduleActions button {
+    min-height: 38px !important;
+    border-radius: 13px !important;
+    font-size: 12px !important;
+    font-weight: 900 !important;
+}
+
+/* Campos de data/hora um pouco mais premium */
+.mediaDateFields input[type="datetime-local"] {
+    min-height: 42px;
+
+    border-radius: 14px !important;
+    border: 1px solid rgba(219, 231, 243, 0.95) !important;
+
+    background: rgba(255, 255, 255, 0.92) !important;
+    color: var(--blue-950) !important;
+
+    font-size: 13px !important;
+    font-weight: 850 !important;
+
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.mediaDateFields input[type="datetime-local"]:focus {
+    outline: none !important;
+    border-color: rgba(15, 112, 196, 0.45) !important;
+    box-shadow:
+        0 0 0 4px rgba(15, 112, 196, 0.10),
+        inset 0 1px 0 rgba(255, 255, 255, 0.82) !important;
+}
+
+.mediaDateFields.disabledDates input[type="datetime-local"] {
+    cursor: not-allowed !important;
+    opacity: 0.58;
+    background: rgba(241, 245, 249, 0.78) !important;
+}
+
+.mediaDateFields input[type="datetime-local"]:disabled {
+    cursor: not-allowed !important;
+    opacity: 0.58;
+    background: rgba(241, 245, 249, 0.78) !important;
 }

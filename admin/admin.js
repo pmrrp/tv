@@ -450,6 +450,24 @@ function configurarDetailsControlados() {
 }
 
 /* =========================================================
+   PERÍODO - GUARDA ESTADO AO ABRIR POPOVER
+   ========================================================= */
+
+document.addEventListener("toggle", (event) => {
+    const menu = event.target;
+
+    if (!(menu instanceof HTMLDetailsElement)) return;
+
+    if (!menu.matches(".mediaScheduleMenu")) return;
+
+    if (!menu.open) return;
+
+    const item = menu.closest(".mediaItem");
+
+    guardarRascunhoPeriodo(item);
+}, true);
+
+/* =========================================================
    USUÁRIOS - HELPERS VISUAIS
    ========================================================= */
 
@@ -2552,22 +2570,35 @@ function renderizarMidias(midias) {
                                     Início
                                     <input
                                         type="datetime-local"
-                                    class="mediaStartDate"
-                                    data-arquivo="${nomeArquivo}"
-                                    value="${formatarIsoParaDatetimeLocal(midia.inicio)}"
+                                        class="mediaStartDate"
+                                        data-arquivo="${nomeArquivo}"
+                                        value="${formatarIsoParaDatetimeLocal(midia.inicio)}"
+                                        ${semValidadeDefinida ? "disabled" : ""}
                                     />
                                 </label>
 
                                 <label class="mediaConfigLabel mediaDateLabel">
                                     Fim
-                                    <input
+                                   <input
                                         type="datetime-local"
-                                    class="mediaEndDate"
-                                    data-arquivo="${nomeArquivo}"
-                                    value="${formatarIsoParaDatetimeLocal(midia.fim)}"
+                                        class="mediaEndDate"
+                                        data-arquivo="${nomeArquivo}"
+                                        value="${formatarIsoParaDatetimeLocal(midia.fim)}"
                                     />
                                 </label>
                             </div>
+
+                            <div class="mediaScheduleActions">
+                                <button class="secondaryAction mediaScheduleCancel" type="button" data-arquivo="${nomeArquivo}">
+                                    Cancelar
+                                </button>
+
+                                <button class="successAction mediaScheduleApply" type="button" data-arquivo="${nomeArquivo}">
+                                    <i class="fa-solid fa-check" aria-hidden="true"></i>
+                                    Aplicar período
+                                </button>
+                            </div>
+
                         </div>
                     </details>
 
@@ -3864,9 +3895,20 @@ function itemPossuiAlteracaoReal(item) {
 
     if (!atual) return false;
 
+    /*
+      Enquanto o período está sendo editado no popover,
+      início/fim ainda são rascunho.
+
+      Só devem contar como alteração real depois que o usuário
+      clicar em "Aplicar período".
+    */
+    if (item.dataset.periodoDraftAtivo === "true") {
+        atual.inicio = original.inicio;
+        atual.fim = original.fim;
+    }
+
     return JSON.stringify(original) !== JSON.stringify(atual);
 }
-
 /**
  * Atualiza visualmente o estado de alteração de um card.
  */
@@ -4077,24 +4119,26 @@ async function salvarMidiaRapida(item) {
     }
 }
 
-
 /* =========================================================
    VALIDADE / DATA DE EXIBIÇÃO
-   ========================================================= */
+   ========================================================== */
 
 /**
  * Atualiza os campos de validade de uma mídia.
  *
- * Quando "Exibir por tempo indeterminado" está marcado:
+ * Quando "Tempo indeterminado" está marcado:
  * - limpa data inicial;
  * - limpa data final;
- * - desabilita os campos de data.
+ * - aplica visual de campos desabilitados.
  *
- * Quando está desmarcado:
- * - libera os campos para edição.
+ * O parâmetro atualizarBadge permite usar a função em modo rascunho:
+ * - true: atualiza badge/resumo do card;
+ * - false: altera apenas o popover enquanto o usuário ainda não aplicou.
  */
-function atualizarCamposValidade(item) {
+function atualizarCamposValidade(item, opcoes = {}) {
     if (!item) return;
+
+    const { atualizarBadge = true } = opcoes;
 
     const checkboxIndefinido = item.querySelector(".mediaIndefinite");
     const inputInicio = item.querySelector(".mediaStartDate");
@@ -4111,10 +4155,16 @@ function atualizarCamposValidade(item) {
         inputInicio.value = "";
         inputFim.value = "";
 
+        inputInicio.disabled = true;
+        inputFim.disabled = true;
+
         if (dateFields) {
             dateFields.classList.add("disabledDates");
         }
     } else {
+        inputInicio.disabled = false;
+        inputFim.disabled = false;
+
         if (dateFields) {
             dateFields.classList.remove("disabledDates");
         }
@@ -4128,37 +4178,120 @@ function atualizarCamposValidade(item) {
         scheduleSummarySmall.textContent = textoPeriodo;
     }
 
-    /*
-      Mesmo que o texto pequeno esteja escondido no CSS,
-      o title ajuda o usuário e facilita debug visual.
-    */
     if (scheduleSummary) {
         scheduleSummary.title = textoPeriodo;
         scheduleSummary.setAttribute("aria-label", `Período de exibição: ${textoPeriodo}`);
     }
 
-    atualizarPeriodoBadgeDoItem(item);
+    if (atualizarBadge) {
+        atualizarPeriodoBadgeDoItem(item);
+    }
 }
 
 /**
  * Ativa datas quando o usuário interage com o datepicker.
+ *
+ * Com o novo fluxo, campos desabilitados não devem ativar período sozinhos.
+ * Para usar datas, o usuário deve desmarcar "Tempo indeterminado".
  */
 function ativarPeriodoPorData(input) {
-    const item = input ? input.closest(".mediaItem") : null;
+    if (!input || input.disabled) return;
+
+    const item = input.closest(".mediaItem");
     const checkboxIndefinido = item ? item.querySelector(".mediaIndefinite") : null;
 
     if (!item || !checkboxIndefinido || !checkboxIndefinido.checked) return;
 
     checkboxIndefinido.checked = false;
-    atualizarCamposValidade(item);
 
-    /*
-      Interagir com os campos de data deve contar como alteração real
-      somente se o estado atual ficou diferente do original.
-    */
-    atualizarEstadoVisualAlteracaoDoItem(item);
+    atualizarCamposValidade(item, {
+        atualizarBadge: false
+    });
 }
 
+/* =========================================================
+   PERÍODO - RASCUNHO / APLICAR / CANCELAR
+   =========================================================
+   Permite editar datas no popover sem marcar alteração real
+   até o usuário clicar em "Aplicar período".
+   ========================================================== */
+
+/**
+ * Guarda o estado atual do período antes do usuário editar.
+ */
+function guardarRascunhoPeriodo(item) {
+    if (!item) return;
+
+    const checkboxIndefinido = item.querySelector(".mediaIndefinite");
+    const inputInicio = item.querySelector(".mediaStartDate");
+    const inputFim = item.querySelector(".mediaEndDate");
+
+    if (!checkboxIndefinido || !inputInicio || !inputFim) return;
+
+    item.dataset.periodoDraftIndefinido = checkboxIndefinido.checked ? "true" : "false";
+    item.dataset.periodoDraftInicio = inputInicio.value || "";
+    item.dataset.periodoDraftFim = inputFim.value || "";
+    item.dataset.periodoDraftAtivo = "true";
+
+}
+
+/**
+ * Restaura o estado salvo quando o usuário clica em Cancelar.
+ */
+function cancelarPeriodoDoItem(item) {
+    if (!item) return;
+
+    const checkboxIndefinido = item.querySelector(".mediaIndefinite");
+    const inputInicio = item.querySelector(".mediaStartDate");
+    const inputFim = item.querySelector(".mediaEndDate");
+    const menu = item.querySelector(".mediaScheduleMenu");
+
+    if (!checkboxIndefinido || !inputInicio || !inputFim) return;
+
+    checkboxIndefinido.checked = item.dataset.periodoDraftIndefinido === "true";
+    inputInicio.value = item.dataset.periodoDraftInicio || "";
+    inputFim.value = item.dataset.periodoDraftFim || "";
+
+    atualizarCamposValidade(item, {
+        atualizarBadge: true
+    });
+
+    item.dataset.periodoDraftAtivo = "false";
+
+    /*
+      Depois de cancelar, recalcula se o card ainda tem alteração real.
+      Se a única mudança era o período, o botão Salvar desaparece.
+    */
+    atualizarEstadoVisualAlteracaoDoItem(item);
+
+    if (menu) {
+        menu.removeAttribute("open");
+    }
+}
+
+/**
+ * Aplica o período escolhido e marca o card como alterado se houver diferença real.
+ */
+function aplicarPeriodoDoItem(item) {
+    if (!item) return;
+
+    const menu = item.querySelector(".mediaScheduleMenu");
+
+    atualizarCamposValidade(item, {
+        atualizarBadge: true
+    });
+
+    item.dataset.periodoDraftAtivo = "false";
+
+    /*
+      Só agora o período deixa de ser rascunho e entra como alteração real.
+    */
+    atualizarEstadoVisualAlteracaoDoItem(item);
+
+    if (menu) {
+        menu.removeAttribute("open");
+    }
+}
 
 /* =========================================================
    LOGOUT
@@ -4684,15 +4817,27 @@ async function processarAlteracaoDeMidia(alvo) {
     if (!item) return;
 
     /*
-      Atualiza campos e textos auxiliares de período.
+    Campos de período agora trabalham em modo rascunho.
+    Eles só viram alteração real quando o usuário clica em
+    "Aplicar período".
     */
     if (alvo.classList.contains("mediaIndefinite")) {
-        atualizarCamposValidade(item);
+        atualizarCamposValidade(item, {
+            atualizarBadge: false
+        });
+
+        return;
     }
 
-    if (alvo.classList.contains("mediaStartDate") ||
-        alvo.classList.contains("mediaEndDate")) {
-        atualizarPeriodoBadgeDoItem(item);
+    if (
+        alvo.classList.contains("mediaStartDate") ||
+        alvo.classList.contains("mediaEndDate")
+    ) {
+        atualizarCamposValidade(item, {
+            atualizarBadge: false
+        });
+
+        return;
     }
 
     /*
@@ -4780,6 +4925,35 @@ mediaList.addEventListener("input", (event) => {
         marcarAlteracoesPendentes();
     }
 });
+
+/* =========================================================
+   EVENTOS - PERÍODO DE EXIBIÇÃO
+   ========================================================= */
+
+if (mediaList) {
+    mediaList.addEventListener("click", (event) => {
+        const botaoAplicar = event.target.closest(".mediaScheduleApply");
+        const botaoCancelar = event.target.closest(".mediaScheduleCancel");
+
+        if (!botaoAplicar && !botaoCancelar) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const item = event.target.closest(".mediaItem");
+
+        if (!item) return;
+
+        if (botaoAplicar) {
+            aplicarPeriodoDoItem(item);
+            return;
+        }
+
+        if (botaoCancelar) {
+            cancelarPeriodoDoItem(item);
+        }
+    });
+}
 
 /* =========================================================
    MODO SELEÇÃO - CLIQUE SEGURO NO CARD
