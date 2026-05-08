@@ -7915,3 +7915,97 @@ body.mediaSelectionMode .mediaDragHandle {
 #confirmActionModal[data-variant="warning"] .sectionKicker {
     color: #b45309;
 }
+
+/* =========================================================
+   MODO SELEÇÃO - CARD BLINDADO
+   =========================================================
+   No modo seleção, os cards deixam de parecer editáveis.
+   A ideia é transformar o card em uma peça de seleção segura.
+   ========================================================= */
+
+body.mediaSelectionMode .mediaItem {
+    cursor: pointer !important;
+}
+
+/* Nome fica com aparência de texto fixo */
+body.mediaSelectionMode .mediaTitleInput {
+    pointer-events: none !important;
+
+    border-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+
+    color: var(--blue-950) !important;
+    font-weight: 950 !important;
+}
+
+/* Esconde controles/ações que não devem existir no modo seleção */
+body.mediaSelectionMode .mediaSaveButton,
+body.mediaSelectionMode .mediaDeleteButton,
+body.mediaSelectionMode .mediaDetailsHover,
+body.mediaSelectionMode .mediaPriorityMenu,
+body.mediaSelectionMode .mediaScheduleMenu summary,
+body.mediaSelectionMode .mediaRepeatEvery,
+body.mediaSelectionMode .mediaDuration,
+body.mediaSelectionMode .mediaConfigLabel,
+body.mediaSelectionMode .mediaConfigText {
+    pointer-events: none !important;
+}
+
+/* Fecha visualmente popovers/menus no modo seleção */
+body.mediaSelectionMode .mediaScheduleMenu[open],
+body.mediaSelectionMode .mediaPriorityMenu[open],
+body.mediaSelectionMode .mediaDetailsHover[open] {
+    pointer-events: none !important;
+}
+
+/* Impede que o conteúdo interno dos menus apareça */
+body.mediaSelectionMode .mediaValidityBox,
+body.mediaSelectionMode .mediaPriorityOptions,
+body.mediaSelectionMode .mediaDetailsPopover {
+    display: none !important;
+}
+
+/* Some com botões de ação individuais */
+body.mediaSelectionMode .mediaSaveButton,
+body.mediaSelectionMode .mediaDeleteButton,
+body.mediaSelectionMode .mediaDetailsHover {
+    display: none !important;
+}
+
+/* Repetição e período ficam só como leitura visual */
+body.mediaSelectionMode .mediaScheduleMenu,
+body.mediaSelectionMode .mediaRepeatEvery {
+    pointer-events: none !important;
+}
+
+/* Alça de arrastar desativada */
+body.mediaSelectionMode .mediaDragHandle {
+    opacity: 0.25 !important;
+    pointer-events: none !important;
+}
+
+/* Controles ficam mais suaves, mas sem parecer quebrados */
+body.mediaSelectionMode .mediaInfoControls {
+    opacity: 0.78;
+}
+
+/* Checkbox sempre clicável */
+body.mediaSelectionMode .mediaSelectArea,
+body.mediaSelectionMode .mediaSelect {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+/* Destaque do card selecionado */
+body.mediaSelectionMode .mediaItemSelected {
+    border-color: rgba(15, 112, 196, 0.45) !important;
+    background:
+        linear-gradient(180deg, rgba(239, 246, 255, 0.98), rgba(255, 255, 255, 0.98)) !important;
+    box-shadow:
+        0 0 0 4px rgba(15, 112, 196, 0.09),
+        0 18px 44px rgba(5, 47, 82, 0.10) !important;
+}

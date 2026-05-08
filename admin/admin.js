@@ -3446,6 +3446,16 @@ function limparSelecaoMidias() {
 function definirModoSelecaoMidias(ativo) {
     modoSelecaoMidiasAtivo = Boolean(ativo);
 
+    document.body.classList.toggle("mediaSelectionMode", modoSelecaoMidiasAtivo);
+
+    if (mediaList) {
+        mediaList.classList.toggle("mediaSelectionMode", modoSelecaoMidiasAtivo);
+    }
+
+    if (modoSelecaoMidiasAtivo) {
+        fecharDetailsControlados();
+    }
+
     if (!modoSelecaoMidiasAtivo) {
         limparSelecaoMidias();
     }
@@ -4448,10 +4458,45 @@ mediaList.addEventListener("click", (event) => {
     const checkbox = item ? item.querySelector(".mediaSelect") : null;
 
     /*
-      Fora do modo seleção, clique no card não seleciona nada.
-      Isso evita conflito com edição, detalhes, período e arrastar.
+      Em modo seleção, clicar em área segura do card seleciona/desseleciona.
     */
-    if (!modoSelecaoMidiasAtivo) {
+    if (modoSelecaoMidiasAtivo && item && checkbox) {
+        const clicouEmControle = event.target.closest([
+            "input",
+            "select",
+            "textarea",
+            "button",
+            "a",
+            "summary",
+            "label",
+            ".mediaScheduleMenu",
+            ".mediaPriorityMenu",
+            ".mediaDetailsHover",
+            ".mediaStatusToggle",
+            ".mediaDragHandle"
+        ].join(","));
+
+        /*
+          Se clicou diretamente no checkbox, deixa o próprio checkbox
+          controlar o estado e apenas atualiza a interface.
+        */
+        if (event.target.closest(".mediaSelectArea")) {
+            atualizarEstadoAcoesEmLote();
+            limparCliqueNeutro();
+            return;
+        }
+
+        /*
+          Se clicou em controle interno, não alterna seleção.
+          Como o CSS bloqueia edição em modo seleção, isso evita confusão.
+        */
+        if (clicouEmControle) {
+            return;
+        }
+
+        checkbox.checked = !checkbox.checked;
+        atualizarEstadoAcoesEmLote();
+        limparCliqueNeutro();
         return;
     }
 
@@ -4704,6 +4749,47 @@ mediaList.addEventListener("input", (event) => {
         marcarAlteracoesPendentes();
     }
 });
+
+/* =========================================================
+   MODO SELEÇÃO - CLIQUE SEGURO NO CARD
+   =========================================================
+   Permite selecionar/desselecionar clicando em área segura
+   do card quando o modo seleção está ativo.
+   ========================================================= */
+
+if (mediaList) {
+    mediaList.addEventListener("click", (event) => {
+        if (!modoSelecaoMidiasAtivo) return;
+
+        const item = event.target.closest(".mediaItem");
+
+        if (!item) return;
+
+        const checkbox = item.querySelector(".mediaSelect");
+
+        if (!checkbox) return;
+
+        /*
+          Se clicou diretamente no checkbox, deixa ele funcionar normal
+          e apenas atualiza o visual.
+        */
+        if (event.target.closest(".mediaSelectArea")) {
+            atualizarEstadoAcoesEmLote();
+            return;
+        }
+
+        /*
+          Em modo seleção, o card é blindado.
+          Então clique no card alterna seleção.
+        */
+        event.preventDefault();
+        event.stopPropagation();
+
+        checkbox.checked = !checkbox.checked;
+
+        atualizarEstadoAcoesEmLote();
+    }, true);
+}
 
 document.addEventListener("click", (event) => {
     const trigger = event.target.closest(".mediaDetailsTrigger");
