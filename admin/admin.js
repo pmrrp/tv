@@ -2502,16 +2502,22 @@ function renderizarMidias(midias) {
     `
             : "";
 
-        const statusBadge = `
-            <label class="mediaStatusToggle ${midia.ativo ? "isActive" : "isInactive"}">
-                <input
-                    type="checkbox"
-                    class="mediaActive"
-                    data-arquivo="${nomeArquivo}"
-                    ${midia.ativo ? "checked" : ""}
-                />
-                <span>${midia.ativo ? "Ativo" : "Inativo"}</span>
-            </label>
+        const statusBadge = podeEditarMidias
+            ? `
+        <label class="mediaStatusToggle ${midia.ativo ? "isActive" : "isInactive"}">
+            <input
+                type="checkbox"
+                class="mediaActive"
+                data-arquivo="${nomeArquivo}"
+                ${midia.ativo ? "checked" : ""}
+            />
+            <span>${midia.ativo ? "Ativo" : "Inativo"}</span>
+        </label>
+            `
+            : `
+        <span class="mediaStatusToggle ${midia.ativo ? "isActive" : "isInactive"} mediaBadgeStatic">
+            <span>${midia.ativo ? "Ativo" : "Inativo"}</span>
+        </span>
         `;
 
         const prioridadeBadge = podeEditarMidias
@@ -2545,6 +2551,22 @@ function renderizarMidias(midias) {
         `;
 
         const periodoBadge = renderizarPeriodoBadge(midia);
+
+        const repetirACada = Number(midia.repetirACada || 0);
+
+        const repeticaoBadge = repetirACada > 0
+            ? `
+        <span class="mediaBadge mediaRepeatBadge repeatActive">
+            <i class="fa-solid fa-repeat" aria-hidden="true"></i>
+            Repete a cada ${repetirACada}
+        </span>
+    `
+            : `
+        <span class="mediaBadge mediaRepeatBadge repeatNone">
+            <i class="fa-solid fa-ban" aria-hidden="true"></i>
+            Não repete
+        </span>
+    `;
 
         const semValidadeDefinida = !midia.inicio && !midia.fim;
 
@@ -2582,6 +2604,84 @@ function renderizarMidias(midias) {
             `
             : "";
 
+        const controlesConfiguracaoMidia = podeEditarMidias
+            ? `
+        <div class="mediaConfigRow">
+            ${controleDuracao}
+
+            <details class="mediaScheduleMenu mediaScheduleEditable">
+                <summary>
+                    <span>
+                        <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+                        Período de exibição
+                    </span>
+                    <small>${semValidadeDefinida ? "Tempo indeterminado" : "Com data definida"}</small>
+                </summary>
+
+                <div class="mediaValidityBox">
+                    <label class="mediaConfigCheckbox mediaIndefiniteLabel">
+                        <input
+                            type="checkbox"
+                            class="mediaIndefinite"
+                            data-arquivo="${nomeArquivo}"
+                            ${semValidadeDefinida ? "checked" : ""}
+                        />
+                        Tempo indeterminado
+                    </label>
+
+                    <div class="mediaDateFields ${semValidadeDefinida ? "disabledDates" : ""}">
+                        <label class="mediaConfigLabel mediaDateLabel">
+                            Início
+                            <input
+                                type="datetime-local"
+                                class="mediaStartDate"
+                                data-arquivo="${nomeArquivo}"
+                                value="${formatarIsoParaDatetimeLocal(midia.inicio)}"
+                                ${semValidadeDefinida ? "disabled" : ""}
+                            />
+                        </label>
+
+                        <label class="mediaConfigLabel mediaDateLabel">
+                            Fim
+                            <input
+                                type="datetime-local"
+                                class="mediaEndDate"
+                                data-arquivo="${nomeArquivo}"
+                                value="${formatarIsoParaDatetimeLocal(midia.fim)}"
+                                ${semValidadeDefinida ? "disabled" : ""}
+                            />
+                        </label>
+                    </div>
+
+                    <div class="mediaScheduleActions">
+                        <button class="secondaryAction mediaScheduleCancel" type="button" data-arquivo="${nomeArquivo}">
+                            Cancelar
+                        </button>
+
+                        <button class="successAction mediaScheduleApply" type="button" data-arquivo="${nomeArquivo}">
+                            <i class="fa-solid fa-check" aria-hidden="true"></i>
+                            Aplicar período
+                        </button>
+                    </div>
+                </div>
+            </details>
+
+            ${controlePrioridadeSelect}
+
+            <label class="mediaConfigLabel mediaRepeatEditable">
+                Repetir
+                <select class="mediaRepeatEvery" data-arquivo="${nomeArquivo}">
+                    <option value="0" ${Number(midia.repetirACada) === 0 ? "selected" : ""}>Não repetir</option>
+                    <option value="3" ${Number(midia.repetirACada) === 3 ? "selected" : ""}>A cada 3 mídias</option>
+                    <option value="4" ${Number(midia.repetirACada) === 4 ? "selected" : ""}>A cada 4 mídias</option>
+                    <option value="5" ${Number(midia.repetirACada) === 5 ? "selected" : ""}>A cada 5 mídias</option>
+                    <option value="10" ${Number(midia.repetirACada) === 10 ? "selected" : ""}>A cada 10 mídias</option>
+                </select>
+            </label>
+        </div>
+    `
+            : "";
+
         item.innerHTML = `
             <div class="mediaSelectArea">
                 <input
@@ -2608,87 +2708,14 @@ function renderizarMidias(midias) {
 
             <div class="mediaInfo">
                 ${controleTitulo}
-
-                <div class="mediaConfigRow">
-                    
-                    ${controleDuracao}
-
-                    <details class="mediaScheduleMenu">
-                        <summary>
-                            <span>
-                                <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
-                                Período de exibição
-                            </span>
-                            <small>${semValidadeDefinida ? "Tempo indeterminado" : "Com data definida"}</small>
-                        </summary>
-
-                        <div class="mediaValidityBox">
-                            <label class="mediaConfigCheckbox mediaIndefiniteLabel">
-                                <input
-                                    type="checkbox"
-                                    class="mediaIndefinite"
-                                    data-arquivo="${nomeArquivo}"
-                                    ${semValidadeDefinida ? "checked" : ""}
-                                />
-                                Tempo indeterminado
-                            </label>
-
-                            <div class="mediaDateFields ${semValidadeDefinida ? "disabledDates" : ""}">
-                                <label class="mediaConfigLabel mediaDateLabel">
-                                    Início
-                                    <input
-                                        type="datetime-local"
-                                        class="mediaStartDate"
-                                        data-arquivo="${nomeArquivo}"
-                                        value="${formatarIsoParaDatetimeLocal(midia.inicio)}"
-                                        ${semValidadeDefinida ? "disabled" : ""}
-                                    />
-                                </label>
-
-                                <label class="mediaConfigLabel mediaDateLabel">
-                                    Fim
-                                   <input
-                                        type="datetime-local"
-                                        class="mediaEndDate"
-                                        data-arquivo="${nomeArquivo}"
-                                        value="${formatarIsoParaDatetimeLocal(midia.fim)}"
-                                    />
-                                </label>
-                            </div>
-
-                            <div class="mediaScheduleActions">
-                                <button class="secondaryAction mediaScheduleCancel" type="button" data-arquivo="${nomeArquivo}">
-                                    Cancelar
-                                </button>
-
-                                <button class="successAction mediaScheduleApply" type="button" data-arquivo="${nomeArquivo}">
-                                    <i class="fa-solid fa-check" aria-hidden="true"></i>
-                                    Aplicar período
-                                </button>
-                            </div>
-
-                        </div>
-                    </details>
-
-                    ${controlePrioridadeSelect}
-
-                    <label class="mediaConfigLabel">
-                        Repetir
-                        <select class="mediaRepeatEvery" data-arquivo="${nomeArquivo}">
-                            <option value="0" ${Number(midia.repetirACada) === 0 ? "selected" : ""}>Não repetir</option>
-                            <option value="3" ${Number(midia.repetirACada) === 3 ? "selected" : ""}>A cada 3 mídias</option>
-                            <option value="4" ${Number(midia.repetirACada) === 4 ? "selected" : ""}>A cada 4 mídias</option>
-                            <option value="5" ${Number(midia.repetirACada) === 5 ? "selected" : ""}>A cada 5 mídias</option>
-                            <option value="10" ${Number(midia.repetirACada) === 10 ? "selected" : ""}>A cada 10 mídias</option>
-                        </select>
-                    </label>
-                </div>
+                ${controlesConfiguracaoMidia}
 
                 <div class="mediaFooterActions">
                     <div class="mediaBadges">
                         ${statusBadge}
                         ${prioridadeBadge}
                         ${periodoBadge}
+                        ${repeticaoBadge}
                     </div>
 
                     <div class="mediaDetailsHover">
@@ -2715,6 +2742,8 @@ function renderizarMidias(midias) {
             </div>
 
         `;
+
+
 
         item.dataset.search = normalizarBusca([
             midia.nome,
@@ -3595,6 +3624,8 @@ function definirModoSelecaoMidias(ativo) {
  * Alterna o modo seleção.
  */
 function alternarModoSelecaoMidias() {
+    if (!usuarioPodeEditarMidias()) return;
+
     definirModoSelecaoMidias(!modoSelecaoMidiasAtivo);
 }
 
@@ -3993,6 +4024,45 @@ function atualizarEstadoVisualAlteracaoDoItem(item) {
     sincronizarAlteracoesPendentesGlobais();
 
     return alterado;
+}
+
+/**
+ * Retorna o texto fixo do período para modos de leitura.
+ */
+function obterTextoPeriodoLeitura(midia) {
+    const inicio = midia && midia.inicio ? midia.inicio : "";
+    const fim = midia && midia.fim ? midia.fim : "";
+
+    if (!inicio && !fim) {
+        return "Período: Livre";
+    }
+
+    const agora = new Date();
+    const dataInicio = inicio ? new Date(inicio) : null;
+    const dataFim = fim ? new Date(fim) : null;
+
+    if (dataFim && dataFim < agora) {
+        return "Período: Vencido";
+    }
+
+    if (dataInicio && dataInicio > agora) {
+        return "Período: Agendado";
+    }
+
+    return "Período: Programado";
+}
+
+/**
+ * Retorna o texto fixo de repetição para modos de leitura.
+ */
+function obterTextoRepeticaoLeitura(midia) {
+    const repetirACada = Number(midia && midia.repetirACada ? midia.repetirACada : 0);
+
+    if (!repetirACada) {
+        return "Não repete";
+    }
+
+    return `Repete a cada ${repetirACada} mídias`;
 }
 
 /* =========================================================
@@ -5024,8 +5094,7 @@ if (mediaList) {
 
 if (mediaList) {
     mediaList.addEventListener("click", (event) => {
-        if (!modoSelecaoMidiasAtivo) return;
-
+        if (!usuarioPodeEditarMidias() || !modoSelecaoMidiasAtivo) return;
         const item = event.target.closest(".mediaItem");
 
         if (!item) return;

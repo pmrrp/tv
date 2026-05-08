@@ -7558,7 +7558,7 @@ body.mediaSelectionMode .mediaInfo,
 body.mediaSelectionMode .mediaPreview,
 body.mediaSelectionMode .mediaStatusToggle,
 body.mediaSelectionMode .mediaScheduleMenu,
-body.mediaSelectionMode .mediaDetailsHover,
+
 body.mediaSelectionMode .mediaPriorityMenu,
 body.mediaSelectionMode input,
 body.mediaSelectionMode select,
@@ -8037,7 +8037,7 @@ body.mediaSelectionMode .mediaTitleInput {
 /* Esconde controles/ações que não devem existir no modo seleção */
 body.mediaSelectionMode .mediaSaveButton,
 body.mediaSelectionMode .mediaDeleteButton,
-body.mediaSelectionMode .mediaDetailsHover,
+
 body.mediaSelectionMode .mediaPriorityMenu,
 body.mediaSelectionMode .mediaScheduleMenu summary,
 body.mediaSelectionMode .mediaRepeatEvery,
@@ -8049,22 +8049,19 @@ body.mediaSelectionMode .mediaConfigText {
 
 /* Fecha visualmente popovers/menus no modo seleção */
 body.mediaSelectionMode .mediaScheduleMenu[open],
-body.mediaSelectionMode .mediaPriorityMenu[open],
-body.mediaSelectionMode .mediaDetailsHover[open] {
+body.mediaSelectionMode .mediaPriorityMenu[open] {
     pointer-events: none !important;
 }
 
 /* Impede que o conteúdo interno dos menus apareça */
 body.mediaSelectionMode .mediaValidityBox,
-body.mediaSelectionMode .mediaPriorityOptions,
-body.mediaSelectionMode .mediaDetailsPopover {
+body.mediaSelectionMode .mediaPriorityOptions {
     display: none !important;
 }
 
 /* Some com botões de ação individuais */
 body.mediaSelectionMode .mediaSaveButton,
-body.mediaSelectionMode .mediaDeleteButton,
-body.mediaSelectionMode .mediaDetailsHover {
+body.mediaSelectionMode .mediaDeleteButton {
     display: none !important;
 }
 
@@ -8159,4 +8156,132 @@ body.mediaSelectionMode .mediaItemSelected {
     cursor: not-allowed !important;
     opacity: 0.58;
     background: rgba(241, 245, 249, 0.78) !important;
+}
+
+/* =========================================================
+   CARDS - CAMPOS SOMENTE LEITURA
+   ========================================================= */
+
+.mediaReadOnlyField {
+    display: none;
+    min-height: 44px;
+
+    align-items: flex-start;
+    justify-content: center;
+    flex-direction: column;
+
+    padding: 0 2px 8px;
+
+    border-bottom: 1px solid rgba(219, 231, 243, 0.95);
+}
+
+.mediaReadOnlyLabel {
+    display: block;
+
+    margin-bottom: 4px;
+
+    color: #64748b;
+
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.mediaReadOnlyField strong {
+    display: block;
+
+    color: var(--blue-950);
+
+    font-size: 14px;
+    font-weight: 950;
+    line-height: 1.2;
+}
+
+/* Visualizador: esconde controles editáveis e mostra leitura */
+.mediaItemReadOnly .mediaScheduleEditable,
+.mediaItemReadOnly .mediaRepeatEditable {
+    display: none !important;
+}
+
+.mediaItemReadOnly .mediaReadOnlyField {
+    display: inline-flex !important;
+}
+
+/* Modo seleção: card blindado, igual visualização */
+body.mediaSelectionMode .mediaScheduleEditable,
+body.mediaSelectionMode .mediaRepeatEditable {
+    display: none !important;
+}
+
+body.mediaSelectionMode .mediaReadOnlyField {
+    display: inline-flex !important;
+}
+
+/* Ajusta a linha de controles quando vira leitura */
+body.mediaSelectionMode .mediaConfigRow,
+.mediaItemReadOnly .mediaConfigRow {
+    align-items: center !important;
+    gap: 20px !important;
+}
+
+/* =========================================================
+   BADGE - REPETIÇÃO DA MÍDIA
+   ========================================================= */
+
+.mediaRepeatBadge {
+    gap: 7px;
+}
+
+.mediaRepeatBadge.repeatNone {
+    border-color: rgba(100, 116, 139, 0.16);
+    background: rgba(248, 250, 252, 0.96);
+    color: #475569;
+}
+
+.mediaRepeatBadge.repeatActive {
+    border-color: rgba(15, 112, 196, 0.18);
+    background: rgba(239, 246, 255, 0.96);
+    color: var(--blue-800);
+}
+
+/* =========================================================
+   VISUALIZADOR - OCULTAR AÇÕES EM LOTE
+   ========================================================= */
+
+body.role-viewer #btnToggleSelectionMode,
+body.role-viewer #btnDeleteSelected,
+body.role-viewer .selectAllLabel,
+body.role-viewer .mediaSelectArea {
+    display: none !important;
+}
+
+/* =========================================================
+   BADGE - REPETIÇÃO DA MÍDIA
+   =========================================================
+   A badge existe sempre no HTML, mas:
+   - fica escondida para admin/editor no modo normal;
+   - aparece para visualizador;
+   - aparece para admin/editor no modo seleção.
+   ========================================================= */
+
+.mediaRepeatBadge {
+    display: none !important;
+    gap: 7px;
+}
+
+body.role-viewer .mediaRepeatBadge,
+body.mediaSelectionMode .mediaRepeatBadge {
+    display: inline-flex !important;
+}
+
+.mediaRepeatBadge.repeatNone {
+    border-color: rgba(100, 116, 139, 0.16);
+    background: rgba(248, 250, 252, 0.96);
+    color: #475569;
+}
+
+.mediaRepeatBadge.repeatActive {
+    border-color: rgba(15, 112, 196, 0.18);
+    background: rgba(239, 246, 255, 0.96);
+    color: var(--blue-800);
 }
