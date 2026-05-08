@@ -5057,6 +5057,35 @@ mediaList.addEventListener("input", (event) => {
 });
 
 /* =========================================================
+   BOTÃO - VOLTAR AO TOPO
+   ========================================================= */
+
+const btnBackToTop = document.getElementById("btnBackToTop");
+
+function atualizarBotaoVoltarAoTopo() {
+    if (!btnBackToTop) return;
+
+    const deveMostrar = window.scrollY > 520;
+
+    btnBackToTop.classList.toggle("hidden", !deveMostrar);
+}
+
+if (btnBackToTop) {
+    btnBackToTop.addEventListener("click", () => {
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+        });
+    });
+
+    window.addEventListener("scroll", atualizarBotaoVoltarAoTopo, {
+        passive: true
+    });
+
+    atualizarBotaoVoltarAoTopo();
+}
+
+/* =========================================================
    EVENTOS - PERÍODO DE EXIBIÇÃO
    ========================================================= */
 
