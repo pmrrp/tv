@@ -2104,6 +2104,56 @@ async function carregarPlaylistAtual() {
    ========================================================= */
 
 /**
+ * Fecha visualmente um toast.
+ */
+function fecharToastElemento(toast) {
+    if (!toast || toast.classList.contains("saindo")) return;
+
+    toast.classList.add("saindo");
+
+    setTimeout(() => {
+        toast.remove();
+    }, 220);
+}
+
+/**
+ * Remove toasts de progresso/info antes de mostrar o resultado final.
+ *
+ * Exemplo:
+ * - "Salvando mídia..."
+ * - "Mídia salva com sucesso."
+ *
+ * O segundo substitui o primeiro, evitando poluição visual.
+ */
+function removerToastsDeProgresso() {
+    if (!toastContainer) return;
+
+    toastContainer
+        .querySelectorAll(".toastMessage.info[data-toast-progress='true']")
+        .forEach((toast) => {
+            fecharToastElemento(toast);
+        });
+}
+
+/**
+ * Retorna o tempo ideal do toast conforme o tipo.
+ */
+function obterTempoToast(tipo, tempoInformado) {
+    if (typeof tempoInformado === "number") {
+        return tempoInformado;
+    }
+
+    const tempos = {
+        sucesso: 2800,
+        info: 0,
+        aviso: 4000,
+        erro: 5200
+    };
+
+    return tempos[tipo] ?? 3200;
+}
+
+/**
  * Mostra uma notificação flutuante na tela.
  *
  * Tipos aceitos:
@@ -2111,20 +2161,42 @@ async function carregarPlaylistAtual() {
  * - erro
  * - info
  * - aviso
+ *
+ * Regra:
+ * - info fica como progresso e não some sozinho;
+ * - sucesso/erro/aviso removem infos anteriores;
+ * - sucesso fica menos tempo;
+ * - erro fica mais tempo.
  */
-function mostrarToast(texto, tipo = "info", tempo = 4200) {
+function mostrarToast(texto, tipo = "info", tempo = null) {
     if (!toastContainer) {
         console.log(`[${tipo}] ${texto}`);
         return;
     }
 
+    /*
+      Quando chega um resultado final, removemos os toasts de progresso.
+      Assim "Salvando..." não fica junto com "Salvo com sucesso".
+    */
+    if (tipo !== "info") {
+        removerToastsDeProgresso();
+    }
+
     const toast = document.createElement("div");
     toast.className = `toastMessage ${tipo}`;
+
+    /*
+      Toasts info são tratados como progresso.
+      Eles ficam na tela até serem substituídos por sucesso/erro/aviso.
+    */
+    if (tipo === "info") {
+        toast.dataset.toastProgress = "true";
+    }
 
     const icones = {
         sucesso: "fa-circle-check",
         erro: "fa-circle-xmark",
-        info: "fa-circle-info",
+        info: "fa-spinner",
         aviso: "fa-triangle-exclamation"
     };
 
@@ -2134,28 +2206,24 @@ function mostrarToast(texto, tipo = "info", tempo = 4200) {
         <span class="toastIcon">
             <i class="fa-solid ${icone}" aria-hidden="true"></i>
         </span>
-
         <span class="toastText">${texto}</span>
-
         <button class="toastClose" type="button" aria-label="Fechar aviso">
             <i class="fa-solid fa-xmark" aria-hidden="true"></i>
         </button>
     `;
 
     const fecharToast = () => {
-        toast.classList.add("saindo");
-
-        setTimeout(() => {
-            toast.remove();
-        }, 260);
+        fecharToastElemento(toast);
     };
 
     toast.querySelector(".toastClose").addEventListener("click", fecharToast);
 
     toastContainer.appendChild(toast);
 
-    if (tempo > 0) {
-        setTimeout(fecharToast, tempo);
+    const tempoFinal = obterTempoToast(tipo, tempo);
+
+    if (tempoFinal > 0) {
+        setTimeout(fecharToast, tempoFinal);
     }
 }
 
@@ -3082,8 +3150,7 @@ async function enviarArquivo(event) {
         : null;
 
     if (!arquivo) {
-        mostrarMensagemUpload("Selecione um arquivo antes de enviar.", "erro");
-        return;
+        mostrarMensagemUpload("Selecione uma mídia para enviar.", "erro");
     }
 
     const confirmouUpload = await confirmarAcaoModal({
@@ -3104,7 +3171,7 @@ async function enviarArquivo(event) {
     btnUpload.disabled = true;
     definirBotaoComIcone(btnUpload, "fa-solid fa-spinner fa-spin", "Enviando...");
 
-    mostrarMensagemUpload("Enviando arquivo, aguarde...", "info");
+    mostrarMensagemUpload("Enviando mídia...", "info");
 
     try {
         const resposta = await fetchComSessao("/api/upload", {
@@ -3124,7 +3191,7 @@ async function enviarArquivo(event) {
                 : "mídia enviada";
 
         mostrarMensagemUpload(
-            `Mídia enviada e playlist atualizada: ${nomeExibicaoUpload}`,
+            `Mídia enviada com sucesso: ${nomeExibicaoUpload}`,
             "sucesso"
         );
 
@@ -3308,8 +3375,7 @@ async function salvarTodasConfiguracoes() {
 
     btnSalvarTudo.disabled = true;
     definirBotaoComIcone(btnSalvarTudo, "fa-solid fa-spinner fa-spin", "Salvando...");
-    mostrarMensagemPlaylist("Salvando alterações, aguarde...", "info");
-
+    mostrarMensagemPlaylist("Salvando mídia...", "info");
     try {
         const resposta = await fetchComSessao("/api/midias/config/lote", {
             method: "PUT",
@@ -3324,11 +3390,11 @@ async function salvarTodasConfiguracoes() {
         const dados = await resposta.json();
 
         if (!resposta.ok || dados.erro) {
-            throw new Error(dados.mensagem || "Erro ao salvar alterações.");
+            throw new Error(dados.mensagem || "Não foi possível salvar as alterações.");
         }
 
         mostrarMensagemPlaylist(
-            `Alterações salvas e playlist atualizada automaticamente. ${formatarQuantidade(dados.totalSalvo, "item salvo", "itens salvos")}.`,
+            `${formatarQuantidade(dados.totalSalvo, "alteração salva", "alterações salvas")} com sucesso.`,
             "sucesso"
         );
 
@@ -3342,7 +3408,7 @@ async function salvarTodasConfiguracoes() {
         sincronizarAlteracoesPendentesGlobais();
     } catch (erro) {
         mostrarMensagemPlaylist(
-            erro.message || "Erro ao salvar alterações.",
+            erro.message || "Não foi possível salvar as alterações.",
             "erro"
         );
 
@@ -3554,7 +3620,7 @@ async function excluirMidiasSelecionadas() {
     const arquivos = obterMidiasSelecionadas();
 
     if (!arquivos.length) {
-        mostrarMensagemUpload("Nenhuma mídia selecionada.", "erro");
+        mostrarMensagemUpload("Selecione ao menos uma mídia.", "erro");
         return;
     }
 
@@ -3589,11 +3655,11 @@ async function excluirMidiasSelecionadas() {
         const dados = await resposta.json();
 
         if (!resposta.ok || dados.erro) {
-            throw new Error(dados.mensagem || "Erro ao excluir mídias.");
+            throw new Error(dados.mensagem || "Não foi possível excluir as mídias.");
         }
 
         mostrarMensagemUpload(
-            `${formatarQuantidade(dados.excluidos.length, "mídia excluída", "mídias excluídas")}. Playlist atualizada automaticamente.`,
+            `${formatarQuantidade(dados.excluidos.length, "mídia excluída", "mídias excluídas")} com sucesso.`,
             "sucesso"
         );
 
@@ -3607,7 +3673,7 @@ async function excluirMidiasSelecionadas() {
         atualizarEstadoAcoesEmLote();
     } catch (erro) {
         mostrarMensagemUpload(
-            erro.message || "Erro ao excluir mídias selecionadas.",
+            erro.message || "Não foi possível excluir as mídias selecionadas.",
             "erro"
         );
 
@@ -3651,10 +3717,7 @@ async function moverMidia(nomeArquivo, direcao) {
             throw new Error(dados.mensagem || "Erro ao mover mídia.");
         }
 
-        mostrarMensagemPlaylist(
-            "Ordem atualizada e playlist publicada automaticamente.",
-            "sucesso"
-        );
+        mostrarMensagemPlaylist("Ordem da playlist salva.", "sucesso");
 
         await executarPreservandoScroll(async () => {
             await carregarMidias();
@@ -3707,18 +3770,17 @@ async function excluirMidiaIndividual(nomeArquivo) {
         const dados = await resposta.json();
 
         if (!resposta.ok || dados.erro) {
-            throw new Error(dados.mensagem || "Erro ao excluir mídia.");
+            throw new Error(dados.mensagem || "ENão foi possível excluir a mídia.");
         }
 
-        mostrarMensagemUpload("Mídia excluída e playlist atualizada automaticamente.", "sucesso");
+        mostrarMensagemPlaylist("Mídia excluída com sucesso.", "sucesso");
 
         await executarPreservandoScroll(async () => {
             await carregarMidias();
             await carregarPlaylistAtual();
         });;
     } catch (erro) {
-        mostrarMensagemUpload(erro.message || "Erro ao excluir mídia.", "erro");
-        console.error(erro);
+        mostrarMensagemPlaylist(erro.message || "Não foi possível excluir a mídia.", "erro"); console.error(erro);
     } finally {
         if (botao) {
             botao.disabled = false;
@@ -3762,7 +3824,7 @@ async function moverMidiaParaIndice(nomeArquivo, indiceInicial, indiceFinal) {
         }
 
         mostrarMensagemPlaylist(
-            "Ordem atualizada e playlist publicada automaticamente.",
+            "Ordem da playlist atualizada.",
             "sucesso"
         );
 
@@ -4051,7 +4113,7 @@ async function confirmarESalvarMidia(item, mensagem = "Deseja salvar esta altera
             throw new Error(dados.mensagem || "Erro ao salvar mídia.");
         }
 
-        mostrarMensagemPlaylist("Alteração salva e playlist atualizada automaticamente.", "sucesso");
+        mostrarMensagemPlaylist("Mídia salva com sucesso.", "sucesso");
 
         await executarPreservandoScroll(async () => {
             await carregarMidias();
@@ -4066,9 +4128,7 @@ async function confirmarESalvarMidia(item, mensagem = "Deseja salvar esta altera
 
         return true;
     } catch (erro) {
-        mostrarMensagemPlaylist(erro.message || "Erro ao salvar mídia.", "erro");
-
-        await carregarMidias();
+        mostrarMensagemPlaylist(erro.message || "Não foi possível salvar a mídia.", "erro"); await carregarMidias();
 
         sincronizarAlteracoesPendentesGlobais();
 
