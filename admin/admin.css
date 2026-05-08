@@ -396,7 +396,7 @@ button:disabled {
 
 .summaryCardPrimary .summaryLabel,
 .summaryCardPrimary small {
-    color: var(--muted);
+    color: var(--blue-700);
 }
 
 .summaryCard strong {
