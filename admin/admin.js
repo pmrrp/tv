@@ -2218,6 +2218,39 @@ function destacarMidiaNaLista(nomeArquivo) {
     }, 2600);
 }
 
+/* =========================================================
+   BIBLIOTECA - ABRIR E ROLAR ATÉ MÍDIA
+   =========================================================
+   Após upload, garante que a biblioteca esteja aberta antes
+   de destacar a mídia recém-enviada.
+   ========================================================= */
+
+/**
+ * Abre o dropdown da biblioteca de mídias, se ele estiver fechado.
+ */
+function abrirBibliotecaMidias() {
+    const libraryDropdown = document.querySelector(".libraryDropdown");
+
+    if (!libraryDropdown) return;
+
+    libraryDropdown.setAttribute("open", "");
+}
+
+/**
+ * Abre a biblioteca e depois destaca a mídia enviada.
+ */
+function abrirBibliotecaEDestacarMidia(nomeArquivo) {
+    abrirBibliotecaMidias();
+
+    /*
+      Pequeno atraso para o navegador renderizar o conteúdo do <details>
+      antes de calcular scroll/posição da mídia.
+    */
+    setTimeout(() => {
+        destacarMidiaNaLista(nomeArquivo);
+    }, 220);
+}
+
 /**
  * Gera manualmente o arquivo playlist.json no servidor.
  *
@@ -3075,9 +3108,7 @@ async function enviarArquivo(event) {
           Após recarregar a lista, rola até a mídia enviada
           e aplica destaque visual nela.
         */
-        setTimeout(() => {
-            destacarMidiaNaLista(dados.arquivo.nomeSalvo);
-        }, 180);
+        abrirBibliotecaEDestacarMidia(dados.arquivo.nomeSalvo);
 
         await carregarResumoAdmin();
     } catch (erro) {
