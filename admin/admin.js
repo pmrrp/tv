@@ -2304,6 +2304,25 @@ function destacarMidiaNaLista(nomeArquivo) {
     }, 2600);
 }
 
+/**
+ * Recarrega a biblioteca/playlist e depois destaca uma mídia.
+ *
+ * Diferente de executarPreservandoScroll(), aqui queremos mesmo
+ * levar o usuário até o card salvo.
+ */
+async function recarregarBibliotecaEDestacarMidia(nomeArquivo) {
+    await carregarMidias();
+    await carregarPlaylistAtual();
+
+    abrirBibliotecaMidias();
+
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            destacarMidiaNaLista(nomeArquivo);
+        });
+    });
+}
+
 /* =========================================================
    BIBLIOTECA - ABRIR E ROLAR ATÉ MÍDIA
    =========================================================
@@ -3438,10 +3457,14 @@ async function salvarTodasConfiguracoes() {
 
         limparAlteracoesPendentes();
 
-        await executarPreservandoScroll(async () => {
-            await carregarMidias();
-            await carregarPlaylistAtual();
-        });
+        if (midias.length === 1) {
+            await recarregarBibliotecaEDestacarMidia(midias[0].nome);
+        } else {
+            await executarPreservandoScroll(async () => {
+                await carregarMidias();
+                await carregarPlaylistAtual();
+            });
+        }
 
         sincronizarAlteracoesPendentesGlobais();
     } catch (erro) {
@@ -4194,10 +4217,7 @@ async function confirmarESalvarMidia(item, mensagem = "Deseja salvar esta altera
 
         mostrarMensagemPlaylist("Mídia salva com sucesso.", "sucesso");
 
-        await executarPreservandoScroll(async () => {
-            await carregarMidias();
-            await carregarPlaylistAtual();
-        });
+        await recarregarBibliotecaEDestacarMidia(configuracao.nome);
 
         /*
           Depois que recarrega, sincroniza o botão global do header.
