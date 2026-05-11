@@ -8224,6 +8224,12 @@ body.mediaSelectionMode .mediaConfigRow,
     gap: 20px !important;
 }
 
+/* No modo seleção, esconde duração das imagens */
+body.mediaSelectionMode .mediaConfigLabel:has(.mediaDuration),
+body.mediaSelectionMode .mediaDuration {
+    display: none !important;
+}
+
 /* =========================================================
    BADGE - REPETIÇÃO DA MÍDIA
    ========================================================= */
