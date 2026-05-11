@@ -3199,6 +3199,7 @@ async function enviarArquivo(event) {
 
     if (!arquivo) {
         mostrarMensagemUpload("Selecione uma mídia para enviar.", "erro");
+        return;
     }
 
     const confirmouUpload = await confirmarAcaoModal({
@@ -3227,14 +3228,24 @@ async function enviarArquivo(event) {
             body: formData
         });
 
-        const dados = await resposta.json();
+        const textoResposta = await resposta.text();
+
+        let dados = {};
+        try {
+            dados = textoResposta ? JSON.parse(textoResposta) : {};
+        } catch {
+            dados = {};
+        }
 
         if (!resposta.ok || dados.erro) {
             const mensagemErro = dados.mensagem || dados.error || "Não foi possível enviar a mídia.";
+            const mensagemNormalizada = mensagemErro.toLowerCase();
 
             if (
-                mensagemErro.toLowerCase().includes("file too large") ||
-                mensagemErro.toLowerCase().includes("too large")
+                resposta.status === 413 ||
+                mensagemNormalizada.includes("file too large") ||
+                mensagemNormalizada.includes("too large") ||
+                mensagemNormalizada.includes("content too large")
             ) {
                 throw new Error("Arquivo muito grande para envio.");
             }
@@ -3267,11 +3278,18 @@ async function enviarArquivo(event) {
 
         await carregarResumoAdmin();
     } catch (erro) {
-        mostrarMensagemUpload(
-            erro.message || "Não foi possível enviar a mídia.",
-            "erro"
-        );
+        let mensagemErro = erro.message || "Não foi possível enviar a mídia.";
+        const mensagemNormalizada = mensagemErro.toLowerCase();
 
+        if (
+            mensagemNormalizada.includes("failed to fetch") ||
+            mensagemNormalizada.includes("networkerror") ||
+            mensagemNormalizada.includes("network error")
+        ) {
+            mensagemErro = "Não foi possível concluir o envio. O arquivo pode ser muito grande ou a conexão foi interrompida.";
+        }
+
+        mostrarMensagemUpload(mensagemErro, "erro");
         console.error(erro);
     } finally {
         btnUpload.disabled = false;
