@@ -3185,7 +3185,7 @@ async function enviarArquivo(event) {
     const confirmouUpload = await confirmarAcaoModal({
         kicker: "Upload",
         titulo: "Enviar nova mídia",
-        mensagem: "A mídia será adicionada à biblioteca e a playlist será atualizada automaticamente.",
+        mensagem: "A mídia será enviada para a biblioteca e ficará disponível na playlist publicada.",
         detalhe: arquivo.name,
         confirmar: "Enviar mídia",
         cancelar: "Cancelar",
@@ -3392,9 +3392,9 @@ async function salvarTodasConfiguracoes() {
         kicker: "Biblioteca",
         titulo: "Salvar alterações",
         mensagem: selecionadas.length
-            ? `Você está prestes a salvar ${formatarQuantidade(midias.length, "mídia selecionada", "mídias selecionadas")}.`
-            : `Você está prestes a salvar ${formatarQuantidade(midias.length, "alteração pendente", "alterações pendentes")}.`,
-        detalhe: "A playlist publicada será atualizada automaticamente.",
+            ? `Salvar ${formatarQuantidade(midias.length, "mídia selecionada", "mídias selecionadas")}?`
+            : `Salvar ${formatarQuantidade(midias.length, "alteração pendente", "alterações pendentes")}?`,
+        detalhe: "A playlist publicada será atualizada.",
         confirmar: "Salvar alterações",
         cancelar: "Cancelar",
         variante: "success"
@@ -3658,7 +3658,7 @@ async function excluirMidiasSelecionadas() {
     const confirmou = await confirmarAcaoModal({
         kicker: "Biblioteca",
         titulo: "Excluir mídias selecionadas",
-        mensagem: `Essa ação remove ${formatarQuantidade(arquivos.length, "mídia selecionada", "mídias selecionadas")} da biblioteca e atualiza a playlist publicada automaticamente.`,
+        mensagem: `Excluir ${formatarQuantidade(arquivos.length, "mídia selecionada", "mídias selecionadas")} da biblioteca?`,
         detalhe: "Essa ação não pode ser desfeita.",
         confirmar: "Excluir selecionadas",
         cancelar: "Cancelar",
@@ -3774,7 +3774,7 @@ async function excluirMidiaIndividual(nomeArquivo) {
     const confirmar = await confirmarAcaoModal({
         kicker: "Biblioteca",
         titulo: "Excluir mídia",
-        mensagem: "Essa ação remove a mídia da biblioteca e atualiza a playlist publicada automaticamente.",
+        mensagem: "Excluir esta mídia da biblioteca?",
         detalhe: nomeArquivo,
         confirmar: "Excluir mídia",
         cancelar: "Cancelar",
@@ -4151,7 +4151,7 @@ async function confirmarESalvarMidia(item, mensagem = "Deseja salvar esta altera
     const confirmou = await confirmarAcaoModal({
         kicker: "Biblioteca",
         titulo: "Salvar mídia",
-        mensagem: "As alterações desta mídia serão salvas e a playlist publicada será atualizada automaticamente.",
+        mensagem: "Salvar as alterações desta mídia?",
         detalhe: nomeMidia,
         confirmar: "Salvar mídia",
         cancelar: "Cancelar",
