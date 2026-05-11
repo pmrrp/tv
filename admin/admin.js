@@ -3211,7 +3211,16 @@ async function enviarArquivo(event) {
         const dados = await resposta.json();
 
         if (!resposta.ok || dados.erro) {
-            throw new Error(dados.mensagem || "Erro ao enviar arquivo.");
+            const mensagemErro = dados.mensagem || dados.error || "Não foi possível enviar a mídia.";
+
+            if (
+                mensagemErro.toLowerCase().includes("file too large") ||
+                mensagemErro.toLowerCase().includes("too large")
+            ) {
+                throw new Error("Arquivo muito grande para envio.");
+            }
+
+            throw new Error(mensagemErro);
         }
 
         const nomeExibicaoUpload =
@@ -3240,7 +3249,7 @@ async function enviarArquivo(event) {
         await carregarResumoAdmin();
     } catch (erro) {
         mostrarMensagemUpload(
-            erro.message || "Erro ao enviar arquivo.",
+            erro.message || "Não foi possível enviar a mídia.",
             "erro"
         );
 
