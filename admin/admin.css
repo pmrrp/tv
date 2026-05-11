@@ -319,12 +319,22 @@ button:disabled {
 
 @keyframes saveButtonShine {
     0% {
-        transform: translateX(-160%) rotate(14deg);
+        transform: translateX(-220%) rotate(14deg);
+        opacity: 0;
     }
 
-    45%,
+    12% {
+        opacity: 1;
+    }
+
+    55% {
+        transform: translateX(620%) rotate(14deg);
+        opacity: 1;
+    }
+
     100% {
-        transform: translateX(420%) rotate(14deg);
+        transform: translateX(620%) rotate(14deg);
+        opacity: 0;
     }
 }
 
