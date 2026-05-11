@@ -159,11 +159,15 @@ input:focus-visible {
     left: 0;
     height: 6px;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    background: linear-gradient(90deg,
+    background: repeating-linear-gradient(90deg,
             var(--brand-coral) 0 25%,
             var(--brand-yellow) 25% 50%,
             var(--brand-green) 50% 75%,
             var(--brand-blue) 75% 100%);
+
+    background-size: 200% 100%;
+    animation: loginColorStripMove 4s linear infinite;
+    animation: loginColorStripMove 4s ease-in-out infinite;
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.76);
     pointer-events: none;
 }
@@ -321,6 +325,20 @@ input:focus-visible {
 
 .loginMessage.hidden {
     display: none;
+}
+
+@keyframes loginColorStripMove {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
 }
 
 @keyframes loginCardEnter {
