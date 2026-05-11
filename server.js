@@ -482,6 +482,7 @@ function salvarJsonComBackup(caminhoArquivo, dados, prefixoBackup) {
  * Lê data/midia-config.json.
  *
  * Se der erro, retorna objeto vazio para o sistema não cair.
+ * Também remove BOM invisível caso o arquivo seja salvo pelo PowerShell/Windows.
  */
 function lerConfiguracoesDeMidia() {
     try {
@@ -490,12 +491,13 @@ function lerConfiguracoesDeMidia() {
         }
 
         const conteudo = fs.readFileSync(mediaConfigFile, "utf8");
+        const conteudoLimpo = conteudo.replace(/^\uFEFF/, "").trim();
 
-        if (!conteudo.trim()) {
+        if (!conteudoLimpo) {
             return {};
         }
 
-        return JSON.parse(conteudo);
+        return JSON.parse(conteudoLimpo);
     } catch (erro) {
         console.error("Erro ao ler configurações de mídia:", erro);
         return {};
