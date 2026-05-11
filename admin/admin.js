@@ -4637,7 +4637,25 @@ if (userStatusModal) {
 }
 
 if (btnReload) {
-    btnReload.addEventListener("click", carregarMidias);
+    btnReload.addEventListener("click", async () => {
+        btnReload.disabled = true;
+        definirBotaoComIcone(btnReload, "fa-solid fa-spinner fa-spin", "Sincronizando...");
+        mostrarMensagemPlaylist("Sincronizando biblioteca...", "info");
+
+        try {
+            await carregarMidias();
+            await carregarPlaylistAtual();
+            await carregarResumoAdmin();
+
+            mostrarMensagemPlaylist("Biblioteca atualizada.", "sucesso");
+        } catch (erro) {
+            mostrarMensagemPlaylist("Não foi possível sincronizar a biblioteca.", "erro");
+            console.error(erro);
+        } finally {
+            btnReload.disabled = false;
+            definirBotaoComIcone(btnReload, "fa-solid fa-arrows-rotate", "Sincronizar");
+        }
+    });
 }
 
 if (uploadForm) {
