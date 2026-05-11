@@ -33,7 +33,7 @@
     --muted: #667489;
     --line: #d8e2ec;
     --surface: #ffffff;
-    --shadow-lg: 0 28px 70px rgba(6, 59, 104, 0.18);
+    --shadow-lg: 0 8px 70px rgba(6, 59, 104, 0.1);
     --radius: 18px;
     --radius-lg: 28px
 }
