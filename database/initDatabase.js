@@ -65,6 +65,39 @@ function initDatabase() {
     `).run();
 
     /*
+    Tabela de auditoria.
+
+    Registra ações importantes executadas no painel:
+    - login/logout;
+    - upload;
+    - edição/exclusão de mídias;
+    - alterações de usuários;
+    - ações administrativas.
+    */
+    db.prepare(`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        user_id INTEGER,
+        user_name TEXT,
+        user_email TEXT,
+        user_role TEXT,
+
+        action TEXT NOT NULL,
+        details TEXT,
+
+        ip TEXT,
+        user_agent TEXT,
+
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+        FOREIGN KEY (user_id)
+            REFERENCES users (id)
+            ON DELETE SET NULL
+    )
+    `).run();
+
+    /*
       Índices simples para acelerar buscas futuras.
     */
     db.prepare(`

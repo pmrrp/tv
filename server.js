@@ -1025,6 +1025,47 @@ function obterUsuarioDaSessao(req) {
         : null;
 }
 
+function obterIpRequisicao(req) {
+    return (
+        req.headers["cf-connecting-ip"] ||
+        req.headers["x-forwarded-for"] ||
+        req.socket.remoteAddress ||
+        ""
+    ).toString().split(",")[0].trim();
+}
+
+function registrarAuditoria(req, acao, detalhes = {}) {
+    try {
+        const usuario = obterUsuarioDaSessao(req);
+
+        db.prepare(`
+            INSERT INTO audit_logs (
+                user_id,
+                user_name,
+                user_email,
+                user_role,
+                action,
+                details,
+                ip,
+                user_agent,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+        `).run(
+            usuario ? usuario.id : null,
+            usuario ? usuario.nome : "Sistema",
+            usuario ? usuario.email : null,
+            usuario ? usuario.role : null,
+            acao,
+            JSON.stringify(detalhes || {}),
+            obterIpRequisicao(req),
+            req.headers["user-agent"] || ""
+        );
+    } catch (erro) {
+        console.error("Erro ao registrar auditoria:", erro);
+    }
+}
+
 /**
  * Verifica se o usuário logado possui uma das roles permitidas.
  *
@@ -1315,6 +1356,13 @@ app.post("/api/login", (req, res) => {
                 });
             }
 
+            registrarAuditoria(req, "login.realizado", {
+                usuarioId: usuario.id,
+                email: usuario.email,
+                nome: usuario.nome,
+                role: usuario.role
+            });
+
             res.json({
                 sucesso: true,
                 mensagem: "Login realizado com sucesso.",
@@ -1332,6 +1380,12 @@ app.post("/api/login", (req, res) => {
 });
 
 app.post("/api/logout", (req, res) => {
+    registrarAuditoria(req, "login.logout", {
+        usuario: req.session && req.session.user
+            ? req.session.user.email
+            : null
+    });
+
     req.session.destroy(() => {
         res.json({
             sucesso: true,
@@ -1886,6 +1940,12 @@ app.post("/api/upload/finalizar", exigirLogin, exigirEditor, (req, res) => {
 
                 const resultado = registrarMidiaEnviada(nomeSalvo, nomeOriginal, tamanho);
 
+                registrarAuditoria(req, "midia.upload", {
+                    nomeOriginal,
+                    nomeSalvo,
+                    tamanho
+                });
+
                 res.json({
                     sucesso: true,
                     mensagem: "Arquivo enviado com sucesso.",
@@ -1982,6 +2042,16 @@ app.post("/api/upload", exigirLogin, exigirEditor, upload.array("arquivo", 30), 
         normalizarOrdensDasMidias();
 
         const publicacao = publicarPlaylistAutomaticamente();
+
+        registrarAuditoria(req, "midia.upload", {
+            total: arquivosResposta.length,
+            arquivos: arquivosResposta.map((arquivo) => ({
+                nomeOriginal: arquivo.nomeOriginal,
+                nomeSalvo: arquivo.nomeSalvo,
+                tamanho: arquivo.tamanho,
+                tipo: arquivo.tipo
+            }))
+        });
 
         res.json({
             sucesso: true,
@@ -2085,6 +2155,22 @@ app.put("/api/midias/config/lote", exigirLogin, exigirEditor, (req, res) => {
 
         const publicacao = publicarPlaylistAutomaticamente();
 
+        registrarAuditoria(req, "midia.editar_lote", {
+            totalRecebido: midias.length,
+            totalSalvo,
+            arquivos: midias.map((midia) => ({
+                nome: path.basename(midia.nome || ""),
+                titulo: midia.titulo || null,
+                ativo: midia.ativo !== false,
+                prioridade: midia.prioridade || null,
+                duracao: midia.duracao || null,
+                repetirACada: midia.repetirACada || 0,
+                inicio: midia.inicio || null,
+                fim: midia.fim || null
+            })),
+            playlistAtualizada: publicacao
+        });
+
         res.json({
             sucesso: true,
             mensagem: "Configurações salvas com sucesso.",
@@ -2180,6 +2266,13 @@ app.put("/api/midias/:nomeArquivo/config", exigirLogin, exigirEditor, (req, res)
 
         const publicacao = publicarPlaylistAutomaticamente();
 
+        registrarAuditoria(req, "midia.editar", {
+            arquivo: nomeArquivo,
+            configuracaoAnterior: configuracaoAtual,
+            configuracaoNova: configuracoes[nomeArquivo],
+            playlistAtualizada: publicacao
+        });
+
         res.json({
             sucesso: true,
             mensagem: "Configuração salva com sucesso.",
@@ -2259,6 +2352,15 @@ app.post("/api/midias/:nomeArquivo/mover", exigirLogin, exigirEditor, (req, res)
 
         const publicacao = publicarPlaylistAutomaticamente();
 
+        registrarAuditoria(req, "midia.mover", {
+            arquivo: nomeArquivo,
+            direcao,
+            indiceAnterior: indiceAtual,
+            indiceNovo: novoIndice,
+            trocouCom: midiaTroca.nome,
+            playlistAtualizada: publicacao
+        });
+
         res.json({
             sucesso: true,
             mensagem: "Ordem atualizada com sucesso.",
@@ -2306,6 +2408,12 @@ app.delete("/api/midias/:nomeArquivo", exigirLogin, exigirEditor, (req, res) => 
         }
 
         const publicacao = publicarPlaylistAutomaticamente();
+
+        registrarAuditoria(req, "midia.excluir", {
+            arquivo: nomeSeguro,
+            tamanho: stats.size,
+            playlistAtualizada: publicacao
+        });
 
         res.json({
             sucesso: true,
@@ -2370,6 +2478,15 @@ app.post("/api/midias/excluir-lote", exigirLogin, exigirEditor, (req, res) => {
         normalizarOrdensDasMidias();
 
         const publicacao = publicarPlaylistAutomaticamente();
+
+        registrarAuditoria(req, "midia.excluir_lote", {
+            totalSolicitado: arquivos.length,
+            totalExcluido: excluidos.length,
+            totalIgnorado: ignorados.length,
+            excluidos,
+            ignorados,
+            playlistAtualizada: publicacao
+        });
 
         res.json({
             sucesso: true,
@@ -2667,6 +2784,16 @@ app.post("/api/admin/users", exigirLogin, exigirAdmin, (req, res) => {
             WHERE id = ?
         `).get(resultado.lastInsertRowid);
 
+        registrarAuditoria(req, "usuario.criar", {
+            usuarioCriado: {
+                id: usuarioCriado.id,
+                nome: usuarioCriado.nome,
+                email: usuarioCriado.email,
+                role: usuarioCriado.role,
+                ativo: usuarioCriado.ativo
+            }
+        });
+
         res.status(201).json({
             sucesso: true,
             mensagem: "Usuário criado com sucesso.",
@@ -2941,6 +3068,26 @@ app.put("/api/admin/users/:id", exigirLogin, exigirAdmin, (req, res) => {
             };
         }
 
+        registrarAuditoria(req, "usuario.editar", {
+            usuarioId: id,
+            antes: {
+                id: usuarioAtual.id,
+                nome: usuarioAtual.nome,
+                email: usuarioAtual.email,
+                role: usuarioAtual.role,
+                secretariaId: usuarioAtual.secretaria_id,
+                ativo: usuarioAtual.ativo
+            },
+            depois: {
+                id: usuarioAtualizado.id,
+                nome: usuarioAtualizado.nome,
+                email: usuarioAtualizado.email,
+                role: usuarioAtualizado.role,
+                secretariaId: usuarioAtualizado.secretariaId,
+                ativo: usuarioAtualizado.ativo
+            }
+        });
+
         res.json({
             sucesso: true,
             mensagem: "Usuário atualizado com sucesso.",
@@ -2955,6 +3102,49 @@ app.put("/api/admin/users/:id", exigirLogin, exigirAdmin, (req, res) => {
         });
     }
 });
+
+/* =========================================================
+   API ADMIN: LOGS DE AUDITORIA
+   ========================================================= */
+app.get("/api/admin/audit-logs", exigirLogin, exigirAdmin, (req, res) => {
+    try {
+        const limite = Math.min(Number(req.query.limite || 100), 300);
+
+        const logs = db.prepare(`
+            SELECT
+                id,
+                user_id AS userId,
+                user_name AS userName,
+                user_email AS userEmail,
+                user_role AS userRole,
+                action,
+                details,
+                ip,
+                user_agent AS userAgent,
+                created_at AS createdAt
+            FROM audit_logs
+            ORDER BY id DESC
+            LIMIT ?
+        `).all(limite);
+
+        res.json({
+            sucesso: true,
+            total: logs.length,
+            logs: logs.map((log) => ({
+                ...log,
+                details: log.details ? JSON.parse(log.details) : null
+            }))
+        });
+    } catch (erro) {
+        console.error("Erro ao listar auditoria:", erro);
+
+        res.status(500).json({
+            erro: true,
+            mensagem: "Erro ao listar logs de auditoria."
+        });
+    }
+});
+
 /* =========================================================
    API ADMIN: ATIVAR / DESATIVAR USUÁRIO
    =========================================================
@@ -3080,6 +3270,17 @@ app.patch("/api/admin/users/:id/status", exigirLogin, exigirAdmin, (req, res) =>
             WHERE id = ?
         `).get(id);
 
+        registrarAuditoria(req, "usuario.alterar_status", {
+            usuarioId: id,
+            usuario: {
+                nome: usuario.nome,
+                email: usuario.email,
+                role: usuario.role
+            },
+            ativoAnterior: usuario.ativo,
+            ativoNovo: usuarioAtualizado.ativo
+        });
+
         res.json({
             sucesso: true,
             mensagem: ativo
@@ -3161,6 +3362,13 @@ app.post("/api/admin/users/:id/reset-password", exigirLogin, exigirAdmin, (req, 
             id,
             senha_hash: senhaHash,
             atualizado_em: agora
+        });
+
+        registrarAuditoria(req, "usuario.resetar_senha", {
+            usuarioId: usuario.id,
+            nome: usuario.nome,
+            email: usuario.email,
+            role: usuario.role
         });
 
         res.json({
