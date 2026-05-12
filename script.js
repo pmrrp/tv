@@ -666,8 +666,7 @@ async function tocarItemAtual() {
     videoPlayer.load();
 
     videoPlayer.muted = true;
-    videoPlayer.src = criarUrlComCacheBuster(item.arquivo);
-    videoPlayer.load();
+    videoPlayer.src = item.arquivo; videoPlayer.load();
 
     debugMensagem(`src definido: ${videoPlayer.src}`);
   } else if (item.tipo === "imagem") {
