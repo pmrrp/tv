@@ -10,6 +10,9 @@ const videoPlayer = document.getElementById("videoPlayer");
 const videoPreload = document.getElementById("videoPreload");
 const imagePlayer = document.getElementById("imagePlayer");
 
+// Fallback de mídia
+const mediaFallback = document.getElementById("mediaFallback");
+
 // Caixa de status / mensagens rápidas
 const statusBox = document.getElementById("status");
 
@@ -393,6 +396,31 @@ document.addEventListener("mousedown", resetarInterface);
 document.addEventListener("touchstart", resetarInterface);
 
 /* =========================================================
+FALLBACK DE MÍDIA
+========================================================= */
+
+/**
+ * Mostra o fallback de carregamento.
+ */
+function mostrarFallbackMidia(texto = "Carregando a próxima mídia...") {
+  if (!mediaFallback) return;
+
+  const textoFallback = mediaFallback.querySelector("span");
+
+  if (textoFallback) {
+    textoFallback.textContent = texto;
+  }
+
+  mediaFallback.classList.remove("hidden");
+}
+
+function esconderFallbackMidia() {
+  if (!mediaFallback) return;
+
+  mediaFallback.classList.add("hidden");
+}
+
+/* =========================================================
    CONTROLE VISUAL DAS MÍDIAS
    ========================================================= */
 
@@ -400,6 +428,7 @@ document.addEventListener("touchstart", resetarInterface);
  * Mostra o vídeo atual e esconde a imagem.
  */
 function mostrarVideo() {
+  esconderFallbackMidia();
   videoPlayer.style.opacity = 1;
   imagePlayer.style.opacity = 0;
 }
@@ -408,6 +437,7 @@ function mostrarVideo() {
  * Mostra a imagem atual e esconde o vídeo.
  */
 function mostrarImagem() {
+  esconderFallbackMidia();
   imagePlayer.style.opacity = 1;
   videoPlayer.style.opacity = 0;
 }
@@ -574,6 +604,8 @@ async function tocarItemAtual() {
   tipoAtual = item.tipo;
   atualizarStatus("Preparando conteúdo...");
 
+  mostrarFallbackMidia("Preparando próxima mídia...");
+
   if (item.tipo === "video") {
     debugMensagem(`Mídia atual: vídeo | ${item.arquivo}`);
     atualizarStatus("Carregando vídeo...");
@@ -690,6 +722,7 @@ async function tocarItemAtual() {
     };
 
     img.onerror = () => {
+      mostrarFallbackMidia("Falha ao carregar. Avançando conteúdo...");
       atualizarStatus("Falha ao abrir mídia, avançando...");
       emTransicao = false;
       setTimeout(proximoItem, 1000);
@@ -809,6 +842,7 @@ function alternarPlayPause() {
       videoPlayer.play().then(() => {
         atualizarTextoBotaoPlayPause();
       }).catch(() => {
+        mostrarFallbackMidia("Falha ao carregar. Avançando conteúdo...");
         atualizarStatus("Não foi possível reproduzir este conteúdo.");
       });
     } else {
