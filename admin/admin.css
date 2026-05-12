@@ -1101,14 +1101,15 @@ button:disabled {
     height: 9px;
     overflow: hidden;
     border-radius: 999px;
-    background: rgba(219, 231, 243, 0.95);
+    background: rgba(216, 226, 236, 0.75);
 }
 
 .uploadProgressBar {
     width: 0%;
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, var(--brand-green), var(--brand-blue));
+    background: linear-gradient(90deg, var(--green-600), var(--blue-700));
+    box-shadow: 0 0 14px rgba(15, 112, 196, 0.22);
     transition: width 0.18s ease;
 }
 

@@ -3179,7 +3179,14 @@ let uploadProgressBar = null;
 let uploadProgressText = null;
 
 function obterElementosProgressoUpload() {
-    if (uploadProgressBox) return;
+    const existente = document.querySelector(".uploadProgress");
+
+    if (existente) {
+        uploadProgressBox = existente;
+        uploadProgressBar = existente.querySelector(".uploadProgressBar");
+        uploadProgressText = existente.querySelector(".uploadProgressText");
+        return;
+    }
 
     uploadProgressBox = document.createElement("div");
     uploadProgressBox.className = "uploadProgress hidden";
@@ -3205,6 +3212,8 @@ function obterElementosProgressoUpload() {
 
 function atualizarProgressoUpload(percentual) {
     obterElementosProgressoUpload();
+
+    if (!uploadProgressBox || !uploadProgressBar || !uploadProgressText) return;
 
     const valor = Math.max(0, Math.min(100, Math.round(percentual)));
 
