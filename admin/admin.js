@@ -3292,7 +3292,7 @@ async function enviarArquivo(event) {
         return;
     }
 
-    const limiteUploadExternoMb = 95;
+    const limiteUploadExternoMb = 98;
     const tamanhoArquivoMb = arquivo.size / (1024 * 1024);
 
     if (tamanhoArquivoMb > limiteUploadExternoMb) {
