@@ -3193,7 +3193,14 @@ function obterElementosProgressoUpload() {
     uploadProgressBar = uploadProgressBox.querySelector(".uploadProgressBar");
     uploadProgressText = uploadProgressBox.querySelector(".uploadProgressText");
 
-    uploadForm.insertAdjacentElement("afterend", uploadProgressBox);
+    const form = document.getElementById("uploadForm");
+
+    if (!form) {
+        console.error("Formulário de upload não encontrado.");
+        return;
+    }
+
+    form.appendChild(uploadProgressBox);
 }
 
 function atualizarProgressoUpload(percentual) {
