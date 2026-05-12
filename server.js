@@ -65,9 +65,17 @@ const ADMIN_USER = process.env.ADMIN_USER || "Administrador";
 */
 const projectRoot = __dirname;
 const mediaFolder = path.join(projectRoot, "midia");
+const chunksFolder = path.join(projectRoot, "data", "upload-chunks");
+
 const adminFolder = path.join(projectRoot, "admin");
 const dataFolder = path.join(projectRoot, "data");
 const backupFolder = path.join(projectRoot, "backups");
+
+[mediaFolder, dataFolder, backupFolder, chunksFolder].forEach((pasta) => {
+    if (!fs.existsSync(pasta)) {
+        fs.mkdirSync(pasta, { recursive: true });
+    }
+});
 
 /*
   Arquivo principal de configurações das mídias.
@@ -900,6 +908,42 @@ const upload = multer({
     }
 });
 
+/* =========================================================
+   UPLOAD EM PARTES / CHUNKS
+   ========================================================== */
+
+const chunkStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadId = String(req.body.uploadId || "").replace(/[^a-zA-Z0-9_-]/g, "");
+        const pastaUpload = path.join(chunksFolder, uploadId);
+
+        if (!uploadId) {
+            return cb(new Error("Identificador de upload inválido."));
+        }
+
+        if (!fs.existsSync(pastaUpload)) {
+            fs.mkdirSync(pastaUpload, { recursive: true });
+        }
+
+        cb(null, pastaUpload);
+    },
+    filename: (req, file, cb) => {
+        const indice = Number(req.body.indice);
+
+        if (!Number.isInteger(indice) || indice < 0) {
+            return cb(new Error("Índice do pedaço inválido."));
+        }
+
+        cb(null, `chunk-${String(indice).padStart(6, "0")}.part`);
+    }
+});
+
+const uploadChunk = multer({
+    storage: chunkStorage,
+    limits: {
+        fileSize: 60 * 1024 * 1024
+    }
+});
 
 /* =========================================================
    MIDDLEWARES
@@ -1710,6 +1754,169 @@ function gerarTituloAmigavelDoNomeOriginal(nomeOriginal) {
         })
         .join(" ");
 }
+
+function registrarMidiaEnviada(nomeSalvo, nomeOriginal, tamanho) {
+    const extensao = path.extname(nomeSalvo).toLowerCase();
+    const tipo = obterTipoPorExtensao(extensao);
+    const tituloAmigavel = gerarTituloAmigavelDoNomeOriginal(nomeOriginal);
+
+    if (tipo !== "outro") {
+        const configuracoes = lerConfiguracoesDeMidia();
+        const configuracaoAtual = configuracoes[nomeSalvo] || {};
+
+        configuracoes[nomeSalvo] = {
+            ativo: configuracaoAtual.ativo !== false,
+            duracao: tipo === "imagem"
+                ? Number(configuracaoAtual.duracao || 8)
+                : 8,
+            ordem: Number(configuracaoAtual.ordem) > 0
+                ? Number(configuracaoAtual.ordem)
+                : 999999,
+            prioridade: configuracaoAtual.prioridade || "normal",
+            repetirACada: Number(configuracaoAtual.repetirACada || 0),
+            titulo: configuracaoAtual.titulo || tituloAmigavel,
+            inicio: configuracaoAtual.inicio || null,
+            fim: configuracaoAtual.fim || null
+        };
+
+        salvarConfiguracoesDeMidia(configuracoes);
+        normalizarOrdensDasMidias();
+    }
+
+    const publicacao = publicarPlaylistAutomaticamente();
+
+    return {
+        publicacao,
+        arquivo: {
+            nomeOriginal: corrigirEncodingTextoUpload(nomeOriginal),
+            nomeSalvo,
+            titulo: tituloAmigavel,
+            caminho: `midia/${nomeSalvo}`,
+            tipo,
+            extensao,
+            tamanho
+        }
+    };
+}
+
+app.post("/api/upload/chunk", exigirLogin, exigirEditor, uploadChunk.single("chunk"), (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Nenhum pedaço recebido."
+            });
+        }
+
+        res.json({
+            sucesso: true,
+            uploadId: req.body.uploadId,
+            indice: Number(req.body.indice)
+        });
+    } catch (erro) {
+        console.error("Erro ao receber chunk:", erro);
+        res.status(500).json({
+            erro: true,
+            mensagem: "Erro ao receber parte do arquivo."
+        });
+    }
+});
+
+app.post("/api/upload/finalizar", exigirLogin, exigirEditor, (req, res) => {
+    try {
+        const uploadId = String(req.body.uploadId || "").replace(/[^a-zA-Z0-9_-]/g, "");
+        const nomeOriginal = String(req.body.nomeOriginal || "");
+        const totalChunks = Number(req.body.totalChunks);
+
+        if (!uploadId || !nomeOriginal || !Number.isInteger(totalChunks) || totalChunks <= 0) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Dados de finalização inválidos."
+            });
+        }
+
+        if (!extensaoPermitida(nomeOriginal)) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Tipo de arquivo não permitido."
+            });
+        }
+
+        const pastaUpload = path.join(chunksFolder, uploadId);
+
+        if (!fs.existsSync(pastaUpload)) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Upload temporário não encontrado."
+            });
+        }
+
+        const nomeSeguro = gerarNomeSeguro(nomeOriginal);
+        const nomeSalvo = garantirNomeUnico(nomeSeguro);
+        const caminhoFinal = path.join(mediaFolder, nomeSalvo);
+
+        const escrita = fs.createWriteStream(caminhoFinal);
+
+        for (let i = 0; i < totalChunks; i++) {
+            const caminhoChunk = path.join(pastaUpload, `chunk-${String(i).padStart(6, "0")}.part`);
+
+            if (!fs.existsSync(caminhoChunk)) {
+                escrita.destroy();
+
+                if (fs.existsSync(caminhoFinal)) {
+                    fs.unlinkSync(caminhoFinal);
+                }
+
+                return res.status(400).json({
+                    erro: true,
+                    mensagem: `Parte ${i + 1} de ${totalChunks} não encontrada.`
+                });
+            }
+
+            const buffer = fs.readFileSync(caminhoChunk);
+            escrita.write(buffer);
+        }
+
+        escrita.end();
+
+        escrita.on("finish", () => {
+            try {
+                const tamanho = fs.statSync(caminhoFinal).size;
+                fs.rmSync(pastaUpload, { recursive: true, force: true });
+
+                const resultado = registrarMidiaEnviada(nomeSalvo, nomeOriginal, tamanho);
+
+                res.json({
+                    sucesso: true,
+                    mensagem: "Arquivo enviado com sucesso.",
+                    playlistAtualizada: resultado.publicacao,
+                    arquivo: resultado.arquivo,
+                    arquivos: [resultado.arquivo]
+                });
+            } catch (erroFinalizacao) {
+                console.error("Erro ao finalizar upload em chunks:", erroFinalizacao);
+                res.status(500).json({
+                    erro: true,
+                    mensagem: "Erro ao finalizar arquivo enviado."
+                });
+            }
+        });
+
+        escrita.on("error", (erroEscrita) => {
+            console.error("Erro ao juntar chunks:", erroEscrita);
+            res.status(500).json({
+                erro: true,
+                mensagem: "Erro ao montar arquivo enviado."
+            });
+        });
+    } catch (erro) {
+        console.error("Erro ao finalizar upload:", erro);
+        res.status(500).json({
+            erro: true,
+            mensagem: "Erro ao finalizar upload."
+        });
+    }
+});
 
 app.post("/api/upload", exigirLogin, exigirEditor, upload.array("arquivo", 30), (req, res) => {
     try {

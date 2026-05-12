@@ -3264,42 +3264,100 @@ function enviarArquivoComProgresso(formData, aoProgredir) {
     });
 }
 
+function gerarUploadId() {
+    if (window.crypto && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+
+    return `upload-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function enviarChunkComProgresso(formData, aoProgredir) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.open("POST", "/api/upload/chunk", true);
+        xhr.withCredentials = true;
+
+        xhr.upload.onprogress = (event) => {
+            if (!event.lengthComputable) return;
+            aoProgredir(event.loaded, event.total);
+        };
+
+        xhr.onload = () => {
+            resolve({
+                ok: xhr.status >= 200 && xhr.status < 300,
+                status: xhr.status,
+                text: async () => xhr.responseText || ""
+            });
+        };
+
+        xhr.onerror = () => {
+            reject(new Error("Não foi possível enviar uma parte do arquivo. A conexão foi interrompida."));
+        };
+
+        xhr.onabort = () => {
+            reject(new Error("Envio cancelado."));
+        };
+
+        xhr.send(formData);
+    });
+}
+
+async function lerRespostaJsonSegura(resposta, mensagemPadrao) {
+    const textoResposta = await resposta.text();
+
+    let dados = {};
+
+    try {
+        dados = textoResposta ? JSON.parse(textoResposta) : {};
+    } catch {
+        dados = {};
+    }
+
+    if (!resposta.ok || dados.erro) {
+        const mensagemErro = dados.mensagem || dados.error || mensagemPadrao || "Não foi possível concluir a operação.";
+        throw new Error(mensagemErro);
+    }
+
+    return dados;
+}
+
+async function finalizarUploadEmChunks({ uploadId, nomeOriginal, totalChunks }) {
+    const resposta = await fetchComSessao("/api/upload/finalizar", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            uploadId,
+            nomeOriginal,
+            totalChunks
+        })
+    });
+
+    return lerRespostaJsonSegura(resposta, "Não foi possível finalizar o upload.");
+}
+
 /**
  * Envia o arquivo selecionado para a API.
+ *
+ * Para arquivos maiores, usa upload em partes para evitar
+ * limite de upload da Cloudflare.
  */
 async function enviarArquivo(event) {
     event.preventDefault();
+
     if (!garantirPermissaoParaEditarMidias()) return;
 
     esconderMensagemUpload();
 
-    /*
-      Upload de UM arquivo por vez.
-
-      Motivo técnico:
-      O backend atual está configurado com multer usando:
-      upload.single("arquivo")
-
-      Portanto, o FormData deve enviar apenas um campo "arquivo".
-      Isso evita erro silencioso e mantém o frontend alinhado ao backend.
-    */
     const arquivo = inputArquivo && inputArquivo.files
         ? inputArquivo.files[0]
         : null;
 
     if (!arquivo) {
         mostrarMensagemUpload("Selecione uma mídia para enviar.", "erro");
-        return;
-    }
-
-    const limiteUploadExternoMb = 98;
-    const tamanhoArquivoMb = arquivo.size / (1024 * 1024);
-
-    if (tamanhoArquivoMb > limiteUploadExternoMb) {
-        mostrarMensagemUpload(
-            `Arquivo muito grande para envio pela URL externa. Limite recomendado: até ${limiteUploadExternoMb} MB.`,
-            "erro"
-        );
         return;
     }
 
@@ -3315,42 +3373,50 @@ async function enviarArquivo(event) {
 
     if (!confirmouUpload) return;
 
-    const formData = new FormData();
-    formData.append("arquivo", arquivo);
+    const tamanhoChunk = 50 * 1024 * 1024;
+    const totalChunks = Math.ceil(arquivo.size / tamanhoChunk);
+    const uploadId = gerarUploadId();
 
     btnUpload.disabled = true;
     definirBotaoComIcone(btnUpload, "fa-solid fa-spinner fa-spin", "Enviando...");
-
     mostrarMensagemUpload("Enviando mídia...", "info");
     atualizarProgressoUpload(0);
 
     try {
-        const resposta = await enviarArquivoComProgresso(formData, atualizarProgressoUpload);
+        for (let indice = 0; indice < totalChunks; indice++) {
+            const inicio = indice * tamanhoChunk;
+            const fim = Math.min(inicio + tamanhoChunk, arquivo.size);
+            const chunk = arquivo.slice(inicio, fim);
 
-        const textoResposta = await resposta.text();
+            const formData = new FormData();
+            formData.append("uploadId", uploadId);
+            formData.append("indice", String(indice));
+            formData.append("totalChunks", String(totalChunks));
+            formData.append("nomeOriginal", arquivo.name);
+            formData.append("chunk", chunk, arquivo.name);
 
-        let dados = {};
-        try {
-            dados = textoResposta ? JSON.parse(textoResposta) : {};
-        } catch {
-            dados = {};
+            const resposta = await enviarChunkComProgresso(formData, (carregadoChunk, totalChunk) => {
+                const carregadoAntes = indice * tamanhoChunk;
+                const carregadoTotal = carregadoAntes + carregadoChunk;
+                const percentualTotal = (carregadoTotal / arquivo.size) * 100;
+
+                atualizarProgressoUpload(percentualTotal);
+            });
+
+            await lerRespostaJsonSegura(
+                resposta,
+                `Não foi possível enviar a parte ${indice + 1} de ${totalChunks}.`
+            );
         }
 
-        if (!resposta.ok || dados.erro) {
-            const mensagemErro = dados.mensagem || dados.error || "Não foi possível enviar a mídia.";
-            const mensagemNormalizada = mensagemErro.toLowerCase();
+        mostrarMensagemUpload("Finalizando envio da mídia...", "info");
+        atualizarProgressoUpload(100);
 
-            if (
-                resposta.status === 413 ||
-                mensagemNormalizada.includes("file too large") ||
-                mensagemNormalizada.includes("too large") ||
-                mensagemNormalizada.includes("content too large")
-            ) {
-                throw new Error("Arquivo muito grande para envio.");
-            }
-
-            throw new Error(mensagemErro);
-        }
+        const dados = await finalizarUploadEmChunks({
+            uploadId,
+            nomeOriginal: arquivo.name,
+            totalChunks
+        });
 
         const nomeExibicaoUpload =
             dados.arquivo && (dados.arquivo.titulo || dados.arquivo.nomeOriginal || dados.arquivo.nomeSalvo)
@@ -3362,8 +3428,6 @@ async function enviarArquivo(event) {
             "sucesso"
         );
 
-        atualizarProgressoUpload(100);
-
         uploadForm.reset();
         selectedFileName.textContent = "Nenhum arquivo selecionado";
         uploadForm.classList.remove("uploadFormHasFile");
@@ -3371,11 +3435,9 @@ async function enviarArquivo(event) {
         await carregarMidias();
         await carregarPlaylistAtual();
 
-        /*
-          Após recarregar a lista, rola até a mídia enviada
-          e aplica destaque visual nela.
-        */
-        abrirBibliotecaEDestacarMidia(dados.arquivo.nomeSalvo);
+        if (dados.arquivo && dados.arquivo.nomeSalvo) {
+            abrirBibliotecaEDestacarMidia(dados.arquivo.nomeSalvo);
+        }
 
         await carregarResumoAdmin();
     } catch (erro) {
@@ -3385,9 +3447,10 @@ async function enviarArquivo(event) {
         if (
             mensagemNormalizada.includes("failed to fetch") ||
             mensagemNormalizada.includes("networkerror") ||
-            mensagemNormalizada.includes("network error")
+            mensagemNormalizada.includes("network error") ||
+            mensagemNormalizada.includes("conexão foi interrompida")
         ) {
-            mensagemErro = "Não foi possível concluir o envio. O arquivo pode ser muito grande ou a conexão foi interrompida.";
+            mensagemErro = "Não foi possível concluir o envio. A conexão foi interrompida ou instável.";
         }
 
         mostrarMensagemUpload(mensagemErro, "erro");
@@ -3398,7 +3461,6 @@ async function enviarArquivo(event) {
         setTimeout(esconderProgressoUpload, 900);
     }
 }
-
 
 /* =========================================================
    ALTERAÇÕES PENDENTES / SALVAR EM LOTE
