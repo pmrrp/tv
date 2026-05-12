@@ -3361,6 +3361,17 @@ async function enviarArquivo(event) {
         return;
     }
 
+    const limiteMaximoGb = 1.5;
+    const limiteMaximoBytes = limiteMaximoGb * 1024 * 1024 * 1024;
+
+    if (arquivo.size > limiteMaximoBytes) {
+        mostrarMensagemUpload(
+            `Arquivo muito grande. O limite máximo permitido é ${limiteMaximoGb} GB.`,
+            "erro"
+        );
+        return;
+    }
+
     const confirmouUpload = await confirmarAcaoModal({
         kicker: "Upload",
         titulo: "Enviar nova mídia",
@@ -3427,6 +3438,17 @@ async function enviarArquivo(event) {
             `Mídia enviada com sucesso: ${nomeExibicaoUpload}`,
             "sucesso"
         );
+
+        const limiteMaximoGb = 1.5;
+        const limiteMaximoBytes = limiteMaximoGb * 1024 * 1024 * 1024;
+
+        if (arquivo.size > limiteMaximoBytes) {
+            mostrarMensagemUpload(
+                `Arquivo muito grande. O limite máximo permitido é ${limiteMaximoGb} GB.`,
+                "erro"
+            );
+            return;
+        }
 
         uploadForm.reset();
         selectedFileName.textContent = "Nenhum arquivo selecionado";
