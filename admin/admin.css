@@ -1087,6 +1087,37 @@ button:disabled {
     font-weight: 800;
 }
 
+.uploadProgress {
+    display: grid;
+    gap: 7px;
+    margin-top: 12px;
+}
+
+.uploadProgress.hidden {
+    display: none !important;
+}
+
+.uploadProgressTrack {
+    height: 9px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(219, 231, 243, 0.95);
+}
+
+.uploadProgressBar {
+    width: 0%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--brand-green), var(--brand-blue));
+    transition: width 0.18s ease;
+}
+
+.uploadProgressText {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 900;
+}
+
 .uploadMessage {
     margin-top: 12px;
     padding: 12px 14px;

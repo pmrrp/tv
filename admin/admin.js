@@ -3174,6 +3174,80 @@ function confirmarAcaoModal({
     });
 }
 
+let uploadProgressBox = null;
+let uploadProgressBar = null;
+let uploadProgressText = null;
+
+function obterElementosProgressoUpload() {
+    if (uploadProgressBox) return;
+
+    uploadProgressBox = document.createElement("div");
+    uploadProgressBox.className = "uploadProgress hidden";
+    uploadProgressBox.innerHTML = `
+        <div class="uploadProgressTrack">
+            <div class="uploadProgressBar"></div>
+        </div>
+        <div class="uploadProgressText">Preparando envio...</div>
+    `;
+
+    uploadProgressBar = uploadProgressBox.querySelector(".uploadProgressBar");
+    uploadProgressText = uploadProgressBox.querySelector(".uploadProgressText");
+
+    uploadForm.insertAdjacentElement("afterend", uploadProgressBox);
+}
+
+function atualizarProgressoUpload(percentual) {
+    obterElementosProgressoUpload();
+
+    const valor = Math.max(0, Math.min(100, Math.round(percentual)));
+
+    uploadProgressBox.classList.remove("hidden");
+    uploadProgressBar.style.width = `${valor}%`;
+    uploadProgressText.textContent = `Enviando mídia... ${valor}%`;
+}
+
+function esconderProgressoUpload() {
+    if (!uploadProgressBox) return;
+
+    uploadProgressBox.classList.add("hidden");
+    uploadProgressBar.style.width = "0%";
+    uploadProgressText.textContent = "Preparando envio...";
+}
+
+function enviarArquivoComProgresso(formData, aoProgredir) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.open("POST", "/api/upload", true);
+        xhr.withCredentials = true;
+
+        xhr.upload.onprogress = (event) => {
+            if (!event.lengthComputable) return;
+
+            const percentual = (event.loaded / event.total) * 100;
+            aoProgredir(percentual);
+        };
+
+        xhr.onload = () => {
+            resolve({
+                ok: xhr.status >= 200 && xhr.status < 300,
+                status: xhr.status,
+                text: async () => xhr.responseText || ""
+            });
+        };
+
+        xhr.onerror = () => {
+            reject(new Error("Não foi possível concluir o envio. A conexão foi interrompida."));
+        };
+
+        xhr.onabort = () => {
+            reject(new Error("Envio cancelado."));
+        };
+
+        xhr.send(formData);
+    });
+}
+
 /**
  * Envia o arquivo selecionado para a API.
  */
@@ -3202,6 +3276,17 @@ async function enviarArquivo(event) {
         return;
     }
 
+    const limiteUploadExternoMb = 95;
+    const tamanhoArquivoMb = arquivo.size / (1024 * 1024);
+
+    if (tamanhoArquivoMb > limiteUploadExternoMb) {
+        mostrarMensagemUpload(
+            `Arquivo muito grande para envio pela URL externa. Limite recomendado: até ${limiteUploadExternoMb} MB.`,
+            "erro"
+        );
+        return;
+    }
+
     const confirmouUpload = await confirmarAcaoModal({
         kicker: "Upload",
         titulo: "Enviar nova mídia",
@@ -3221,12 +3306,10 @@ async function enviarArquivo(event) {
     definirBotaoComIcone(btnUpload, "fa-solid fa-spinner fa-spin", "Enviando...");
 
     mostrarMensagemUpload("Enviando mídia...", "info");
+    atualizarProgressoUpload(0);
 
     try {
-        const resposta = await fetchComSessao("/api/upload", {
-            method: "POST",
-            body: formData
-        });
+        const resposta = await enviarArquivoComProgresso(formData, atualizarProgressoUpload);
 
         const textoResposta = await resposta.text();
 
@@ -3263,6 +3346,8 @@ async function enviarArquivo(event) {
             "sucesso"
         );
 
+        atualizarProgressoUpload(100);
+
         uploadForm.reset();
         selectedFileName.textContent = "Nenhum arquivo selecionado";
         uploadForm.classList.remove("uploadFormHasFile");
@@ -3294,6 +3379,7 @@ async function enviarArquivo(event) {
     } finally {
         btnUpload.disabled = false;
         definirBotaoComIcone(btnUpload, "fa-solid fa-upload", "Enviar mídia");
+        setTimeout(esconderProgressoUpload, 900);
     }
 }
 
