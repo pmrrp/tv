@@ -3106,7 +3106,7 @@ app.put("/api/admin/users/:id", exigirLogin, exigirAdmin, (req, res) => {
 /* =========================================================
    API ADMIN: LOGS DE AUDITORIA
    ========================================================= */
-app.get("/api/admin/audit-logs", exigirLogin, exigirAdmin, (req, res) => {
+app.get("/api/admin/audit-logs", exigirLogin, exigirRole("superadmin"), (req, res) => {
     try {
         const limite = Math.min(Number(req.query.limite || 100), 300);
 

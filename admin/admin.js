@@ -108,6 +108,10 @@ const userRoleField = userRoleInput
 const usersDropdown = document.getElementById("usersDropdown");
 const usersDropdownCount = document.getElementById("usersDropdownCount");
 
+const auditLogsList = document.getElementById("auditLogsList");
+const auditDropdownCount = document.getElementById("auditDropdownCount");
+const btnReloadAuditLogs = document.getElementById("btnReloadAuditLogs");
+
 /* =========================================================
    ELEMENTOS - RESET DE SENHA
    ========================================================= */
@@ -697,6 +701,93 @@ function renderizarUsuarios(usuarios) {
 
         usersList.appendChild(item);
     });
+}
+
+function formatarAcaoAuditoria(acao) {
+    const mapa = {
+        "login.realizado": "Login realizado",
+        "login.logout": "Logout",
+        "midia.upload": "Upload de mídia",
+        "midia.excluir": "Exclusão de mídia",
+        "midia.excluir_lote": "Exclusão em lote",
+        "midia.editar": "Edição de mídia",
+        "midia.editar_lote": "Edição em lote",
+        "midia.mover": "Reordenação de mídia",
+        "usuario.criar": "Criação de usuário",
+        "usuario.editar": "Edição de usuário",
+        "usuario.alterar_status": "Alteração de status",
+        "usuario.resetar_senha": "Reset de senha"
+    };
+
+    return mapa[acao] || acao;
+}
+
+function renderizarLogsAuditoria(logs) {
+    if (!auditLogsList) return;
+
+    if (!logs.length) {
+        auditLogsList.innerHTML = `<div class="message">Nenhum log encontrado.</div>`;
+        return;
+    }
+
+    auditLogsList.innerHTML = logs.map((log) => {
+        const data = log.createdAt || "--";
+        const usuario = log.userName || "Sistema";
+        const email = log.userEmail || "";
+        const acao = formatarAcaoAuditoria(log.action);
+        const detalhes = log.details
+            ? JSON.stringify(log.details).slice(0, 220)
+            : "Sem detalhes";
+
+        return `
+            <article class="auditLogItem">
+                <div class="auditLogMain">
+                    <strong>${acao}</strong>
+                    <span>${data}</span>
+                </div>
+
+                <div class="auditLogMeta">
+                    <span><i class="fa-solid fa-user"></i> ${usuario}${email ? ` (${email})` : ""}</span>
+                    <span><i class="fa-solid fa-location-dot"></i> ${log.ip || "--"}</span>
+                </div>
+
+                <code>${detalhes}</code>
+            </article>
+        `;
+    }).join("");
+}
+
+async function carregarLogsAuditoria() {
+    if (!auditLogsList) return;
+
+    auditLogsList.innerHTML = `<div class="message">Carregando logs...</div>`;
+
+    if (auditDropdownCount) {
+        auditDropdownCount.textContent = "Carregando logs...";
+    }
+
+    try {
+        const resposta = await fetchComSessao("/api/admin/audit-logs?limite=50");
+        const dados = await resposta.json();
+
+        if (!resposta.ok || dados.erro) {
+            throw new Error(dados.mensagem || "Não foi possível carregar os logs.");
+        }
+
+        renderizarLogsAuditoria(dados.logs || []);
+
+        if (auditDropdownCount) {
+            auditDropdownCount.textContent = `${dados.total || 0} registros encontrados`;
+        }
+    } catch (erro) {
+        auditLogsList.innerHTML = `<div class="message error">Erro ao carregar logs.</div>`;
+
+        if (auditDropdownCount) {
+            auditDropdownCount.textContent = "Erro ao carregar logs";
+        }
+
+        console.error(erro);
+    }
 }
 
 /* =========================================================
@@ -4689,6 +4780,10 @@ if (btnReloadUsers) {
     btnReloadUsers.addEventListener("click", carregarUsuarios);
 }
 
+if (btnReloadAuditLogs) {
+    btnReloadAuditLogs.addEventListener("click", carregarLogsAuditoria);
+}
+
 /*
   Abre o modal de novo usuário.
 */
@@ -5435,9 +5530,25 @@ document.addEventListener("click", (event) => {
 async function iniciarAdmin() {
     await carregarUsuarioLogado();
 
+    function aplicarVisibilidadeAuditoria() {
+        const auditCard = document.getElementById("auditCard");
+
+        if (!auditCard) return;
+
+        const ehSuperadmin = usuarioLogado && usuarioLogado.role === "superadmin";
+
+        auditCard.classList.toggle("hidden", !ehSuperadmin);
+    }
+
     await carregarResumoAdmin();
     await carregarMidias();
     await carregarPlaylistAtual();
+
+    await aplicarVisibilidadeAuditoria();
+
+    if (usuarioLogado && usuarioLogado.role === "superadmin") {
+        await carregarLogsAuditoria();
+    }
 
     limparAlteracoesPendentes();
     configurarScrollAoAbrirDropdowns();
