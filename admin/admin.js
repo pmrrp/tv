@@ -667,6 +667,21 @@ function renderizarUsuarios(usuarios) {
     `
             : "";
 
+        const botaoExcluirUsuario =
+            usuarioLogadoEhSuperadmin && !usuarioEhAtual
+                ? `
+        <button
+            class="dangerAction btnDeleteUser"
+            type="button"
+            data-user-id="${usuario.id}"
+            data-user-name="${nome}"
+        >
+            <i class="fa-solid fa-trash" aria-hidden="true"></i>
+            Excluir
+        </button>
+    `
+                : "";
+
         item.innerHTML = `
             <div class="userInfo">
                 <div class="userMainLine">
@@ -696,6 +711,7 @@ function renderizarUsuarios(usuarios) {
                 ${botaoEditarUsuario}
                 ${botaoResetSenhaUsuario}
                 ${botaoStatusUsuario}
+                ${botaoExcluirUsuario}
             </div>
         `;
 
@@ -716,7 +732,8 @@ function formatarAcaoAuditoria(acao) {
         "usuario.criar": "Criação de usuário",
         "usuario.editar": "Edição de usuário",
         "usuario.alterar_status": "Alteração de status",
-        "usuario.resetar_senha": "Reset de senha"
+        "usuario.resetar_senha": "Reset de senha",
+        "usuario.excluir": "Exclusão de usuário"
     };
 
     return mapa[acao] || acao;
@@ -1216,6 +1233,73 @@ async function salvarUsuarioPeloFormulario(event) {
             btnSaveUser.disabled = false;
             btnSaveUser.innerHTML = textoOriginalBotao;
         }
+    }
+}
+
+/* =========================================================
+   USUÁRIOS - EXCLUSÃO DEFINITIVA
+   =========================================================
+   Exclui um usuário do sistema usando o modal genérico premium.
+
+   Regras:
+   - somente superadmin pode excluir;
+   - o usuário logado não pode excluir a si mesmo;
+   - o backend também valida tudo novamente;
+   - após excluir, recarrega usuários, resumo e logs.
+   ========================================================= */
+
+async function excluirUsuario(id, nome) {
+    if (!usuarioLogado || usuarioLogado.role !== "superadmin") {
+        mostrarToast("Somente um superadmin pode excluir usuários.", "erro");
+        return;
+    }
+
+    if (Number(usuarioLogado.id) === Number(id)) {
+        mostrarToast("Você não pode excluir o próprio usuário logado.", "erro");
+        return;
+    }
+
+    const confirmou = await confirmarAcaoModal({
+        kicker: "Acesso e permissões",
+        titulo: "Excluir usuário",
+        mensagem: "Tem certeza que deseja excluir este usuário do painel administrativo?",
+        detalhe: nome,
+        confirmar: "Excluir usuário",
+        cancelar: "Cancelar",
+        variante: "danger"
+    });
+
+    if (!confirmou) return;
+
+    try {
+        const resposta = await fetchComSessao(`/api/admin/users/${encodeURIComponent(id)}`, {
+            method: "DELETE"
+        });
+
+        const resultado = await resposta.json();
+
+        if (!resposta.ok || resultado.erro) {
+            throw new Error(resultado.mensagem || "Erro ao excluir usuário.");
+        }
+
+        mostrarToast("Usuário excluído com sucesso.", "sucesso");
+
+        await carregarUsuarios();
+
+        if (typeof carregarLogsAuditoria === "function") {
+            await carregarLogsAuditoria();
+        }
+
+        if (typeof carregarResumoAdmin === "function") {
+            await carregarResumoAdmin();
+        }
+    } catch (erro) {
+        console.error("Erro ao excluir usuário:", erro);
+
+        mostrarToast(
+            erro.message || "Erro ao excluir usuário.",
+            "erro"
+        );
     }
 }
 
@@ -4864,6 +4948,7 @@ if (usersList) {
         const btnEditar = event.target.closest(".btnEditUser");
         const btnResetSenha = event.target.closest(".btnResetUserPassword");
         const btnStatus = event.target.closest(".btnToggleUserStatus");
+        const btnExcluir = event.target.closest(".btnDeleteUser");
 
         if (btnEditar) {
             const idUsuario = btnEditar.dataset.userId;
@@ -4886,6 +4971,14 @@ if (usersList) {
             const usuarioEstaAtivo = btnStatus.dataset.active === "true";
 
             abrirModalStatusUsuario(idUsuario, nomeUsuario, usuarioEstaAtivo);
+            return;
+        }
+
+        if (btnExcluir) {
+            const idUsuario = btnExcluir.dataset.userId;
+            const nomeUsuario = btnExcluir.dataset.userName || "usuário";
+
+            excluirUsuario(idUsuario, nomeUsuario);
             return;
         }
     });

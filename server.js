@@ -1028,6 +1028,8 @@ function obterUsuarioDaSessao(req) {
 function obterIpRequisicao(req) {
     return (
         req.headers["cf-connecting-ip"] ||
+        req.headers["true-client-ip"] ||
+        req.headers["x-real-ip"] ||
         req.headers["x-forwarded-for"] ||
         req.socket.remoteAddress ||
         ""
@@ -3294,6 +3296,105 @@ app.patch("/api/admin/users/:id/status", exigirLogin, exigirAdmin, (req, res) =>
         res.status(500).json({
             erro: true,
             mensagem: "Erro ao alterar status do usuário."
+        });
+    }
+});
+
+/* =========================================================
+   API ADMIN: EXCLUIR USUÁRIO
+   =========================================================
+   Exclui definitivamente um usuário do sistema.
+
+   Segurança:
+   - exige login;
+   - exige perfil superadmin;
+   - impede o superadmin logado de excluir a si mesmo;
+   - registra auditoria antes da exclusão.
+   ========================================================= */
+
+app.delete("/api/admin/users/:id", exigirLogin, exigirRole("superadmin"), (req, res) => {
+    try {
+        const id = Number(req.params.id);
+
+        if (!Number.isInteger(id) || id <= 0) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "ID de usuário inválido."
+            });
+        }
+
+        const usuarioLogado = obterUsuarioDaSessao(req);
+
+        if (!usuarioLogado) {
+            return res.status(401).json({
+                erro: true,
+                mensagem: "Sessão inválida. Faça login novamente."
+            });
+        }
+
+        if (Number(usuarioLogado.id) === id) {
+            return res.status(403).json({
+                erro: true,
+                mensagem: "Você não pode excluir o próprio usuário logado."
+            });
+        }
+
+        const usuarioAlvo = db.prepare(`
+            SELECT
+                id,
+                nome,
+                email,
+                role,
+                secretaria_id AS secretariaId,
+                ativo,
+                criado_em AS criadoEm,
+                atualizado_em AS atualizadoEm
+            FROM users
+            WHERE id = ?
+            LIMIT 1
+        `).get(id);
+
+        if (!usuarioAlvo) {
+            return res.status(404).json({
+                erro: true,
+                mensagem: "Usuário não encontrado."
+            });
+        }
+
+        registrarAuditoria(req, "usuario.excluir", {
+            usuarioExcluido: {
+                id: usuarioAlvo.id,
+                nome: usuarioAlvo.nome,
+                email: usuarioAlvo.email,
+                role: usuarioAlvo.role,
+                secretariaId: usuarioAlvo.secretariaId,
+                ativo: usuarioAlvo.ativo,
+                criadoEm: usuarioAlvo.criadoEm,
+                atualizadoEm: usuarioAlvo.atualizadoEm
+            }
+        });
+
+        db.prepare(`
+            DELETE FROM users
+            WHERE id = ?
+        `).run(id);
+
+        res.json({
+            sucesso: true,
+            mensagem: "Usuário excluído com sucesso.",
+            usuario: {
+                id: usuarioAlvo.id,
+                nome: usuarioAlvo.nome,
+                email: usuarioAlvo.email,
+                role: usuarioAlvo.role
+            }
+        });
+    } catch (erro) {
+        console.error("Erro ao excluir usuário:", erro);
+
+        res.status(500).json({
+            erro: true,
+            mensagem: "Erro ao excluir usuário."
         });
     }
 });
