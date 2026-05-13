@@ -66,6 +66,11 @@ const mediaRepeatFilter = document.getElementById("mediaRepeatFilter");
 const mediaFilterInfo = document.getElementById("mediaFilterInfo");
 const libraryDropdownMeta = document.getElementById("libraryDropdownMeta");
 
+const mediaFiltersDropdown = document.querySelector(".mediaFiltersDropdown");
+const mediaFiltersCount = document.getElementById("mediaFiltersCount");
+const btnApplyMediaFilters = document.getElementById("btnApplyMediaFilters");
+const btnClearMediaFilters = document.getElementById("btnClearMediaFilters");
+
 const adminUserName = document.getElementById("adminUserName");
 
 const toastContainer = document.getElementById("toastContainer");
@@ -294,6 +299,24 @@ let modalConfirmacao = null;
 let usuariosCarregados = [];
 let usuarioLogado = null;
 
+/*
+  Guarda quais filtros foram efetivamente aplicados.
+
+  Importante:
+  Isso separa "filtro escolhido no popover" de "filtro aplicado
+  na listagem". Sem isso, o contador pode indicar filtros que o
+  usuário só selecionou, mas não confirmou.
+*/
+let filtrosMidiaAplicados = null;
+
+/*
+  Indica se o usuário mexeu nos campos do popover, mas ainda
+  não clicou em "Aplicar filtros".
+
+  Se ele clicar fora ou apertar ESC, esse rascunho é descartado.
+*/
+let filtrosMidiaPossuemRascunho = false;
+
 
 /* =========================================================
    FUNÇÕES UTILITÁRIAS
@@ -419,6 +442,15 @@ function configurarDetailsControlados() {
 
         fecharDetailsControlados();
 
+        /*
+        Se o usuário clicou fora do popover de filtros sem aplicar,
+        descartamos o rascunho para não deixar contador/seleções
+        com cara de filtro aplicado.
+        */
+        descartarRascunhoFiltrosMidia();
+
+        fecharDetailsControlados();
+
         const dropdownFiltros = document.querySelector(".mediaFiltersDropdown");
 
         if (dropdownFiltros) {
@@ -428,6 +460,11 @@ function configurarDetailsControlados() {
 
     document.addEventListener("keydown", (event) => {
         if (event.key !== "Escape") return;
+
+        /*
+        ESC também cancela filtros ainda não aplicados.
+        */
+        descartarRascunhoFiltrosMidia();
 
         fecharDetailsControlados();
 
@@ -449,7 +486,20 @@ function configurarDetailsControlados() {
 
         if (!ehControlado || !details.open) return;
 
+        /*
+          Ao abrir os filtros, garantimos que os campos mostrem
+          exatamente o último estado aplicado.
+        
+          Isso evita abrir o popover com rascunho antigo perdido.
+        */
+        if (details.matches(".mediaFiltersDropdown")) {
+            definirValoresCamposFiltrosMidia(obterFiltrosMidiaAplicados());
+            filtrosMidiaPossuemRascunho = false;
+            atualizarAcoesFiltrosMidia();
+        }
+
         fecharDetailsControlados(details);
+
     }, true);
 }
 
@@ -3023,6 +3073,228 @@ function atualizarDuracaoRealDosVideos() {
     });
 }
 
+/* =========================================================
+   FILTROS DE MÍDIA - HELPERS
+   =========================================================
+   Controla:
+   - filtros aplicados;
+   - filtros em rascunho dentro do popover;
+   - contador visual no botão;
+   - exibição dos botões Aplicar/Limpar;
+   - fechamento seguro do popover.
+
+   Regra principal:
+   selecionar filtros dentro do popover NÃO aplica nada sozinho.
+   Só aplica quando o usuário clica em "Aplicar filtros".
+   ========================================================= */
+
+/**
+ * Retorna os valores atuais dos campos de filtro.
+ *
+ * Estes valores podem representar:
+ * - filtros realmente aplicados;
+ * - ou apenas um rascunho ainda não confirmado.
+ */
+function obterValoresCamposFiltrosMidia() {
+    return {
+        termo: mediaSearch ? normalizarBusca(mediaSearch.value) : "",
+        status: mediaStatusFilter ? mediaStatusFilter.value : "todas",
+        tipo: mediaTypeFilter ? mediaTypeFilter.value : "todos",
+        periodo: mediaPeriodFilter ? mediaPeriodFilter.value : "todos",
+        prioridade: mediaPriorityFilter ? mediaPriorityFilter.value : "todas",
+        repeticao: mediaRepeatFilter ? mediaRepeatFilter.value : "todas"
+    };
+}
+
+/**
+ * Retorna o estado padrão dos filtros.
+ */
+function obterFiltrosMidiaPadrao() {
+    return {
+        termo: "",
+        status: "todas",
+        tipo: "todos",
+        periodo: "todos",
+        prioridade: "todas",
+        repeticao: "todas"
+    };
+}
+
+/**
+ * Garante que sempre exista um objeto de filtros aplicados.
+ */
+function obterFiltrosMidiaAplicados() {
+    if (!filtrosMidiaAplicados) {
+        filtrosMidiaAplicados = obterValoresCamposFiltrosMidia();
+    }
+
+    return filtrosMidiaAplicados;
+}
+
+/**
+ * Aplica um conjunto de valores nos campos do popover.
+ *
+ * Usado para:
+ * - restaurar rascunho cancelado;
+ * - limpar filtros;
+ * - sincronizar campos com os filtros aplicados.
+ */
+function definirValoresCamposFiltrosMidia(filtros) {
+    const valores = filtros || obterFiltrosMidiaPadrao();
+
+    if (mediaSearch) mediaSearch.value = valores.termo || "";
+    if (mediaStatusFilter) mediaStatusFilter.value = valores.status || "todas";
+    if (mediaTypeFilter) mediaTypeFilter.value = valores.tipo || "todos";
+    if (mediaPeriodFilter) mediaPeriodFilter.value = valores.periodo || "todos";
+    if (mediaPriorityFilter) mediaPriorityFilter.value = valores.prioridade || "todas";
+    if (mediaRepeatFilter) mediaRepeatFilter.value = valores.repeticao || "todas";
+}
+
+/**
+ * Conta quantos filtros estão ativos em um objeto de filtros.
+ *
+ * Observação:
+ * - aqui contamos somente filtros realmente aplicados quando
+ *   o objetivo é atualizar o contador do botão.
+ */
+function contarFiltrosMidiaAtivos(filtros = obterFiltrosMidiaAplicados()) {
+    let total = 0;
+
+    if (filtros.termo) total++;
+    if (filtros.status !== "todas") total++;
+    if (filtros.tipo !== "todos") total++;
+    if (filtros.periodo !== "todos") total++;
+    if (filtros.prioridade !== "todas") total++;
+    if (filtros.repeticao !== "todas") total++;
+
+    return total;
+}
+
+/**
+ * Verifica se dois estados de filtro são iguais.
+ */
+function filtrosMidiaSaoIguais(filtrosA, filtrosB) {
+    const a = filtrosA || obterFiltrosMidiaPadrao();
+    const b = filtrosB || obterFiltrosMidiaPadrao();
+
+    return (
+        a.termo === b.termo &&
+        a.status === b.status &&
+        a.tipo === b.tipo &&
+        a.periodo === b.periodo &&
+        a.prioridade === b.prioridade &&
+        a.repeticao === b.repeticao
+    );
+}
+
+/**
+ * Atualiza o contador visual no botão "Filtros".
+ *
+ * Importante:
+ * O contador mostra apenas filtros APLICADOS,
+ * não filtros em rascunho dentro do popover.
+ */
+function atualizarContadorFiltrosMidia() {
+    if (!mediaFiltersCount) return;
+
+    const total = contarFiltrosMidiaAtivos(obterFiltrosMidiaAplicados());
+
+    mediaFiltersCount.textContent = String(total);
+    mediaFiltersCount.classList.toggle("hidden", total === 0);
+}
+
+/**
+ * Controla a aparição dos botões do popover.
+ *
+ * Regras:
+ * - "Aplicar filtros" aparece se houver rascunho diferente
+ *   dos filtros aplicados;
+ * - "Limpar filtros" aparece se já existe filtro aplicado;
+ * - se não houver nada a fazer, os dois ficam ocultos.
+ */
+function atualizarAcoesFiltrosMidia() {
+    const filtrosAtuais = obterValoresCamposFiltrosMidia();
+    const filtrosAplicados = obterFiltrosMidiaAplicados();
+
+    const existeRascunho =
+        !filtrosMidiaSaoIguais(filtrosAtuais, filtrosAplicados);
+
+    const existeFiltroAplicado =
+        contarFiltrosMidiaAtivos(filtrosAplicados) > 0;
+
+    filtrosMidiaPossuemRascunho = existeRascunho;
+
+    if (btnApplyMediaFilters) {
+        btnApplyMediaFilters.classList.toggle("hidden", !existeRascunho);
+    }
+
+    if (btnClearMediaFilters) {
+        btnClearMediaFilters.classList.toggle("hidden", !existeFiltroAplicado);
+    }
+}
+
+/**
+ * Fecha o popover de filtros.
+ *
+ * Como ele é um <details>, basta remover o atributo open.
+ */
+function fecharPopoverFiltrosMidia() {
+    if (!mediaFiltersDropdown) return;
+
+    mediaFiltersDropdown.removeAttribute("open");
+}
+
+/**
+ * Descarta alterações não aplicadas.
+ *
+ * Se o usuário clicou fora ou apertou ESC sem aplicar,
+ * os campos voltam para o último estado realmente aplicado.
+ */
+function descartarRascunhoFiltrosMidia() {
+    if (!filtrosMidiaPossuemRascunho) {
+        atualizarAcoesFiltrosMidia();
+        return;
+    }
+
+    definirValoresCamposFiltrosMidia(obterFiltrosMidiaAplicados());
+
+    filtrosMidiaPossuemRascunho = false;
+
+    atualizarAcoesFiltrosMidia();
+    atualizarContadorFiltrosMidia();
+}
+
+/**
+ * Aplica os filtros manualmente.
+ *
+ * Agora este é o único caminho que confirma o rascunho
+ * e altera a listagem.
+ */
+function aplicarFiltrosMidiaManual() {
+    filtrosMidiaAplicados = obterValoresCamposFiltrosMidia();
+    filtrosMidiaPossuemRascunho = false;
+
+    aplicarFiltrosMidia();
+    atualizarContadorFiltrosMidia();
+    atualizarAcoesFiltrosMidia();
+    fecharPopoverFiltrosMidia();
+}
+
+/**
+ * Limpa todos os filtros da biblioteca e restaura a listagem completa.
+ */
+function limparFiltrosMidia() {
+    filtrosMidiaAplicados = obterFiltrosMidiaPadrao();
+    filtrosMidiaPossuemRascunho = false;
+
+    definirValoresCamposFiltrosMidia(filtrosMidiaAplicados);
+
+    aplicarFiltrosMidia();
+    atualizarContadorFiltrosMidia();
+    atualizarAcoesFiltrosMidia();
+    fecharPopoverFiltrosMidia();
+}
+
 /**
  * Aplica busca e filtro de status sem remover cards do DOM.
  *
@@ -3042,12 +3314,20 @@ function aplicarFiltrosMidia() {
         return;
     }
 
-    const termo = normalizarBusca(mediaSearch ? mediaSearch.value : "");
-    const status = mediaStatusFilter ? mediaStatusFilter.value : "todas";
-    const tipoFiltro = mediaTypeFilter ? mediaTypeFilter.value : "todos";
-    const periodoFiltro = mediaPeriodFilter ? mediaPeriodFilter.value : "todos";
-    const prioridadeFiltro = mediaPriorityFilter ? mediaPriorityFilter.value : "todas";
-    const repeticaoFiltro = mediaRepeatFilter ? mediaRepeatFilter.value : "todas";
+    /*
+    A listagem usa apenas filtros confirmados.
+
+    Assim, se o usuário mudar algo no popover e clicar fora sem aplicar,
+    a lista não muda e o contador também não engana.
+    */
+    const filtrosAplicados = obterFiltrosMidiaAplicados();
+
+    const termo = filtrosAplicados.termo;
+    const status = filtrosAplicados.status;
+    const tipoFiltro = filtrosAplicados.tipo;
+    const periodoFiltro = filtrosAplicados.periodo;
+    const prioridadeFiltro = filtrosAplicados.prioridade;
+    const repeticaoFiltro = filtrosAplicados.repeticao;
 
     let totalVisivel = 0;
 
@@ -3111,6 +3391,8 @@ function aplicarFiltrosMidia() {
             : formatarQuantidade(itens.length, "mídia cadastrada", "mídias cadastradas");
     }
 
+    atualizarContadorFiltrosMidia();
+    atualizarAcoesFiltrosMidia();
     atualizarEstadoAcoesEmLote();
 }
 
@@ -5102,18 +5384,57 @@ if (btnSalvarTudo) {
     btnSalvarTudo.addEventListener("click", salvarTodasConfiguracoes);
 }
 
+/* =========================================================
+   EVENTOS - FILTROS DE MÍDIA
+   =========================================================
+   Os filtros funcionam em duas etapas:
+
+   1. Rascunho:
+      o usuário escolhe os filtros dentro do popover.
+
+   2. Aplicação:
+      a lista só muda quando ele clica em "Aplicar filtros".
+
+   Se clicar fora ou apertar ESC antes de aplicar,
+   o rascunho é descartado.
+   ========================================================= */
+
+if (btnApplyMediaFilters) {
+    btnApplyMediaFilters.addEventListener("click", aplicarFiltrosMidiaManual);
+}
+
+if (btnClearMediaFilters) {
+    btnClearMediaFilters.addEventListener("click", limparFiltrosMidia);
+}
+
+/*
+  Enter no campo de busca aplica os filtros manualmente.
+*/
 if (mediaSearch) {
-    mediaSearch.addEventListener("input", aplicarFiltrosMidia);
+    mediaSearch.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return;
+
+        event.preventDefault();
+        aplicarFiltrosMidiaManual();
+    });
 }
 
-if (mediaStatusFilter) {
-    mediaStatusFilter.addEventListener("change", aplicarFiltrosMidia);
-}
-
-[mediaTypeFilter, mediaPeriodFilter, mediaPriorityFilter, mediaRepeatFilter]
+/*
+  Qualquer alteração nos campos apenas atualiza o estado visual
+  dos botões do popover. A lista não é filtrada aqui.
+*/
+[
+    mediaSearch,
+    mediaStatusFilter,
+    mediaTypeFilter,
+    mediaPeriodFilter,
+    mediaPriorityFilter,
+    mediaRepeatFilter
+]
     .filter(Boolean)
-    .forEach((filtro) => {
-        filtro.addEventListener("change", aplicarFiltrosMidia);
+    .forEach((campoFiltro) => {
+        campoFiltro.addEventListener("input", atualizarAcoesFiltrosMidia);
+        campoFiltro.addEventListener("change", atualizarAcoesFiltrosMidia);
     });
 
 /*

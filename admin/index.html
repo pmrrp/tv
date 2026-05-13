@@ -296,7 +296,17 @@
                             <details class="mediaFiltersDropdown">
                                 <summary class="secondaryAction mediaFiltersButton">
                                     <i class="fa-solid fa-filter" aria-hidden="true"></i>
+
                                     <span>Filtros</span>
+
+                                    <!--
+                                        Contador visual de filtros aplicados.
+
+                                        Ele começa oculto e só aparece quando pelo menos
+                                        um filtro estiver ativo.
+                                    -->
+                                    <span id="mediaFiltersCount" class="mediaFiltersCount hidden">0</span>
+
                                     <i class="fa-solid fa-chevron-down mediaFiltersChevron" aria-hidden="true"></i>
                                 </summary>
 
@@ -357,6 +367,26 @@
                                             </select>
                                         </label>
                                     </div>
+
+                                    <!--
+                                        Ações dos filtros.
+
+                                        Agora os filtros não são aplicados automaticamente
+                                        a cada alteração de select. O usuário escolhe os critérios
+                                        e confirma clicando em "Aplicar filtros".
+                                    -->
+                                    <div class="mediaFiltersActions">
+                                        <button id="btnClearMediaFilters" class="secondaryAction hidden" type="button">
+                                            <i class="fa-solid fa-eraser" aria-hidden="true"></i>
+                                            Limpar filtros
+                                        </button>
+
+                                        <button id="btnApplyMediaFilters" class="primaryAction hidden" type="button">
+                                            <i class="fa-solid fa-check" aria-hidden="true"></i>
+                                            Aplicar filtros
+                                        </button>
+                                    </div>
+
                                 </div>
                             </details>
 
