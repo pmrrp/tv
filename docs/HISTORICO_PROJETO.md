@@ -181,7 +181,7 @@ O projeto conta atualmente com:
 
 Gerenciamento automático do processo Node.js.
 
-## Agendador de Tarefas do Windows
+## Agendador de Tarefas do Windows Server (VM)
 
 Responsável por:
 - inicialização automática
