@@ -2728,6 +2728,7 @@ function atualizarControleRepeticaoPorPrioridade(item, opcoes = {}) {
     labelRepeticao.classList.toggle("mediaRepeatDisabled", !podeRepetir);
 
     if (!podeRepetir) {
+        selectRepeticao.innerHTML = renderizarOpcoesRepeticao(0, false);
         selectRepeticao.value = "0";
         selectRepeticao.disabled = true;
         item.dataset.repeat = "sem";
@@ -2736,15 +2737,46 @@ function atualizarControleRepeticaoPorPrioridade(item, opcoes = {}) {
 
     selectRepeticao.disabled = false;
 
-    if (opcoes.aplicarSugestao === true) {
-        const repeticaoAtual = Number(selectRepeticao.value || 0);
+    let repeticaoAtual = Number(selectRepeticao.value || 0);
 
-        if (repeticaoAtual === 0) {
-            selectRepeticao.value = String(obterRepeticaoSugeridaPorPrioridade(prioridade));
-        }
+    /*
+      Para prioridade Alta/Urgente, "Não repetir" deixa de existir.
+      Se estava em 0, aplicamos a sugestão padrão.
+    */
+    if (repeticaoAtual === 0) {
+        repeticaoAtual = obterRepeticaoSugeridaPorPrioridade(prioridade);
     }
 
+    selectRepeticao.innerHTML = renderizarOpcoesRepeticao(repeticaoAtual, true);
+    selectRepeticao.value = String(repeticaoAtual);
+
     item.dataset.repeat = Number(selectRepeticao.value || 0) > 0 ? "com" : "sem";
+}
+
+function renderizarOpcoesRepeticao(repetirACada, prioridadePodeRepetir) {
+    const valorAtual = Number(repetirACada || 0);
+
+    const opcoes = [];
+
+    /*
+      "Não repetir" só aparece quando a prioridade é Normal.
+      Para Alta/Urgente, o select só mostra opções reais de repetição.
+    */
+    if (!prioridadePodeRepetir) {
+        opcoes.push(`
+            <option value="0" selected>Não repetir</option>
+        `);
+    }
+
+    [3, 4, 5, 6, 10].forEach((valor) => {
+        opcoes.push(`
+            <option value="${valor}" ${valorAtual === valor ? "selected" : ""}>
+                A cada ${valor} mídias
+            </option>
+        `);
+    });
+
+    return opcoes.join("");
 }
 
 /* =========================================================
@@ -2959,12 +2991,7 @@ function renderizarMidias(midias) {
                 <label class="mediaConfigLabel">
                     Duração
                     <select class="mediaDuration" data-arquivo="${nomeArquivo}">
-                        <option value="5" ${Number(midia.duracao) === 5 ? "selected" : ""}>5s</option>
-                        <option value="8" ${Number(midia.duracao) === 8 ? "selected" : ""}>8s</option>
-                        <option value="10" ${Number(midia.duracao) === 10 ? "selected" : ""}>10s</option>
-                        <option value="15" ${Number(midia.duracao) === 15 ? "selected" : ""}>15s</option>
-                        <option value="20" ${Number(midia.duracao) === 20 ? "selected" : ""}>20s</option>
-                        <option value="30" ${Number(midia.duracao) === 30 ? "selected" : ""}>30s</option>
+                        ${renderizarOpcoesRepeticao(repetirACada, prioridadePodeRepetir)}
                     </select>
                 </label>
             `
@@ -2982,7 +3009,13 @@ function renderizarMidias(midias) {
                     data-arquivo="${nomeArquivo}"
                     ${prioridadePodeRepetir ? "" : "disabled"}
                 >
-                    <option value="0" ${Number(repetirACada) === 0 ? "selected" : ""}>Não repetir</option>
+                    <option
+                        value="0"
+                        ${!prioridadePodeRepetir ? "selected" : ""}
+                        ${prioridadePodeRepetir ? "disabled" : ""}
+                    >
+                        Não repetir
+                    </option>
                     <option value="3" ${Number(repetirACada) === 3 ? "selected" : ""}>A cada 3 mídias</option>
                     <option value="4" ${Number(repetirACada) === 4 ? "selected" : ""}>A cada 4 mídias</option>
                     <option value="5" ${Number(repetirACada) === 5 ? "selected" : ""}>A cada 5 mídias</option>

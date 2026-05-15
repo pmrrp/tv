@@ -7022,18 +7022,18 @@ body:not(.can-edit-media) .mediaStatusToggle.isInactive {
 }
 
 /* Select de repetição */
-.mediaRepeatEvery {
-    width: 145px !important;
-    min-width: 145px !important;
-    max-width: 145px !important;
+.mediaRepeatEditable {
+    min-width: 190px;
+}
 
+.mediaRepeatEvery {
+    width: 100% !important;
+    min-width: 170px !important;
+    max-width: 220px !important;
     height: 42px !important;
     min-height: 42px !important;
-
-    padding: 0 32px 0 12px !important;
-
+    padding: 0 36px 0 12px !important;
     border-radius: 14px !important;
-
     font-size: 13px !important;
     font-weight: 900 !important;
 }
