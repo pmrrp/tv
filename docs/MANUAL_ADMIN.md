@@ -201,35 +201,100 @@ Mídias fora do período configurado não entram na playlist.
 
 ---
 
-## 12. Prioridade
+## 12. Prioridade e repetição
 
-A prioridade define o peso de uma mídia dentro da playlist.
+A prioridade define a importância da mídia dentro da programação.
 
-Perfis de prioridade:
+O sistema trabalha com três níveis:
 
-- normal;
-- alta;
-- urgente.
+- Normal;
+- Alta;
+- Urgente.
 
-### Uso recomendado
+### Normal
 
-Normal:
+A prioridade Normal é usada para conteúdos comuns.
+
+Nesse caso, a mídia entra na playlist apenas na ordem normal e o controle de repetição fica oculto.
+
+Uso recomendado:
 
 ```txt
-conteúdos comuns
+conteúdos informativos comuns
 ```
 
-Alta:
+---
+
+### Alta
+
+A prioridade Alta é usada para conteúdos que merecem aparecer com mais frequência.
+
+Ao selecionar Alta, o sistema libera o campo de repetição e sugere:
+
+```txt
+A cada 6 mídias
+```
+
+O usuário pode manter essa sugestão ou ajustar manualmente.
+
+Uso recomendado:
 
 ```txt
 campanhas importantes
 ```
 
-Urgente:
+---
+
+### Urgente
+
+A prioridade Urgente é usada para conteúdos de alta relevância.
+
+Ao selecionar Urgente, o sistema libera o campo de repetição e sugere:
+
+```txt
+A cada 3 mídias
+```
+
+O usuário pode manter essa sugestão ou ajustar manualmente.
+
+Uso recomendado:
 
 ```txt
 avisos de grande relevância
+comunicados importantes
+campanhas prioritárias
 ```
+
+---
+
+### Observação importante
+
+A repetição controla a frequência com que a mídia reaparece dentro da playlist.
+
+Quanto menor o número escolhido, mais vezes a mídia aparecerá.
+
+Exemplo:
+
+```txt
+A cada 3 mídias
+```
+
+significa que aquela mídia será inserida novamente após cada grupo de 3 mídias da programação.
+
+## 13. Recorrência / repetição
+
+A repetição aparece quando uma mídia está marcada como prioridade Alta ou Urgente.
+
+Ela permite definir com que frequência a mídia deve reaparecer na playlist.
+
+Exemplos:
+
+```txt
+A cada 6 mídias
+A cada 3 mídias
+```
+
+A prioridade sugere uma frequência inicial, mas o usuário pode ajustar conforme a necessidade.
 
 ---
 

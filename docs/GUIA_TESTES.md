@@ -106,6 +106,26 @@ Navegadores recomendados para teste:
 
 ---
 
+## 8.1 Testes de prioridade e repetição
+
+- [ ] Selecionar prioridade Normal em uma imagem.
+- [ ] Confirmar que o campo de repetição fica oculto.
+- [ ] Selecionar prioridade Alta em uma imagem.
+- [ ] Confirmar que o campo de repetição aparece.
+- [ ] Confirmar sugestão de repetição "A cada 6 mídias".
+- [ ] Selecionar prioridade Urgente em uma imagem.
+- [ ] Confirmar sugestão de repetição "A cada 3 mídias".
+- [ ] Repetir os mesmos testes em uma mídia do tipo vídeo.
+- [ ] Confirmar que vídeo não exibe campo de duração manual.
+- [ ] Confirmar que imagem mantém o campo de duração manual.
+- [ ] Alterar manualmente o valor de repetição.
+- [ ] Salvar a mídia.
+- [ ] Recarregar a página.
+- [ ] Confirmar que prioridade e repetição permanecem corretas.
+- [ ] Confirmar que a playlist é atualizada após salvar.
+
+---
+
 ## 9. Testes de filtros
 
 - [ ] Abrir filtros.

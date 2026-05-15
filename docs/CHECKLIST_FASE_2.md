@@ -154,6 +154,11 @@ Ele serve para:
 - [OK] Playlist respeita validade.
 - [OK] Playlist respeita prioridade.
 - [OK] Playlist respeita recorrência.
+- [OK] Prioridade integrada visualmente ao controle de repetição.
+- [OK] Prioridade Normal oculta repetição e mantém a mídia sem recorrência.
+- [OK] Prioridade Alta libera repetição e sugere “a cada 6 mídias”.
+- [OK] Prioridade Urgente libera repetição e sugere “a cada 3 mídias”.
+- [OK] Repetição funciona para imagens e vídeos.
 
 ---
 

@@ -286,6 +286,28 @@ A documentação passou a registrar contexto, arquitetura, decisões, histórico
 
 ---
 
+---
+
+## 2026-05 — Integração entre prioridade e repetição
+
+### Implementado
+
+- Ajuste conceitual entre prioridade e recorrência das mídias.
+- Prioridade Normal passa a manter a mídia sem repetição.
+- Prioridade Alta libera o seletor de repetição e sugere repetição a cada 6 mídias.
+- Prioridade Urgente libera o seletor de repetição e sugere repetição a cada 3 mídias.
+- O controle de repetição passou a ser exibido apenas quando fizer sentido operacional.
+- O comportamento foi aplicado tanto para imagens quanto para vídeos.
+- O badge de prioridade passou a atualizar visualmente junto com a configuração da mídia.
+
+### Impacto
+
+A interface ficou mais lógica para o usuário, reduzindo a confusão entre “prioridade” e “repetição”.
+
+A prioridade agora orienta a frequência de exibição, enquanto o campo de repetição permite ajuste fino quando a mídia for marcada como Alta ou Urgente.
+
+---
+
 ## Próximos registros esperados
 
 Próximas entradas deste changelog deverão registrar:
