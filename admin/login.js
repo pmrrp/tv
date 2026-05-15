@@ -23,6 +23,28 @@ const btnTogglePasswordIcon = btnTogglePassword
     : null;
 
 /* =========================================================
+   FOCO AUTOMÁTICO NO LOGIN
+   =========================================================
+   Ao abrir a tela de login, posiciona o cursor automaticamente
+   no campo de usuário/e-mail.
+
+   Isso melhora a experiência de uso, principalmente para quem
+   acessa o painel com frequência.
+   ========================================================= */
+
+document.addEventListener("DOMContentLoaded", () => {
+    const campoUsuario = document.getElementById("email")
+        || document.getElementById("login")
+        || document.querySelector('input[name="email"]')
+        || document.querySelector('input[name="login"]')
+        || document.querySelector('input[type="text"]');
+
+    if (!campoUsuario) return;
+
+    campoUsuario.focus();
+});
+
+/* =========================================================
    MOSTRAR / OCULTAR SENHA
    ========================================================= */
 
