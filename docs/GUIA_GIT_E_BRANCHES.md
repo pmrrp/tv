@@ -462,7 +462,7 @@ Para documentação:
 git add docs/
 ```
 
-Para tudo, apenas quando tiver certeza:
+Para tudo, apenas quando tiver certeza:git styatus
 
 ```bash
 git add .
