@@ -485,7 +485,6 @@ Criar documentação na pasta `docs/`.
 - Registrar arquitetura e decisões.
 - Apoiar manutenção futura.
 - Facilitar apresentação institucional.
-- Reduzir dependência do histórico de conversa.
 
 ## Arquivos iniciais
 
@@ -494,11 +493,85 @@ Criar documentação na pasta `docs/`.
 - `CHECKLIST_FASE_2.md`;
 - `ARQUITETURA.md`;
 - `DECISOES_TECNICAS.md`;
-- `ROADMAP.md`.
+- `ROADMAP.md`;
+- `HISTORICO_PROJETO.md`;
+- `CHANGELOG.md`.
 
 ---
 
-## 23. Observação final
+## 23. Estruturação em branches
+
+## Decisão
+
+Separar funcionalidades e documentações por branches Git.
+
+## Objetivos
+
+- Evitar alterações diretas na branch principal.
+- Organizar melhor cada tipo de trabalho.
+- Separar correções funcionais de documentação.
+- Facilitar revisão antes de merge.
+- Reduzir risco de quebrar a versão estável.
+
+## Branches utilizadas até o momento
+
+- `main`;
+- `fase-2-backend-admin`;
+- `fix-admin-funcionalidades`;
+- `polish-admin-ui-v2`;
+- `docs/documentacao-fase-2`.
+
+## Observação
+
+A branch `docs/documentacao-fase-2` foi criada especificamente para concentrar a documentação da Fase 2 antes de mesclar com a branch funcional.
+
+---
+
+## 24. Prioridade para custo zero
+
+## Decisão
+
+Priorizar soluções gratuitas ou já disponíveis na infraestrutura da Prefeitura.
+
+## Motivos
+
+- Evitar contratação imediata.
+- Evitar abertura de processo licitatório apenas para validação inicial.
+- Acelerar a implantação.
+- Aproveitar a estrutura de servidores já existente.
+- Demonstrar capacidade técnica interna.
+
+## Resultado
+
+O sistema foi implementado com custo operacional praticamente zero para a Prefeitura, utilizando VM interna, Cloudflare Tunnel gratuito, Node.js, SQLite, PM2 e desenvolvimento próprio.
+
+---
+
+## 25. Prioridade para facilidade operacional
+
+## Decisão
+
+Criar uma solução simples o suficiente para ser operada por equipes não técnicas.
+
+## Objetivos
+
+- Permitir que a Comunicação/SEGOV alimente conteúdos.
+- Reduzir dependência diária da TI.
+- Facilitar upload, ordenação, agendamento e exclusão de mídias.
+- Tornar o painel visual e intuitivo.
+
+## Reflexos no sistema
+
+- Dashboard administrativa visual.
+- Filtros de mídia.
+- Botões claros de ação.
+- Modais padronizados.
+- Controle de permissões.
+- Logs para rastreabilidade.
+
+---
+
+## 26. Observação final
 
 As decisões técnicas deste documento refletem o estágio atual do projeto.
 
