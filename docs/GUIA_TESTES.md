@@ -1,0 +1,282 @@
+# Guia de Testes — Painel Ribas
+
+## 1. Objetivo
+
+Este guia organiza os testes manuais necessários para validar o funcionamento do Painel Ribas.
+
+Ele deve ser usado antes de:
+
+- apresentar o sistema;
+- fazer deploy;
+- considerar a Fase 2 finalizada;
+- realizar grandes refatorações.
+
+---
+
+## 2. Ambiente de teste
+
+Testar preferencialmente em:
+
+- ambiente local;
+- VM;
+- navegador principal usado na Prefeitura;
+- navegador alternativo.
+
+Navegadores recomendados para teste:
+
+- Google Chrome;
+- Microsoft Edge.
+
+---
+
+## 3. Testes de acesso
+
+- [ ] Acessar `/admin`.
+- [ ] Confirmar redirecionamento para login quando não logado.
+- [ ] Fazer login com usuário válido.
+- [ ] Tentar login com senha incorreta.
+- [ ] Confirmar mensagem de erro.
+- [ ] Fazer logout.
+- [ ] Confirmar encerramento da sessão.
+- [ ] Atualizar página após logout e confirmar proteção.
+
+---
+
+## 4. Testes da dashboard
+
+- [ ] Confirmar carregamento do cabeçalho.
+- [ ] Confirmar exibição do usuário logado.
+- [ ] Confirmar carregamento dos cards de resumo.
+- [ ] Confirmar ausência de erro vermelho no console.
+- [ ] Confirmar botão de abrir player.
+- [ ] Confirmar botão de logout.
+
+---
+
+## 5. Testes de upload
+
+- [ ] Enviar imagem pequena.
+- [ ] Enviar vídeo pequeno.
+- [ ] Enviar arquivo maior usando chunks.
+- [ ] Confirmar barra/progresso de upload.
+- [ ] Confirmar mensagem de sucesso.
+- [ ] Confirmar mídia na biblioteca.
+- [ ] Confirmar atualização da playlist.
+- [ ] Confirmar log de upload.
+
+---
+
+## 6. Testes de biblioteca
+
+- [ ] Abrir biblioteca.
+- [ ] Confirmar listagem de mídias.
+- [ ] Confirmar prévias.
+- [ ] Confirmar títulos.
+- [ ] Confirmar nomes reais dos arquivos.
+- [ ] Confirmar status.
+- [ ] Confirmar prioridade.
+- [ ] Confirmar período.
+- [ ] Confirmar detalhes.
+
+---
+
+## 7. Testes de edição de mídia
+
+- [ ] Alterar título amigável.
+- [ ] Ativar/desativar mídia.
+- [ ] Alterar prioridade.
+- [ ] Alterar recorrência.
+- [ ] Alterar período.
+- [ ] Salvar mídia individual.
+- [ ] Confirmar mensagem de sucesso.
+- [ ] Confirmar atualização da playlist.
+- [ ] Confirmar log de edição.
+
+---
+
+## 8. Testes de período de exibição
+
+- [ ] Definir mídia com início futuro.
+- [ ] Confirmar que ela aparece como agendada.
+- [ ] Definir mídia vencida.
+- [ ] Confirmar que ela sai da playlist.
+- [ ] Definir período indefinido.
+- [ ] Confirmar que permanece ativa.
+- [ ] Confirmar rotina automática de atualização.
+
+---
+
+## 9. Testes de filtros
+
+- [ ] Abrir filtros.
+- [ ] Confirmar que botões não aparecem sem alteração.
+- [ ] Selecionar filtro.
+- [ ] Confirmar que aparece “Aplicar filtros”.
+- [ ] Clicar fora sem aplicar.
+- [ ] Confirmar que o rascunho foi descartado.
+- [ ] Selecionar filtro novamente.
+- [ ] Aplicar filtro.
+- [ ] Confirmar contador no botão.
+- [ ] Abrir filtros com filtro ativo.
+- [ ] Confirmar botão “Limpar filtros”.
+- [ ] Limpar filtros.
+- [ ] Confirmar listagem completa.
+
+---
+
+## 10. Testes de ordenação
+
+- [ ] Mover mídia para cima.
+- [ ] Mover mídia para baixo.
+- [ ] Arrastar mídia, se disponível.
+- [ ] Confirmar nova ordem.
+- [ ] Confirmar atualização da playlist.
+
+---
+
+## 11. Testes de exclusão de mídia
+
+- [ ] Excluir mídia individual.
+- [ ] Confirmar modal de confirmação.
+- [ ] Cancelar exclusão.
+- [ ] Confirmar que mídia permanece.
+- [ ] Excluir novamente e confirmar.
+- [ ] Confirmar remoção da biblioteca.
+- [ ] Confirmar atualização da playlist.
+- [ ] Confirmar log de exclusão.
+
+---
+
+## 12. Testes de exclusão em lote
+
+- [ ] Ativar modo seleção.
+- [ ] Selecionar múltiplas mídias.
+- [ ] Cancelar exclusão em lote.
+- [ ] Confirmar que mídias permanecem.
+- [ ] Confirmar exclusão em lote.
+- [ ] Confirmar remoção.
+- [ ] Confirmar log de exclusão em lote.
+
+---
+
+## 13. Testes de usuários
+
+- [ ] Criar usuário.
+- [ ] Editar usuário.
+- [ ] Resetar senha.
+- [ ] Desativar usuário.
+- [ ] Ativar usuário.
+- [ ] Excluir usuário teste.
+- [ ] Confirmar proteção contra autoexclusão.
+- [ ] Confirmar proteção contra autodesativação.
+- [ ] Confirmar proteção de superadmin.
+
+---
+
+## 14. Testes de perfis
+
+Testar com:
+
+- [ ] superadmin;
+- [ ] admin;
+- [ ] editor;
+- [ ] viewer.
+
+Confirmar:
+
+- [ ] botões visíveis conforme perfil;
+- [ ] rotas protegidas no backend;
+- [ ] ações proibidas retornam erro;
+- [ ] usuários sem permissão não conseguem alterar dados sensíveis.
+
+---
+
+## 15. Testes de logs
+
+- [ ] Fazer login.
+- [ ] Fazer logout.
+- [ ] Enviar mídia.
+- [ ] Editar mídia.
+- [ ] Excluir mídia.
+- [ ] Criar usuário.
+- [ ] Resetar senha.
+- [ ] Alterar status.
+- [ ] Confirmar registros na tela de auditoria.
+
+---
+
+## 16. Testes do player
+
+- [ ] Abrir player.
+- [ ] Confirmar splash inicial.
+- [ ] Confirmar carregamento da playlist.
+- [ ] Confirmar exibição de imagem.
+- [ ] Confirmar exibição de vídeo.
+- [ ] Confirmar troca automática.
+- [ ] Confirmar loop.
+- [ ] Confirmar relógio.
+- [ ] Confirmar controles temporários.
+- [ ] Confirmar atualização após mudança de playlist.
+
+---
+
+## 17. Testes de deploy
+
+Na VM:
+
+```powershell
+cd c:\tv-v2\tv
+git pull
+pm2 restart painel-tv-v2
+pm2 status
+pm2 save
+```
+
+Confirmar:
+
+- [ ] processo online;
+- [ ] sem erro no PM2;
+- [ ] admin acessível;
+- [ ] player acessível;
+- [ ] console sem erro crítico.
+
+---
+
+## 18. Testes de console
+
+Abrir DevTools e verificar:
+
+- [ ] ausência de erro vermelho;
+- [ ] warnings conhecidos não críticos;
+- [ ] requisições sem falha;
+- [ ] APIs respondendo corretamente.
+
+Warnings conhecidos:
+
+- Font Awesome via CDN pode gerar aviso no Edge relacionado a `cdnjs.cloudflare.com`.
+
+---
+
+## 19. Critério de aprovação
+
+A Fase 2 pode ser considerada validada quando:
+
+- login funcionar;
+- dashboard carregar;
+- upload funcionar;
+- biblioteca funcionar;
+- filtros funcionarem;
+- playlist atualizar;
+- player exibir corretamente;
+- usuários funcionarem;
+- logs funcionarem;
+- permissões forem respeitadas;
+- deploy na VM estiver estável.
+
+---
+
+## 20. Observação final
+
+Este guia deve ser usado antes da apresentação e também antes de grandes alterações futuras.
+
+Após refatorações, os testes devem ser repetidos.
