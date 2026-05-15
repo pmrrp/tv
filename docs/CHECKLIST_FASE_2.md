@@ -40,6 +40,11 @@ Ele serve para:
 - [OK] Faixa superior animada com as cores da identidade visual.
 - [OK] Logo institucional aplicado.
 - [OK] Mensagens de erro no login.
+- [AJUSTE] Ao entrar na página de login, posicionar automaticamente o cursor no campo de usuário/e-mail.
+- [BACKLOG] Implementar recuperação de senha por e-mail.
+- [BACKLOG] Implementar logout automático após determinado tempo de inatividade.
+- [BACKLOG] Avaliar limite de sessões/instâncias simultâneas por usuário.
+- [BACKLOG] Caso o limite de sessões seja atingido, exibir acessos ativos e permitir desconectar sessões antigas.
 
 ---
 
@@ -85,6 +90,8 @@ Ele serve para:
 - [OK] Upload registra mídia no final da lista.
 - [OK] Upload atualiza playlist automaticamente.
 - [OK] Upload registra log de auditoria.
+- [IDEIA] Implementar drag and drop de upload em tela inteira, com efeito visual semelhante a serviços como Convertio.
+- [IDEIA] Permitir soltar arquivos em qualquer ponto da tela quando o modo de upload estiver ativo.
 
 ---
 
@@ -111,6 +118,16 @@ Ele serve para:
 - [OK] Mídias podem ser reordenadas.
 - [OK] Alça de arraste/reordenação funcionando.
 - [AJUSTE] Revisar popover de detalhes em telas pequenas, pois pode cortar dependendo do tamanho da tela.
+- [AJUSTE] Revisar popovers que ficam cortados quando abrem próximos aos limites do navegador.
+- [AJUSTE] Ajustar largura do select de repetição para exibir o texto completo da opção selecionada.
+- [AJUSTE] Melhorar tratamento visual de mídias inativas.
+- [AJUSTE] Avaliar bloqueio de edição em cards de mídias inativas.
+- [AJUSTE] Revisar se o botão "Salvar" deve aparecer de forma mais destacada mesmo em card inativo.
+- [AJUSTE] Revisar comportamento de alterações não salvas em campos como repetição e período.
+- [AJUSTE] Avaliar se, ao clicar fora ou pressionar ESC, alterações em repetição/período devem ser descartadas como ocorre nos filtros.
+- [IDEIA] Melhorar visual geral dos selects da dashboard.
+- [IDEIA] Melhorar visual de datepicker e timepicker.
+- [IDEIA] Padronizar aparência dos campos nativos que ainda parecem crus no navegador.
 
 ---
 
@@ -126,8 +143,8 @@ Ele serve para:
 - [OK] Filtro por prioridade.
 - [OK] Filtro por recorrência/repetição.
 - [OK] Combinação de múltiplos filtros.
-- [OK] Botão “Aplicar filtros”.
-- [OK] Botão “Limpar filtros”.
+- [OK] Botão "Aplicar filtros".
+- [OK] Botão "Limpar filtros".
 - [OK] Contador de filtros aplicados.
 - [OK] Filtros não são mais aplicados automaticamente a cada clique.
 - [OK] Rascunho de filtro é descartado ao clicar fora sem aplicar.
@@ -138,7 +155,7 @@ Ele serve para:
 
 ---
 
-## 9. Agendamento, validade e recorrência
+## 9. Agendamento, validade, prioridade e recorrência
 
 - [OK] Período de exibição implementado.
 - [OK] Data/hora inicial implementada.
@@ -156,9 +173,13 @@ Ele serve para:
 - [OK] Playlist respeita recorrência.
 - [OK] Prioridade integrada visualmente ao controle de repetição.
 - [OK] Prioridade Normal oculta repetição e mantém a mídia sem recorrência.
-- [OK] Prioridade Alta libera repetição e sugere “a cada 6 mídias”.
-- [OK] Prioridade Urgente libera repetição e sugere “a cada 3 mídias”.
+- [OK] Prioridade Alta libera repetição e sugere "A cada 6 mídias".
+- [OK] Prioridade Urgente libera repetição e sugere "A cada 3 mídias".
 - [OK] Repetição funciona para imagens e vídeos.
+- [AJUSTE] Revisar comportamento dos botões "Cancelar" e "Aplicar período" no popover de período de exibição.
+- [AJUSTE] Fazer os botões de período aparecerem apenas quando houver alteração real no período.
+- [AJUSTE] Revisar comportamento do período de exibição ao clicar fora ou pressionar ESC sem aplicar.
+- [AJUSTE] Revisar comportamento da repetição ao clicar fora ou pressionar ESC sem salvar.
 
 ---
 
@@ -277,38 +298,80 @@ Ele serve para:
 
 ---
 
-## 17. Backlog / melhorias futuras
+## 17. Pendências recomendadas antes da apresentação
+
+- [ ] Testar todas as funcionalidades em produção.
+- [ ] Revisar console do navegador.
+- [ ] Revisar usabilidade geral da dashboard.
+- [ ] Revisar popover de detalhes em tela pequena.
+- [ ] Revisar popovers que ficam cortados próximos aos limites do navegador.
+- [ ] Ajustar largura do select de repetição.
+- [ ] Revisar botões "Cancelar" e "Aplicar período" para aparecerem apenas quando houver alteração real.
+- [ ] Revisar comportamento de alterações não salvas em repetição/período.
+- [ ] Revisar tratamento visual de mídia inativa.
+- [ ] Avaliar bloqueio de edição em mídias inativas.
+- [ ] Validar se a configuração do player está adequada para apresentação.
+- [ ] Confirmar se `config.json` está com opções corretas para produção/apresentação.
+- [ ] Atualizar documentação após os últimos ajustes.
+- [ ] Criar documento executivo para chefe/prefeito ao final da estabilização.
+- [ ] Gerar PDF executivo final após fechamento da Fase 2.
+
+---
+
+## 18. Fase 3 — Polimento, usabilidade e implantação assistida
+
+- [IDEIA] Implementar drag and drop de upload em tela inteira, com efeito visual mais profissional.
+- [IDEIA] Melhorar visual geral dos selects da dashboard.
+- [IDEIA] Melhorar visual de datepicker e timepicker.
+- [IDEIA] Padronizar aparência dos campos nativos.
+- [IDEIA] Criar área de ajuda/tutoriais dentro do admin.
+- [IDEIA] Criar cards de tutorial com texto explicativo.
+- [IDEIA] Avaliar uso de vídeos curtos ou mini previews para demonstrar operações do sistema.
+- [IDEIA] Criar usuário de treinamento/teste para gravação dos tutoriais.
+- [IDEIA] Gravar tutoriais em vídeo usando OBS Studio.
+- [IDEIA] Criar manual visual com prints e textos objetivos.
+- [IDEIA] Melhorar responsividade/mobile da dashboard.
+- [IDEIA] Fazer polimento visual geral da interface administrativa.
+- [IDEIA] Refinar experiência de uso para usuários não técnicos.
+- [IDEIA] Revisar textos explicativos da interface.
+- [IDEIA] Melhorar microinterações e feedbacks visuais.
+
+---
+
+## 19. Backlog técnico
 
 - [BACKLOG] Hospedar Font Awesome localmente para remover dependência de CDN externo e evitar warnings no Edge.
 - [BACKLOG] Refatorar `admin.css` após estabilização.
 - [BACKLOG] Modularizar `admin.js` após estabilização.
+- [BACKLOG] Refatorar `server.js` futuramente em rotas, serviços e utilitários.
 - [BACKLOG] Melhorar responsividade/mobile da dashboard.
+- [BACKLOG] Criar rotina de limpeza de chunks antigos.
+- [BACKLOG] Criar rotina de limpeza de mídias órfãs.
+- [BACKLOG] Criar validação de espaço em disco.
+- [BACKLOG] Melhorar logs técnicos do servidor.
+- [BACKLOG] Criar documentação técnica de APIs.
+- [BACKLOG] Melhorar documentação técnica continuamente.
+
+---
+
+## 20. Backlog de produto futuro
+
 - [BACKLOG] Criar tela de status das TVs/players.
 - [BACKLOG] Criar monitoramento online/offline dos players.
 - [BACKLOG] Criar grupos de telas/unidades.
+- [BACKLOG] Criar playlists por unidade ou grupo de telas.
 - [BACKLOG] Criar permissões mais refinadas por secretaria.
 - [BACKLOG] Criar relatório de exibição.
 - [BACKLOG] Criar modo de comunicado urgente.
-- [BACKLOG] Melhorar documentação técnica.
+- [BACKLOG] Criar dashboard gerencial.
+- [BACKLOG] Criar analytics de exibição.
+- [BACKLOG] Criar cache/offline para players.
 - [BACKLOG] Criar manual completo para usuários administrativos.
+- [BACKLOG] Avaliar modelo white-label para uso futuro em outros contextos/projetos.
 
 ---
 
-## 18. Pendências antes da apresentação
-
-- [ ] Testar todas as funcionalidades em produção.
-- [ ] Revisar console do navegador.
-- [ ] Revisar usabilidade geral.
-- [ ] Revisar popover de detalhes em tela pequena.
-- [ ] Criar documento executivo para chefe/prefeito.
-- [ ] Criar manual simples de uso.
-- [ ] Registrar próximos passos e roadmap.
-- [ ] Validar se a configuração do player está adequada para apresentação.
-- [ ] Confirmar se `config.json` está com opções corretas para produção/apresentação.
-
----
-
-## 19. Observação sobre refatoração
+## 21. Observação sobre refatoração
 
 A refatoração geral do código deve ser feita somente depois que:
 
@@ -322,7 +385,7 @@ Neste momento, a prioridade é manter o sistema funcionando, testado e apresent�
 
 ---
 
-## 20. Observação sobre validação do checklist
+## 22. Observação sobre validação do checklist
 
 Este checklist deve ser revisado após uma rodada completa de testes manuais no sistema.
 
