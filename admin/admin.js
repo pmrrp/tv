@@ -2644,75 +2644,6 @@ async function gerarPlaylist() {
     }
 }
 
-/* =========================================================
-   PRIORIDADE / FREQUÊNCIA DE EXIBIÇÃO
-   =========================================================
-   A prioridade passa a orientar a frequência de exibição.
-
-   Regra visual:
-   - Normal: não repete;
-   - Alta: sugere repetir a cada 6 mídias;
-   - Urgente: sugere repetir a cada 3 mídias.
-
-   O usuário ainda pode ajustar manualmente a repetição
-   depois que escolher Alta ou Urgente.
-   ========================================================= */
-
-function obterRepeticaoSugeridaPorPrioridade(prioridade) {
-    const valor = String(prioridade || "normal").toLowerCase();
-
-    if (valor === "urgente") return 3;
-    if (valor === "alta") return 6;
-
-    return 0;
-}
-
-function prioridadePermiteRepeticao(prioridade) {
-    return String(prioridade || "normal").toLowerCase() !== "normal";
-}
-
-function atualizarControleRepeticaoPorPrioridade(item, opcoes = {}) {
-    if (!item) return;
-
-    const selectPrioridade = item.querySelector(".mediaPriority");
-    const labelRepeticao = item.querySelector(".mediaRepeatEditable");
-    const selectRepeticao = item.querySelector(".mediaRepeatEvery");
-
-    if (!selectPrioridade || !labelRepeticao || !selectRepeticao) return;
-
-    const prioridade = String(selectPrioridade.value || "normal").toLowerCase();
-    const permiteRepeticao = prioridade !== "normal";
-
-    labelRepeticao.classList.toggle("hidden", !permiteRepeticao);
-    labelRepeticao.classList.toggle("mediaRepeatDisabled", !permiteRepeticao);
-
-    if (!permiteRepeticao) {
-        selectRepeticao.value = "0";
-        selectRepeticao.disabled = true;
-        return;
-    }
-
-    selectRepeticao.disabled = false;
-
-    /*
-      Só aplica sugestão quando a prioridade acabou de mudar.
-      Não mexe quando o usuário está apenas tentando escolher manualmente
-      a repetição.
-    */
-    if (opcoes.aplicarSugestao === true) {
-        const repeticaoAtual = Number(selectRepeticao.value || 0);
-
-        if (repeticaoAtual === 0) {
-            selectRepeticao.value = prioridade === "urgente" ? "3" : "6";
-        }
-    }
-}
-
-function atualizarControlesRepeticaoPorPrioridade() {
-    document.querySelectorAll(".mediaItem").forEach((item) => {
-        atualizarControleRepeticaoPorPrioridade(item);
-    });
-}
 
 /* =========================================================
    RENDERIZAÇÃO DAS MÍDIAS
@@ -2903,15 +2834,15 @@ function renderizarMidias(midias) {
 
         const controleDuracao = midia.tipo === "imagem"
             ? `
-                <label class="mediaConfigLabel mediaRepeatEditable">
-                    Repetir
-                    <select class="mediaRepeatEvery" data-arquivo="${nomeArquivo}">
-                        <option value="0" ${Number(midia.repetirACada) === 0 ? "selected" : ""}>Não repetir</option>
-                        <option value="3" ${Number(midia.repetirACada) === 3 ? "selected" : ""}>A cada 3 mídias</option>
-                        <option value="4" ${Number(midia.repetirACada) === 4 ? "selected" : ""}>A cada 4 mídias</option>
-                        <option value="5" ${Number(midia.repetirACada) === 5 ? "selected" : ""}>A cada 5 mídias</option>
-                        <option value="6" ${Number(midia.repetirACada) === 6 ? "selected" : ""}>A cada 6 mídias</option>
-                        <option value="10" ${Number(midia.repetirACada) === 10 ? "selected" : ""}>A cada 10 mídias</option>
+                <label class="mediaConfigLabel">
+                    Duração
+                    <select class="mediaDuration" data-arquivo="${nomeArquivo}">
+                        <option value="5" ${Number(midia.duracao) === 5 ? "selected" : ""}>5s</option>
+                        <option value="8" ${Number(midia.duracao) === 8 ? "selected" : ""}>8s</option>
+                        <option value="10" ${Number(midia.duracao) === 10 ? "selected" : ""}>10s</option>
+                        <option value="15" ${Number(midia.duracao) === 15 ? "selected" : ""}>15s</option>
+                        <option value="20" ${Number(midia.duracao) === 20 ? "selected" : ""}>20s</option>
+                        <option value="30" ${Number(midia.duracao) === 30 ? "selected" : ""}>30s</option>
                     </select>
                 </label>
             `
@@ -3075,7 +3006,6 @@ function renderizarMidias(midias) {
         );
 
         mediaList.appendChild(item);
-        atualizarControleRepeticaoPorPrioridade(item);
     });
 
     aplicarFiltrosMidia();
@@ -5536,16 +5466,6 @@ mediaList.addEventListener("click", (event) => {
         return;
     }
 
-    /*
-    Clique no select de repetição deve ser neutro.
-    Sem isso, o clique pode cair em outras lógicas do card
-    e fazer o campo sumir/fechar.
-    */
-    if (event.target.closest(".mediaRepeatEvery")) {
-        limparCliqueNeutro();
-        return;
-    }
-
     const botaoMover = event.target.closest(".btnMoveMedia");
     const botaoExcluir = event.target.closest(".mediaDeleteButton");
     const botaoSalvarItem = event.target.closest(".mediaSaveButton");
@@ -5583,30 +5503,7 @@ mediaList.addEventListener("click", (event) => {
         if (!itemPrioridade || !selectPrioridade) return;
 
         selectPrioridade.value = botaoPrioridade.dataset.prioridade;
-
-        atualizarControleRepeticaoPorPrioridade(itemPrioridade, {
-            aplicarSugestao: true
-        });
-
-        const menuPrioridade = itemPrioridade.querySelector(".mediaPriorityMenu");
-
-        if (menuPrioridade) {
-            const summary = menuPrioridade.querySelector("summary");
-            const prioridade = selectPrioridade.value;
-
-            if (summary) {
-                summary.innerHTML = `
-                <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-                ${prioridade.toUpperCase()}
-            `;
-            }
-
-            menuPrioridade.classList.remove("priority-normal", "priority-alta", "priority-urgente");
-            menuPrioridade.classList.add(`priority-${prioridade}`);
-
-            menuPrioridade.removeAttribute("open");
-        }
-
+        itemPrioridade.querySelector(".mediaPriorityMenu").removeAttribute("open");
         processarAlteracaoDeMidia(selectPrioridade);
         return;
     }

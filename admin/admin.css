@@ -8676,21 +8676,3 @@ body.mediaSelectionMode .mediaRepeatBadge {
     line-height: 1.45;
     white-space: pre-wrap;
 }
-
-/* =========================================================
-   PRIORIDADE / FREQUÊNCIA DE EXIBIÇÃO
-   =========================================================
-   Quando a mídia está como prioridade Normal, escondemos
-   o controle de repetição para evitar dupla interpretação.
-
-   Prioridades Alta e Urgente liberam o ajuste de repetição.
-   ========================================================= */
-
-.mediaRepeatEditable.hidden {
-    display: none !important;
-}
-
-.mediaRepeatDisabled {
-    opacity: 0.55;
-    pointer-events: none;
-}
