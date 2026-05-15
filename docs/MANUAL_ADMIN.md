@@ -267,19 +267,25 @@ campanhas prioritárias
 
 ---
 
+### Regras atuais de funcionamento
+
+- Prioridade Normal:
+  - não exibe repetição;
+  - mídia entra apenas uma vez na sequência normal da playlist.
+
+- Prioridade Alta:
+  - libera recorrência;
+  - sugere repetição "A cada 6 mídias".
+
+- Prioridade Urgente:
+  - libera recorrência;
+  - sugere repetição "A cada 3 mídias".
+
 ### Observação importante
 
-A repetição controla a frequência com que a mídia reaparece dentro da playlist.
+Quando uma mídia é marcada como Alta ou Urgente, a opção "Não repetir" deixa de existir.
 
-Quanto menor o número escolhido, mais vezes a mídia aparecerá.
-
-Exemplo:
-
-```txt
-A cada 3 mídias
-```
-
-significa que aquela mídia será inserida novamente após cada grupo de 3 mídias da programação.
+Isso evita inconsistências entre prioridade e recorrência, mantendo o comportamento do sistema mais previsível e coerente para o usuário.
 
 ## 13. Recorrência / repetição
 

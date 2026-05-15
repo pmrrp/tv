@@ -176,6 +176,10 @@ Ele serve para:
 - [OK] Prioridade Alta libera repetição e sugere "A cada 6 mídias".
 - [OK] Prioridade Urgente libera repetição e sugere "A cada 3 mídias".
 - [OK] Repetição funciona para imagens e vídeos.
+- [OK] Opção "Não repetir" removida para prioridades Alta e Urgente.
+- [OK] Prioridades Alta/Urgente agora exigem recorrência válida.
+- [OK] Prioridade Normal mantém repetição oculta e recorrência zerada.
+- [OK] Sugestões automáticas de recorrência ajustadas conforme prioridade.
 - [AJUSTE] Revisar comportamento dos botões "Cancelar" e "Aplicar período" no popover de período de exibição.
 - [AJUSTE] Fazer os botões de período aparecerem apenas quando houver alteração real no período.
 - [AJUSTE] Revisar comportamento do período de exibição ao clicar fora ou pressionar ESC sem aplicar.

@@ -308,6 +308,26 @@ A prioridade agora orienta a frequência de exibição, enquanto o campo de repe
 
 ---
 
+## 2026-05 — Refinamento de prioridade e recorrência
+
+### Ajustes implementados
+
+- Removida a opção "Não repetir" para mídias com prioridade Alta ou Urgente.
+- Prioridades Alta/Urgente agora obrigam uma recorrência válida.
+- Prioridade Normal mantém recorrência desativada.
+- Campo de repetição passou a respeitar melhor o conceito de prioridade.
+- Sugestões automáticas de recorrência foram refinadas:
+  - Alta → "A cada 6 mídias"
+  - Urgente → "A cada 3 mídias"
+- Ajustada largura visual do select de repetição.
+- Melhorado comportamento visual do campo de recorrência.
+
+### Resultado
+
+A interface ficou mais coerente conceitualmente, reduzindo ambiguidades entre prioridade e repetição.
+
+Agora a prioridade influencia diretamente a frequência operacional da mídia na playlist.
+
 ## Próximos registros esperados
 
 Próximas entradas deste changelog deverão registrar:
