@@ -2644,6 +2644,108 @@ async function gerarPlaylist() {
     }
 }
 
+/* =========================================================
+   PRIORIDADE / FREQUÊNCIA DE EXIBIÇÃO
+   =========================================================
+   Regras de interface:
+   - Normal: não repete e esconde o controle de repetição;
+   - Alta: mostra repetição e sugere "a cada 6 mídias";
+   - Urgente: mostra repetição e sugere "a cada 3 mídias".
+
+   Importante:
+   O backend continua usando prioridade + repetirACada.
+   Aqui estamos organizando a UX para evitar confusão.
+   ========================================================= */
+
+function obterLabelPrioridade(prioridade) {
+    const valor = String(prioridade || "normal").toLowerCase();
+
+    if (valor === "urgente") return "Urgente";
+    if (valor === "alta") return "Alta";
+
+    return "Normal";
+}
+
+function obterIconePrioridade(prioridade) {
+    const valor = String(prioridade || "normal").toLowerCase();
+
+    if (valor === "urgente") return "fa-triangle-exclamation";
+    if (valor === "alta") return "fa-bolt";
+
+    return "fa-circle-check";
+}
+
+function prioridadePermiteRepeticao(prioridade) {
+    return String(prioridade || "normal").toLowerCase() !== "normal";
+}
+
+function obterRepeticaoSugeridaPorPrioridade(prioridade) {
+    const valor = String(prioridade || "normal").toLowerCase();
+
+    if (valor === "urgente") return 3;
+    if (valor === "alta") return 6;
+
+    return 0;
+}
+
+function atualizarBadgePrioridadeDoItem(item, prioridade) {
+    if (!item) return;
+
+    const valor = String(prioridade || "normal").toLowerCase();
+    const summary = item.querySelector(".mediaPriorityMenu summary");
+    const icone = summary ? summary.querySelector("i") : null;
+    const texto = summary ? summary.querySelector("span") : null;
+
+    item.dataset.prioridade = valor;
+
+    if (summary) {
+        summary.classList.remove("normal", "alta", "urgente");
+        summary.classList.add(valor);
+    }
+
+    if (icone) {
+        icone.className = `fa-solid ${obterIconePrioridade(valor)}`;
+    }
+
+    if (texto) {
+        texto.textContent = obterLabelPrioridade(valor);
+    }
+}
+
+function atualizarControleRepeticaoPorPrioridade(item, opcoes = {}) {
+    if (!item) return;
+
+    const selectPrioridade = item.querySelector(".mediaPriority");
+    const labelRepeticao = item.querySelector(".mediaRepeatEditable");
+    const selectRepeticao = item.querySelector(".mediaRepeatEvery");
+
+    if (!selectPrioridade || !labelRepeticao || !selectRepeticao) return;
+
+    const prioridade = String(selectPrioridade.value || "normal").toLowerCase();
+    const podeRepetir = prioridadePermiteRepeticao(prioridade);
+
+    labelRepeticao.classList.toggle("hidden", !podeRepetir);
+    labelRepeticao.classList.toggle("mediaRepeatDisabled", !podeRepetir);
+
+    if (!podeRepetir) {
+        selectRepeticao.value = "0";
+        selectRepeticao.disabled = true;
+        item.dataset.repeat = "sem";
+        return;
+    }
+
+    selectRepeticao.disabled = false;
+
+    if (opcoes.aplicarSugestao === true) {
+        const repeticaoAtual = Number(selectRepeticao.value || 0);
+
+        if (repeticaoAtual === 0) {
+            selectRepeticao.value = String(obterRepeticaoSugeridaPorPrioridade(prioridade));
+        }
+    }
+
+    item.dataset.repeat = Number(selectRepeticao.value || 0) > 0 ? "com" : "sem";
+}
 
 /* =========================================================
    RENDERIZAÇÃO DAS MÍDIAS
@@ -2668,6 +2770,7 @@ async function gerarPlaylist() {
  */
 function renderizarMidias(midias) {
     mediaList.innerHTML = "";
+
     const podeEditarMidias = usuarioPodeEditarMidias();
 
     if (libraryDropdownMeta) {
@@ -2680,6 +2783,7 @@ function renderizarMidias(midias) {
                 Nenhuma mídia cadastrada ainda.
             </div>
         `;
+
         aplicarFiltrosMidia();
         return;
     }
@@ -2693,14 +2797,14 @@ function renderizarMidias(midias) {
             midia.tipo === "video" ? "mediaItemVideo" : "",
             midia.ativo ? "" : "mediaItemInactive"
         ].filter(Boolean).join(" ");
+
         item.style.setProperty("--item-index", index);
         item.draggable = podeEditarMidias;
 
         /*
-        Identifica este card pelo nome real do arquivo.
-
-        Isso permite localizar o card depois de ações como upload,
-        para rolar até ele e aplicar um destaque visual.
+          Identifica este card pelo nome real do arquivo.
+          Isso permite localizar o card depois de ações como upload,
+          para rolar até ele e aplicar um destaque visual.
         */
         item.dataset.arquivo = midia.nome;
 
@@ -2708,13 +2812,20 @@ function renderizarMidias(midias) {
         const tituloMidia = escaparHtml(midia.titulo || midia.nome);
         const extensao = escaparHtml(midia.extensao || "");
         const tipo = escaparHtml(midia.tipo || "arquivo");
-        const prioridade = escaparHtml(midia.prioridade || "normal");
 
-        const prioridadeLabel = midia.prioridade === "urgente"
-            ? "Urgente"
-            : midia.prioridade === "alta"
-                ? "Alta"
-                : "Normal";
+        const prioridadeValor = String(midia.prioridade || "normal").toLowerCase();
+        const prioridade = escaparHtml(prioridadeValor);
+        const prioridadeLabel = obterLabelPrioridade(prioridadeValor);
+        const prioridadeIcone = obterIconePrioridade(prioridadeValor);
+
+        /*
+          Nova regra visual:
+          - prioridade normal não deve repetir;
+          - alta/urgente liberam o seletor de repetição.
+        */
+        const prioridadePodeRepetir = prioridadePermiteRepeticao(prioridadeValor);
+        const repetirACadaOriginal = Number(midia.repetirACada || 0);
+        const repetirACada = prioridadePodeRepetir ? repetirACadaOriginal : 0;
 
         const controleTitulo = podeEditarMidias
             ? `
@@ -2736,12 +2847,17 @@ function renderizarMidias(midias) {
         </div>
     `;
 
+        /*
+          Select real de prioridade.
+          Ele fica no card para o JavaScript coletar/salvar a configuração,
+          mas a interação visual principal acontece pelo badge/dropdown.
+        */
         const controlePrioridadeSelect = podeEditarMidias
             ? `
         <select class="mediaPriority" data-arquivo="${nomeArquivo}" aria-label="Prioridade da mídia ${nomeArquivo}">
-            <option value="normal" ${midia.prioridade === "normal" ? "selected" : ""}>Normal</option>
-            <option value="alta" ${midia.prioridade === "alta" ? "selected" : ""}>Alta</option>
-            <option value="urgente" ${midia.prioridade === "urgente" ? "selected" : ""}>Urgente</option>
+            <option value="normal" ${prioridadeValor === "normal" ? "selected" : ""}>Normal</option>
+            <option value="alta" ${prioridadeValor === "alta" ? "selected" : ""}>Alta</option>
+            <option value="urgente" ${prioridadeValor === "urgente" ? "selected" : ""}>Urgente</option>
         </select>
     `
             : "";
@@ -2768,18 +2884,21 @@ function renderizarMidias(midias) {
             ? `
             <details class="mediaPriorityMenu">
                 <summary class="mediaBadge ${prioridade}">
-                    <i class="fa-solid ${midia.prioridade === "urgente" ? "fa-triangle-exclamation" : midia.prioridade === "alta" ? "fa-bolt" : "fa-circle-check"}" aria-hidden="true"></i>
+                    <i class="fa-solid ${prioridadeIcone}" aria-hidden="true"></i>
                     <span>${prioridadeLabel}</span>
                 </summary>
+
                 <div class="mediaPriorityOptions">
                     <button type="button" data-prioridade="normal" data-arquivo="${nomeArquivo}">
                         <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
                         Normal
                     </button>
+
                     <button type="button" data-prioridade="alta" data-arquivo="${nomeArquivo}">
                         <i class="fa-solid fa-bolt" aria-hidden="true"></i>
                         Alta
                     </button>
+
                     <button type="button" data-prioridade="urgente" data-arquivo="${nomeArquivo}">
                         <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
                         Urgente
@@ -2789,14 +2908,12 @@ function renderizarMidias(midias) {
             `
             : `
             <span class="mediaBadge ${prioridade} mediaBadgeStatic">
-                <i class="fa-solid ${midia.prioridade === "urgente" ? "fa-triangle-exclamation" : midia.prioridade === "alta" ? "fa-bolt" : "fa-circle-check"}" aria-hidden="true"></i>
+                <i class="fa-solid ${prioridadeIcone}" aria-hidden="true"></i>
                 <span>${prioridadeLabel}</span>
             </span>
         `;
 
         const periodoBadge = renderizarPeriodoBadge(midia);
-
-        const repetirACada = Number(midia.repetirACada || 0);
 
         const repeticaoBadge = repetirACada > 0
             ? `
@@ -2830,8 +2947,13 @@ function renderizarMidias(midias) {
                 >
                     ${detalheDuracao}
                 </span>
-            </span>        `;
+            </span>
+        `;
 
+        /*
+          Duração só existe para imagem.
+          Vídeos usam a duração real do arquivo.
+        */
         const controleDuracao = midia.tipo === "imagem"
             ? `
                 <label class="mediaConfigLabel">
@@ -2847,6 +2969,28 @@ function renderizarMidias(midias) {
                 </label>
             `
             : "";
+
+        /*
+          Repetição existe para imagem e vídeo,
+          mas só aparece quando a prioridade for Alta ou Urgente.
+        */
+        const controleRepeticao = `
+            <label class="mediaConfigLabel mediaRepeatEditable ${prioridadePodeRepetir ? "" : "hidden mediaRepeatDisabled"}">
+                Repetir
+                <select
+                    class="mediaRepeatEvery"
+                    data-arquivo="${nomeArquivo}"
+                    ${prioridadePodeRepetir ? "" : "disabled"}
+                >
+                    <option value="0" ${Number(repetirACada) === 0 ? "selected" : ""}>Não repetir</option>
+                    <option value="3" ${Number(repetirACada) === 3 ? "selected" : ""}>A cada 3 mídias</option>
+                    <option value="4" ${Number(repetirACada) === 4 ? "selected" : ""}>A cada 4 mídias</option>
+                    <option value="5" ${Number(repetirACada) === 5 ? "selected" : ""}>A cada 5 mídias</option>
+                    <option value="6" ${Number(repetirACada) === 6 ? "selected" : ""}>A cada 6 mídias</option>
+                    <option value="10" ${Number(repetirACada) === 10 ? "selected" : ""}>A cada 10 mídias</option>
+                </select>
+            </label>
+        `;
 
         const controlesConfiguracaoMidia = podeEditarMidias
             ? `
@@ -2911,17 +3055,7 @@ function renderizarMidias(midias) {
             </details>
 
             ${controlePrioridadeSelect}
-
-            <label class="mediaConfigLabel mediaRepeatEditable">
-                Repetir
-                <select class="mediaRepeatEvery" data-arquivo="${nomeArquivo}">
-                    <option value="0" ${Number(midia.repetirACada) === 0 ? "selected" : ""}>Não repetir</option>
-                    <option value="3" ${Number(midia.repetirACada) === 3 ? "selected" : ""}>A cada 3 mídias</option>
-                    <option value="4" ${Number(midia.repetirACada) === 4 ? "selected" : ""}>A cada 4 mídias</option>
-                    <option value="5" ${Number(midia.repetirACada) === 5 ? "selected" : ""}>A cada 5 mídias</option>
-                    <option value="10" ${Number(midia.repetirACada) === 10 ? "selected" : ""}>A cada 10 mídias</option>
-                </select>
-            </label>
+            ${controleRepeticao}
         </div>
     `
             : "";
@@ -2984,10 +3118,7 @@ function renderizarMidias(midias) {
                     </button>
                 </div>
             </div>
-
         `;
-
-
 
         item.dataset.search = normalizarBusca([
             midia.nome,
@@ -2996,13 +3127,19 @@ function renderizarMidias(midias) {
             midia.extensao,
             midia.prioridade
         ].join(" "));
+
         item.dataset.active = midia.ativo ? "true" : "false";
         item.dataset.tipo = midia.tipo || "arquivo";
-        item.dataset.prioridade = midia.prioridade || "normal";
-        item.dataset.repeat = Number(midia.repetirACada || 0) > 0 ? "com" : "sem";
+        item.dataset.prioridade = prioridadeValor;
+        item.dataset.repeat = Number(repetirACada || 0) > 0 ? "com" : "sem";
         item.dataset.periodo = obterEstadoPeriodo(midia.inicio, midia.fim);
+
         item.dataset.configOriginal = JSON.stringify(
-            obterConfiguracaoOriginalDeMidia(midia)
+            obterConfiguracaoOriginalDeMidia({
+                ...midia,
+                prioridade: prioridadeValor,
+                repetirACada
+            })
         );
 
         mediaList.appendChild(item);
@@ -5745,6 +5882,14 @@ async function processarAlteracaoDeMidia(alvo) {
         if (statusText) {
             statusText.textContent = alvo.checked ? "Ativo" : "Inativo";
         }
+    }
+
+    if (alvo.classList.contains("mediaPriority")) {
+        atualizarBadgePrioridadeDoItem(item, alvo.value);
+
+        atualizarControleRepeticaoPorPrioridade(item, {
+            aplicarSugestao: true
+        });
     }
 
     /*

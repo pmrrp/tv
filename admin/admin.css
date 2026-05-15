@@ -8676,3 +8676,16 @@ body.mediaSelectionMode .mediaRepeatBadge {
     line-height: 1.45;
     white-space: pre-wrap;
 }
+
+/* =========================================================
+   PRIORIDADE / REPETIÇÃO
+   ========================================================= */
+
+.mediaRepeatEditable.hidden {
+    display: none !important;
+}
+
+.mediaRepeatDisabled {
+    opacity: 0.55;
+    pointer-events: none;
+}
