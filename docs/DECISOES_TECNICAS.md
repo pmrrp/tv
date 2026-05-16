@@ -571,7 +571,30 @@ Criar uma solução simples o suficiente para ser operada por equipes não técn
 
 ---
 
-## 26. Observação final
+---
+
+## 26. Sincronização automática da playlist
+
+## Decisão
+Reduzir o intervalo de revalidação e sincronização da playlist para 5 segundos.
+
+## Motivo
+O sistema possui mídias com período de exibição configurável, podendo ter data/hora de início e fim. Com intervalos maiores, uma mídia agendada poderia demorar alguns segundos ou até quase um minuto para entrar na playlist publicada e ser percebida pelo player.
+
+## Como funciona atualmente
+- O backend revalida e republica a playlist automaticamente a cada 5 segundos.
+- O player consulta silenciosamente o `playlist.json` também a cada 5 segundos.
+- Quando detecta alteração, o player atualiza a playlist em memória sem reiniciar desnecessariamente a exibição atual.
+
+## Benefício
+Essa configuração reduz o atraso percebido na entrada e saída de mídias agendadas, tornando o comportamento mais próximo do horário configurado pelo usuário.
+
+## Observação
+O intervalo de 5 segundos foi considerado adequado para o volume atual do sistema. Caso o número de telas, mídias ou acessos cresça muito, esse intervalo poderá ser revisto futuramente.
+
+---
+
+## 27. Observação final
 
 As decisões técnicas deste documento refletem o estágio atual do projeto.
 

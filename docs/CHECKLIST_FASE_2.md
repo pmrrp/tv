@@ -201,6 +201,9 @@ Ele serve para:
 - [OK] Duração de imagens é respeitada.
 - [OK] Vídeos usam duração original no player.
 - [OK] Arquivo `playlist.json` é publicado para o player.
+- [OK] Backend revalida automaticamente a playlist a cada 5 segundos.
+- [OK] Player sincroniza silenciosamente a playlist a cada 5 segundos.
+- [OK] Mídias agendadas entram na playlist com atraso reduzido em relação ao horário configurado.
 
 ---
 
