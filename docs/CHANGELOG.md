@@ -340,3 +340,54 @@ Próximas entradas deste changelog deverão registrar:
 - refatoração futura;
 - merge da documentação na branch funcional;
 - fechamento oficial da Fase 2.
+
+---
+
+## 2026-05 — Refinamento do status Ativo/Inativo
+
+### Implementado
+
+- A TAG Ativo/Inativo passou a funcionar como um switch de ação imediata.
+- O clique na TAG agora salva automaticamente o novo estado no backend.
+- A alteração de status não exige mais o botão "Salvar alterações".
+- O botão "Salvar alterações" continua reservado para mudanças reais de configuração, como nome, duração, período, prioridade e repetição.
+- Mídias inativas passaram a bloquear edição de configurações sensíveis:
+  - nome;
+  - duração;
+  - período de exibição;
+  - prioridade;
+  - repetição.
+- Mídias inativas continuam permitindo ações essenciais:
+  - reativar;
+  - excluir;
+  - visualizar detalhes;
+  - selecionar em lote.
+- O botão Excluir permanece visualmente ativo mesmo quando o card está inativo.
+- O status visual do card é atualizado imediatamente após o clique.
+- Em caso de erro ao salvar o status, o card retorna ao estado anterior.
+- Os filtros da biblioteca são reaplicados após a mudança de status.
+
+### Impacto
+
+A operação ficou mais simples e intuitiva para o usuário administrativo.
+
+Como Ativo/Inativo é uma ação de alternância simples, o próprio clique passou a persistir a mudança, evitando a necessidade de um botão adicional de salvamento para uma ação reversível.
+
+Isso reduz confusão na interface, melhora a velocidade de operação e mantém o botão "Salvar alterações" focado apenas em edições que exigem mais atenção.
+
+---
+
+## 2026-05 — Sincronização rápida da playlist
+
+### Implementado
+
+- Backend passou a revalidar/publicar a playlist automaticamente a cada 5 segundos.
+- Player passou a sincronizar silenciosamente a playlist a cada 5 segundos.
+- Mídias agendadas passam a entrar na programação com atraso reduzido após atingir o horário configurado.
+- Alterações feitas no painel administrativo são refletidas no player com menor tempo de espera.
+
+### Impacto
+
+A atualização da programação ficou mais ágil.
+
+Essa decisão melhora principalmente o uso de mídias com período de exibição, campanhas agendadas e conteúdos que precisam entrar ou sair da playlist em horário próximo ao definido no painel.
