@@ -454,6 +454,9 @@ Já existem:
 - logs de auditoria;
 - deploy funcional na VM;
 - acesso via painelribas.com.br.
+- modal de detalhes da mídia;
+- modal de saída com alterações pendentes;
+- modal de sincronização bloqueada quando existem alterações pendentes.
 
 ---
 
@@ -461,7 +464,7 @@ Já existem:
 
 Pendências e melhorias identificadas:
 
-- revisar popover de detalhes em telas pequenas;
+- refinar posicionamento/experiência do modal de detalhes da mídia no mobile;
 - criar documentação completa de uso;
 - criar documento executivo para apresentação;
 - revisar responsividade/mobile da dashboard;

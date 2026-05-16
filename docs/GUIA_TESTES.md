@@ -76,7 +76,12 @@ Navegadores recomendados para teste:
 - [ ] Confirmar status.
 - [ ] Confirmar prioridade.
 - [ ] Confirmar período.
-- [ ] Confirmar detalhes.
+- [ ] Confirmar que o botão Detalhes abre o modal de detalhes da mídia.
+- [ ] Confirmar que o modal de detalhes exibe dados da mídia.
+- [ ] Confirmar que o modal de detalhes fecha pelo X.
+- [ ] Confirmar que o modal de detalhes fecha pelo botão Fechar.
+- [ ] Confirmar que o modal de detalhes fecha ao clicar fora.
+- [ ] Confirmar que o modal de detalhes fecha com ESC.
 
 ---
 
@@ -92,6 +97,30 @@ Navegadores recomendados para teste:
 - [ ] Alterar período.
 - [ ] Confirmar que alterações de configuração exigem salvamento.
 - [ ] Confirmar log de edição.
+
+---
+
+## 7.1 Testes de alterações pendentes
+
+- [ ] Alterar título amigável de uma mídia sem salvar.
+- [ ] Confirmar que o card fica marcado como alterado.
+- [ ] Confirmar que o botão global "Salvar alterações" aparece.
+- [ ] Clicar no botão "Sair".
+- [ ] Confirmar que aparece modal próprio de alterações pendentes.
+- [ ] Clicar em "Continuar editando".
+- [ ] Confirmar que permanece na página.
+- [ ] Clicar em "Sair" novamente.
+- [ ] Clicar em "Sair sem salvar".
+- [ ] Confirmar encerramento da sessão.
+- [ ] Alterar novamente uma mídia sem salvar.
+- [ ] Apertar F5.
+- [ ] Confirmar que aparece modal próprio de alterações pendentes.
+- [ ] Alterar novamente uma mídia sem salvar.
+- [ ] Apertar Ctrl+R.
+- [ ] Confirmar que aparece modal próprio de alterações pendentes.
+- [ ] Alterar novamente uma mídia sem salvar.
+- [ ] Clicar no botão atualizar do navegador.
+- [ ] Confirmar que aparece o alerta nativo do navegador.
 
 ---
 
@@ -147,6 +176,24 @@ Navegadores recomendados para teste:
 - [ ] Recarregar a página.
 - [ ] Confirmar que prioridade e repetição permanecem corretas.
 - [ ] Confirmar que a playlist é atualizada após salvar.
+
+---
+
+## 8.2 Testes de sincronização com alterações pendentes
+
+- [ ] Alterar título amigável de uma mídia sem salvar.
+- [ ] Clicar em "Sincronizar".
+- [ ] Confirmar que a sincronização é bloqueada.
+- [ ] Confirmar que aparece modal de aviso em tom de atenção.
+- [ ] Clicar em "Continuar editando".
+- [ ] Confirmar que o rascunho permanece na tela.
+- [ ] Clicar novamente em "Sincronizar".
+- [ ] Clicar em "Salvar alterações" dentro do modal.
+- [ ] Confirmar que o fluxo de salvamento é acionado.
+- [ ] Confirmar que as alterações são salvas.
+- [ ] Confirmar que o botão global "Salvar alterações" desaparece após salvar.
+- [ ] Clicar em "Sincronizar" sem alterações pendentes.
+- [ ] Confirmar que a biblioteca sincroniza normalmente.
 
 ---
 
@@ -265,6 +312,8 @@ Confirmar:
 - [ ] Reativar uma mídia pelo admin e confirmar que ela volta ao player após a sincronização.
 - [ ] Agendar uma mídia para horário próximo e confirmar entrada na playlist com atraso reduzido.
 - [ ] Confirmar que o player sincroniza a playlist silenciosamente, sem recarregar a página inteira.
+- [ ] Confirmar que alterações salvas no admin refletem no player após sincronização automática.
+- [ ] Confirmar que sincronização manual não ocorre quando existem alterações pendentes na biblioteca.
 
 ---
 

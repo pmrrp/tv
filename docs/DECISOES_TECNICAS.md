@@ -429,26 +429,38 @@ Evitar bloqueios acidentais, escalada indevida de permissão e perda de acesso a
 
 ---
 
-## 20. Modal genérico de confirmação
+## 20. Modal genérico e padronização de modais
 
 ## Decisão
 
-Criar/reaproveitar modal genérico para confirmações.
+Criar e reaproveitar modais padronizados para confirmações, avisos e visualização de informações.
 
 ## Motivos
 
-- Evitar `confirm()` nativo do navegador.
-- Manter padrão visual.
-- Melhor experiência de uso.
+- Evitar `confirm()` nativo do navegador sempre que possível.
+- Manter padrão visual na dashboard.
+- Melhorar a experiência de uso.
 - Centralizar comportamento de confirmação.
 - Permitir variações visuais como danger, warning e success.
+- Reduzir inconsistências entre alertas, confirmações e detalhes.
 
-## Usos
+## Usos atuais
 
 - salvar alterações;
 - excluir mídias;
 - excluir usuários;
+- visualizar detalhes da mídia;
+- avisar sobre alterações pendentes;
+- bloquear sincronização manual quando existem alterações pendentes;
 - outras confirmações sensíveis.
+
+## Observação
+
+Nem toda saída da página permite modal customizado.
+
+Fechar aba, clicar no botão atualizar do navegador ou navegar pela barra de endereço continuam usando o aviso nativo do navegador por limitação de segurança dos próprios navegadores.
+
+Para ações controláveis pelo sistema, como botão "Sair", F5 e Ctrl+R, o sistema usa modal próprio.
 
 ---
 
@@ -676,7 +688,128 @@ O usuário administrativo consegue ativar e inativar conteúdos com rapidez, sem
 
 ---
 
+---
 
+## 27. Detalhes da mídia em modal
+
+## Decisão
+
+Substituir o popover de detalhes da mídia por um modal padronizado.
+
+## Motivos
+
+- O popover antigo podia ser cortado em telas pequenas.
+- Popovers posicionados dentro de cards sofrem com limites de largura, altura, overflow e bordas da viewport.
+- Os detalhes da mídia são informações de leitura, não uma ação rápida.
+- Um modal oferece melhor espaço visual para organizar dados técnicos e operacionais.
+- O padrão de modal já estava consolidado na dashboard.
+
+## Como ficou
+
+O botão "Detalhes" passou a abrir um modal com informações da mídia.
+
+O popover antigo foi desativado para evitar conflitos visuais e cortes em telas menores.
+
+## Informações exibidas
+
+O modal pode exibir:
+
+- título amigável;
+- nome real do arquivo;
+- tipo;
+- extensão;
+- caminho;
+- tamanho, quando disponível;
+- ordem;
+- duração;
+- período;
+- início;
+- fim;
+- repetição;
+- status;
+- prioridade.
+
+## Observação futura
+
+O modal de detalhes está funcional.
+
+Na Fase 3, deverá ser refinado o posicionamento e a experiência de abertura em telas pequenas/mobile.
+
+---
+
+## 28. Alterações pendentes com modal próprio
+
+## Decisão
+
+Criar modal próprio para avisar o usuário quando existem alterações pendentes em ações controláveis pelo sistema.
+
+## Motivos
+
+- Reduzir risco de perda acidental de alterações.
+- Manter padrão visual da dashboard.
+- Evitar depender apenas do alerta nativo do navegador.
+- Tornar a mensagem mais clara para usuários administrativos.
+- Permitir ações como continuar editando ou sair sem salvar.
+
+## Como ficou
+
+Quando existem alterações pendentes:
+
+- o botão "Sair" abre modal próprio;
+- F5 abre modal próprio;
+- Ctrl+R abre modal próprio.
+
+O modal permite:
+
+- continuar editando;
+- sair/recarregar sem salvar.
+
+## Limitação técnica
+
+Navegadores modernos não permitem substituir completamente o alerta nativo de `beforeunload`.
+
+Por isso, as seguintes ações continuam usando aviso nativo do navegador:
+
+- fechar aba;
+- clicar no botão atualizar do navegador;
+- digitar outra URL na barra de endereço;
+- navegar para fora da página por controles do navegador.
+
+## Decisão complementar
+
+O aviso nativo foi mantido como fallback obrigatório para proteger alterações pendentes nos cenários que o JavaScript não consegue controlar com modal customizado.
+
+---
+
+## 29. Bloqueio de sincronização com alterações pendentes
+
+## Decisão
+
+Bloquear a sincronização manual da biblioteca/playlist quando existem alterações pendentes na tela.
+
+## Motivos
+
+- A sincronização recarrega dados salvos no backend.
+- Se houver rascunhos visuais não salvos, a sincronização pode descartar o que aparece na tela.
+- Isso pode gerar inconsistência entre o estado visual do card e o estado real salvo.
+- A playlist deve refletir dados já persistidos, não rascunhos locais.
+- O usuário deve salvar ou descartar alterações antes de sincronizar.
+
+## Como ficou
+
+Ao clicar em "Sincronizar" com alterações pendentes:
+
+1. a sincronização é bloqueada;
+2. o sistema exibe um modal de aviso;
+3. o usuário pode continuar editando;
+4. o usuário pode optar por salvar as alterações;
+5. após salvar, a playlist é atualizada pelo fluxo normal do backend.
+
+## Diretriz adotada
+
+Não foi criada opção de "sincronizar mesmo assim".
+
+A decisão foi evitar perda de rascunho e impedir estados intermediários confusos para o usuário administrativo.
 
 
 ## Observação final

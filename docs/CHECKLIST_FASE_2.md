@@ -117,8 +117,10 @@ Ele serve para:
 - [OK] Mídias podem ser excluídas em lote.
 - [OK] Mídias podem ser reordenadas.
 - [OK] Alça de arraste/reordenação funcionando.
-- [AJUSTE] Revisar popover de detalhes em telas pequenas, pois pode cortar dependendo do tamanho da tela.
-- [AJUSTE] Revisar popovers que ficam cortados quando abrem próximos aos limites do navegador.
+- [OK] Substituir popover de detalhes da mídia por modal no padrão visual do sistema.
+- [OK] Corrigir problema de detalhes da mídia cortando em telas pequenas ou próximo às bordas do navegador.
+- [OK] Modal de detalhes exibe informações técnicas e operacionais da mídia.
+- [OK] Modal de detalhes pode ser fechado pelo botão Fechar, pelo X, por clique fora e pela tecla ESC.
 - [OK] Ajustar largura do select de repetição para exibir o texto completo da opção selecionada.
 - [OK] Melhorar tratamento visual de mídias inativas.
 - [OK] Bloquear edição de configurações em cards de mídias inativas.
@@ -128,6 +130,9 @@ Ele serve para:
 - [OK] Evitar exibição do botão "Salvar alterações" apenas por ativar/inativar mídia.
 - [AJUSTE] Revisar comportamento de alterações não salvas em campos como repetição e período.
 - [AJUSTE] Avaliar se, ao clicar fora ou pressionar ESC, alterações em repetição devem ser descartadas como ocorre nos filtros.
+- [AJUSTE] Melhorar posicionamento/experiência do modal de detalhes no mobile durante a Fase 3.
+- [AJUSTE] Revisar popovers restantes que ficam cortados quando abrem próximos aos limites do navegador.
+
 - [IDEIA] Melhorar visual geral dos selects da dashboard.
 - [IDEIA] Melhorar visual de datepicker e timepicker.
 - [IDEIA] Padronizar aparência dos campos nativos que ainda parecem crus no navegador.
@@ -206,6 +211,9 @@ Ele serve para:
 - [OK] Backend revalida automaticamente a playlist a cada 5 segundos.
 - [OK] Player sincroniza silenciosamente a playlist a cada 5 segundos.
 - [OK] Mídias agendadas entram na playlist com atraso reduzido em relação ao horário configurado.
+- [OK] Sincronização manual da biblioteca é bloqueada quando existem alterações pendentes.
+- [OK] O usuário precisa salvar as alterações antes de sincronizar manualmente.
+- [OK] O botão Sincronizar preserva o estado da tela quando há rascunhos não salvos.
 
 ---
 
@@ -269,6 +277,22 @@ Ele serve para:
 - [OK] Modais fecham ao clicar fora.
 - [OK] Modais fecham com ESC.
 - [OK] Modais seguem padrão visual da dashboard.
+
+---
+
+## 13.1 Modais e alterações pendentes
+
+- [OK] Modal de detalhes da mídia implementado.
+- [OK] Popover antigo de detalhes foi desativado para evitar cortes em telas pequenas.
+- [OK] Modal de saída com alterações pendentes implementado para ações controláveis pelo sistema.
+- [OK] Ao tentar sair pelo botão "Sair" com alterações pendentes, o sistema exibe modal próprio.
+- [OK] Ao tentar atualizar com F5 ou Ctrl+R com alterações pendentes, o sistema exibe modal próprio.
+- [OK] Alerta nativo do navegador mantido como fallback para fechar aba, botão atualizar do navegador, barra de endereço e navegação externa.
+- [OK] Modal de sincronização bloqueia atualização manual da biblioteca quando há alterações pendentes.
+- [OK] Botão Sincronizar não recarrega a biblioteca enquanto houver rascunhos não salvos.
+- [OK] Modal de sincronização permite continuar editando ou salvar alterações.
+- [OK] Modal de sincronização usa estilo visual de aviso/atenção.
+- [OK] Modal de sincronização evita estado visual inconsistente entre rascunho da tela e dados salvos no backend.
 
 ---
 
@@ -372,6 +396,7 @@ Ele serve para:
 - [BACKLOG] Modularizar `admin.js` após estabilização.
 - [BACKLOG] Refatorar `server.js` futuramente em rotas, serviços e utilitários.
 - [BACKLOG] Melhorar responsividade/mobile da dashboard.
+- [BACKLOG] Refinar posicionamento e experiência dos modais no mobile.
 - [BACKLOG] Criar rotina de limpeza de chunks antigos.
 - [BACKLOG] Criar rotina de limpeza de mídias órfãs.
 - [BACKLOG] Criar validação de espaço em disco.

@@ -328,19 +328,6 @@ A interface ficou mais coerente conceitualmente, reduzindo ambiguidades entre pr
 
 Agora a prioridade influencia diretamente a frequência operacional da mídia na playlist.
 
-## Próximos registros esperados
-
-Próximas entradas deste changelog deverão registrar:
-
-- criação do documento executivo;
-- criação do manual administrativo;
-- criação do guia de testes;
-- refinamentos visuais finais;
-- responsividade/mobile;
-- refatoração futura;
-- merge da documentação na branch funcional;
-- fechamento oficial da Fase 2.
-
 ---
 
 ## 2026-05 — Refinamento do status Ativo/Inativo
@@ -391,3 +378,62 @@ Isso reduz confusão na interface, melhora a velocidade de operação e mantém 
 A atualização da programação ficou mais ágil.
 
 Essa decisão melhora principalmente o uso de mídias com período de exibição, campanhas agendadas e conteúdos que precisam entrar ou sair da playlist em horário próximo ao definido no painel.
+
+---
+
+## 2026-05 — Modais, detalhes da mídia e proteção contra perda de alterações
+
+### Implementado
+
+- Substituição do popover de detalhes da mídia por modal no padrão visual do sistema.
+- Modal de detalhes passou a exibir informações técnicas e operacionais da mídia, incluindo:
+  - título amigável;
+  - nome real do arquivo;
+  - tipo;
+  - extensão;
+  - caminho;
+  - tamanho, quando disponível;
+  - ordem;
+  - duração;
+  - período;
+  - início;
+  - fim;
+  - repetição;
+  - status;
+  - prioridade.
+- Desativação do popover antigo de detalhes para evitar cortes em telas pequenas.
+- Implementação de modal próprio para saída com alterações pendentes.
+- Botão "Sair" passou a exibir modal de confirmação quando existem alterações não salvas.
+- Atalhos F5 e Ctrl+R passaram a exibir modal próprio quando existem alterações não salvas.
+- Aviso nativo do navegador foi mantido como fallback para ações que não permitem modal customizado, como fechar aba, usar o botão atualizar do navegador ou navegar pela barra de endereço.
+- Implementação de modal de aviso ao tentar sincronizar a biblioteca com alterações pendentes.
+- Botão Sincronizar passou a ser bloqueado quando há rascunhos não salvos na tela.
+- Modal de sincronização permite continuar editando ou salvar as alterações antes de atualizar a biblioteca.
+- Modal de sincronização foi ajustado visualmente para tons de aviso/atenção.
+
+### Impacto
+
+A dashboard ficou mais previsível e segura contra perda acidental de alterações.
+
+O modal de detalhes melhora a leitura das informações da mídia e evita problemas de popover cortando em telas pequenas ou próximo às bordas do navegador.
+
+O bloqueio da sincronização manual com alterações pendentes evita estados inconsistentes, em que a biblioteca é recarregada a partir do backend enquanto a tela ainda indica alterações não salvas.
+
+### Observação
+
+O modal de detalhes já está funcional, mas seu posicionamento e experiência em telas pequenas deverão ser refinados na Fase 3, junto com os ajustes gerais de responsividade/mobile.
+
+---
+
+## Próximos registros esperados
+
+Próximas entradas deste changelog deverão registrar:
+
+- criação do documento executivo;
+- criação do manual administrativo;
+- criação do guia de testes;
+- refinamentos visuais finais;
+- responsividade/mobile;
+- refatoração futura;
+- merge da documentação na branch funcional;
+- fechamento oficial da Fase 2.
