@@ -8770,6 +8770,26 @@ body.mediaSelectionMode .mediaRepeatBadge {
     filter: none !important;
 }
 
+/* =========================================================
+   STATUS ATIVO/INATIVO SALVANDO
+   =========================================================
+   Usado quando o usuário clica na TAG Ativo/Inativo.
+
+   A TAG continua parecendo um switch simples, mas damos
+   um pequeno feedback visual enquanto o backend confirma.
+   ========================================================= */
+
+.mediaItemStatusSaving .mediaStatusToggle {
+    cursor: wait;
+    opacity: 0.82;
+}
+
+.mediaItemStatusSaving .mediaStatusToggle span::after {
+    content: " salvando...";
+    font-weight: 800;
+    opacity: 0.78;
+}
+
 /* Excluir bem visível mesmo em mídia inativa */
 .mediaItemEditingLocked .mediaDeleteButton {
     background: #ffffff;

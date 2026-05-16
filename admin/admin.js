@@ -2893,15 +2893,45 @@ function atualizarVisualStatusAtivoDoItem(item, ativo) {
 
     const statusToggle = item.querySelector(".mediaStatusToggle");
     const statusText = statusToggle ? statusToggle.querySelector("span") : null;
+    const checkboxAtivo = item.querySelector(".mediaActive");
+
+    /*
+      Mantém o checkbox sincronizado com o estado visual.
+
+      Importante:
+      Em alguns fluxos chamamos essa função depois de erro,
+      depois de salvamento rápido ou depois de renderização.
+      Então ela precisa ser a "fonte visual única" do status.
+    */
+    if (checkboxAtivo) {
+        checkboxAtivo.checked = Boolean(ativo);
+    }
 
     if (statusToggle) {
-        statusToggle.classList.toggle("isActive", ativo);
+        statusToggle.classList.toggle("isActive", Boolean(ativo));
         statusToggle.classList.toggle("isInactive", !ativo);
+
+        statusToggle.setAttribute(
+            "title",
+            ativo
+                ? "Clique para inativar esta mídia"
+                : "Clique para ativar esta mídia"
+        );
     }
 
     if (statusText) {
         statusText.textContent = ativo ? "Ativo" : "Inativo";
     }
+
+    /*
+      Atualiza o estado do card.
+
+      Esse dataset é usado pelos filtros da biblioteca.
+      Sem isso, ao clicar em Ativo/Inativo, o visual muda,
+      mas filtros como "ativas/inativas" podem continuar usando
+      o valor antigo até recarregar a lista.
+    */
+    item.dataset.active = ativo ? "true" : "false";
 
     item.classList.toggle("mediaItemInactive", !ativo);
 }
@@ -2919,6 +2949,18 @@ function atualizarVisualStatusAtivoDoItem(item, ativo) {
 async function salvarStatusAtivoMidiaRapido(item) {
     if (!garantirPermissaoParaEditarMidias()) return false;
     if (!item) return false;
+
+    /*
+      Proteção contra clique duplo rápido.
+
+      Exemplo:
+      usuário clica duas vezes muito rápido na TAG.
+      Sem esse bloqueio, duas requisições poderiam sair juntas
+      e o backend poderia receber estados fora da ordem esperada.
+    */
+    if (item.dataset.statusSaving === "true") {
+        return false;
+    }
 
     const checkboxAtivo = item.querySelector(".mediaActive");
 
@@ -2938,17 +2980,19 @@ async function salvarStatusAtivoMidiaRapido(item) {
     }
 
     /*
-      Salvamos somente a mudança de ativo/inativo sobre a última
+      Salvamos somente o status ativo/inativo baseado na última
       configuração confirmada do card.
 
-      Assim, se o usuário tiver outra alteração pendente no card,
-      ela não é salva silenciosamente junto com o switch.
+      Isso evita salvar silenciosamente nome, duração, período,
+      prioridade ou repetição que ainda estavam pendentes na tela.
     */
     const configuracaoParaSalvar = {
         ...configuracaoOriginal,
-        nome: nomeArquivo,
         ativo: ativoAtual
     };
+
+    item.dataset.statusSaving = "true";
+    item.classList.add("mediaItemStatusSaving");
 
     checkboxAtivo.disabled = true;
 
@@ -2971,9 +3015,11 @@ async function salvarStatusAtivoMidiaRapido(item) {
         }
 
         /*
-          Atualiza a base original do card com o novo status salvo.
-          Isso impede o botão Salvar de aparecer apenas por causa
-          do clique em Ativo/Inativo.
+          Atualiza a configuração original do card com o novo status salvo.
+
+          Resultado prático:
+          - não aparece botão Salvar só por causa do Ativo/Inativo;
+          - se havia outra alteração pendente real, ela continua pendente.
         */
         const novaConfiguracaoOriginal = {
             ...configuracaoOriginal,
@@ -2986,8 +3032,10 @@ async function salvarStatusAtivoMidiaRapido(item) {
         atualizarBloqueioEdicaoDaMidia(item);
 
         /*
-          Se não houver outra alteração pendente real, o card volta
-          ao estado limpo. Se houver, o botão Salvar continua aparecendo.
+          Recalcula se o card ainda tem alteração pendente real.
+          Exemplo:
+          usuário mudou o nome, não salvou, depois inativou.
+          O status salva sozinho, mas o nome continua pendente.
         */
         atualizarEstadoVisualAlteracaoDoItem(item);
         sincronizarAlteracoesPendentesGlobais();
@@ -2995,7 +3043,7 @@ async function salvarStatusAtivoMidiaRapido(item) {
         mostrarMensagemPlaylist(
             ativoAtual
                 ? "Mídia ativada e playlist atualizada automaticamente."
-                : "Mídia inativada e removida da playlist automaticamente.",
+                : "Mídia desativada e removida da playlist automaticamente.",
             "sucesso"
         );
 
@@ -3003,8 +3051,10 @@ async function salvarStatusAtivoMidiaRapido(item) {
         await carregarResumoAdmin();
 
         /*
-          Reaplica filtros, porque uma mídia pode desaparecer se
-          o filtro atual estiver mostrando apenas ativas/inativas.
+          Reaplica filtros porque o status mudou.
+          Exemplo:
+          se o filtro estiver em "ativas", uma mídia desativada
+          deve sair da lista filtrada.
         */
         aplicarFiltrosMidia();
 
@@ -3016,11 +3066,9 @@ async function salvarStatusAtivoMidiaRapido(item) {
         );
 
         /*
-          Se falhar, volta visualmente para o estado anterior.
+          Se falhar, voltamos para o estado salvo anteriormente.
         */
         const ativoAnterior = configuracaoOriginal.ativo !== false;
-
-        checkboxAtivo.checked = ativoAnterior;
 
         atualizarVisualStatusAtivoDoItem(item, ativoAnterior);
         atualizarBloqueioEdicaoDaMidia(item);
@@ -3032,6 +3080,9 @@ async function salvarStatusAtivoMidiaRapido(item) {
         return false;
     } finally {
         checkboxAtivo.disabled = false;
+
+        item.dataset.statusSaving = "false";
+        item.classList.remove("mediaItemStatusSaving");
     }
 }
 
@@ -6276,6 +6327,15 @@ async function processarAlteracaoDeMidia(alvo) {
     Ao clicar, já salva automaticamente sem modal e sem botão Salvar.
     */
     if (alvo.classList.contains("mediaActive")) {
+        /*
+          Ativo/Inativo é um switch imediato.
+    
+          Fluxo:
+          1. muda o visual na hora;
+          2. bloqueia/desbloqueia os campos conforme o novo estado;
+          3. persiste no backend automaticamente;
+          4. se der erro, a função salvarStatusAtivoMidiaRapido desfaz.
+        */
         atualizarVisualStatusAtivoDoItem(item, alvo.checked);
         atualizarBloqueioEdicaoDaMidia(item);
 
