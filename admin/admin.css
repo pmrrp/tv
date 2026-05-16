@@ -5795,7 +5795,7 @@ body:not(.can-edit-media) .mediaStatusToggle.isInactive {
 .mediaTitleLabel,
 .mediaConfigRow,
 .mediaFooterActions {
-    max-width: min(575px, calc(100% - 120px));
+    max-width: min(580px, calc(100% - 120px));
 }
 
 /* Campo do nome mais comportado */
@@ -8688,4 +8688,19 @@ body.mediaSelectionMode .mediaRepeatBadge {
 .mediaRepeatDisabled {
     opacity: 0.55;
     pointer-events: none;
+}
+
+/* =========================================================
+   PERÍODO - AÇÕES SOMENTE COM RASCUNHO ALTERADO
+   =========================================================
+   Os botões "Cancelar" e "Aplicar período" só aparecem
+   quando o usuário realmente altera algo dentro do popover.
+   ========================================================= */
+
+.mediaScheduleActions {
+    display: none !important;
+}
+
+.mediaScheduleActions.isVisible {
+    display: flex !important;
 }

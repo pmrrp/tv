@@ -1188,6 +1188,8 @@ function sincronizarPlaylistSemReiniciar(novaPlaylist) {
    =========================================================
    Verifica periodicamente se o playlist.json mudou.
    ========================================================= */
+const INTERVALO_SINCRONIZACAO_PLAYLIST_MS = 5 * 1000;
+
 setInterval(async () => {
   try {
     const resposta = await fetch(`playlist.json?v=${Date.now()}`);
@@ -1202,7 +1204,7 @@ setInterval(async () => {
   } catch (erro) {
     console.error("Erro ao atualizar playlist:", erro);
   }
-}, 30000);
+}, INTERVALO_SINCRONIZACAO_PLAYLIST_MS);
 
 /* =========================================================
    TECLADO / CONTROLE REMOTO

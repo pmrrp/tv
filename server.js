@@ -2564,24 +2564,46 @@ app.use((erro, req, res, next) => {
    da TV sem alguém precisar mexer no Admin.
    ========================================================= */
 
-const INTERVALO_PUBLICACAO_AUTOMATICA_MS = 60 * 1000;
+const INTERVALO_PUBLICACAO_AUTOMATICA_MS = 5 * 1000;
+
+/*
+  A playlist precisa ser revalidada com frequência para que
+  mídias agendadas entrem e mídias vencidas saiam perto do
+  horário configurado.
+
+  O intervalo é curto, mas os logs são controlados para não
+  poluir o PM2/terminal a cada 5 segundos.
+*/
+let ciclosPublicacaoAutomatica = 0;
 
 setInterval(() => {
     const agora = new Date();
 
     const horarioCampoGrande = agora.toLocaleString("pt-BR", {
-        timeZone: "America/Campo_Grande",
-        hour12: false
+        timeZone: "America/Campo_Grande"
     });
-
-    console.log(`[${horarioCampoGrande}] Verificando validade das mídias...`);
 
     const resultado = publicarPlaylistAutomaticamente();
 
+    ciclosPublicacaoAutomatica += 1;
+
+    /*
+      Log informativo apenas a cada 12 ciclos.
+      Como o intervalo é de 5s, isso gera log aproximadamente
+      a cada 1 minuto.
+    */
+    const deveLogarStatus = ciclosPublicacaoAutomatica >= 12;
+
+    if (deveLogarStatus) {
+        ciclosPublicacaoAutomatica = 0;
+    }
+
     if (resultado.sucesso) {
-        console.log(
-            `[${horarioCampoGrande}] Playlist atualizada automaticamente. Itens: ${resultado.total}`
-        );
+        if (deveLogarStatus) {
+            console.log(
+                `[${horarioCampoGrande}] Playlist verificada automaticamente. Itens: ${resultado.total}`
+            );
+        }
     } else {
         console.log(
             `[${horarioCampoGrande}] Falha ao atualizar playlist automaticamente.`

@@ -514,11 +514,25 @@ document.addEventListener("toggle", (event) => {
 
     if (!menu.matches(".mediaScheduleMenu")) return;
 
-    if (!menu.open) return;
-
     const item = menu.closest(".mediaItem");
 
-    guardarRascunhoPeriodo(item);
+    if (!item) return;
+
+    /*
+      Ao abrir, guardamos o estado atual como rascunho inicial.
+    */
+    if (menu.open) {
+        guardarRascunhoPeriodo(item);
+        return;
+    }
+
+    /*
+      Ao fechar sem aplicar/cancelar, o comportamento fica parecido
+      com o popover de filtros: alterações de rascunho são descartadas.
+    */
+    if (item.dataset.periodoDraftAtivo === "true") {
+        cancelarPeriodoDoItem(item);
+    }
 }, true);
 
 /* =========================================================
@@ -2986,12 +3000,19 @@ function renderizarMidias(midias) {
           Duração só existe para imagem.
           Vídeos usam a duração real do arquivo.
         */
+        const duracaoImagem = Number(midia.duracao || 8);
+
         const controleDuracao = midia.tipo === "imagem"
             ? `
                 <label class="mediaConfigLabel">
                     Duração
                     <select class="mediaDuration" data-arquivo="${nomeArquivo}">
-                        ${renderizarOpcoesRepeticao(repetirACada, prioridadePodeRepetir)}
+                        <option value="5" ${duracaoImagem === 5 ? "selected" : ""}>5s</option>
+                        <option value="8" ${duracaoImagem === 8 ? "selected" : ""}>8s</option>
+                        <option value="10" ${duracaoImagem === 10 ? "selected" : ""}>10s</option>
+                        <option value="15" ${duracaoImagem === 15 ? "selected" : ""}>15s</option>
+                        <option value="20" ${duracaoImagem === 20 ? "selected" : ""}>20s</option>
+                        <option value="30" ${duracaoImagem === 30 ? "selected" : ""}>30s</option>
                     </select>
                 </label>
             `
@@ -5207,6 +5228,90 @@ function ativarPeriodoPorData(input) {
    ========================================================== */
 
 /**
+ * Lê o estado atual dos campos de período dentro do card.
+ *
+ * Esse estado representa o que o usuário está vendo/editando
+ * no popover neste exato momento.
+ */
+function obterEstadoPeriodoAtualDoItem(item) {
+    if (!item) return null;
+
+    const checkboxIndefinido = item.querySelector(".mediaIndefinite");
+    const inputInicio = item.querySelector(".mediaStartDate");
+    const inputFim = item.querySelector(".mediaEndDate");
+
+    if (!checkboxIndefinido || !inputInicio || !inputFim) return null;
+
+    return {
+        indefinido: checkboxIndefinido.checked,
+        inicio: inputInicio.value || "",
+        fim: inputFim.value || ""
+    };
+}
+
+/**
+ * Lê o estado salvo quando o popover foi aberto.
+ *
+ * Este é o "ponto de retorno" usado pelo botão Cancelar
+ * e também pela comparação que decide se os botões aparecem.
+ */
+function obterEstadoPeriodoRascunhoDoItem(item) {
+    if (!item) return null;
+
+    return {
+        indefinido: item.dataset.periodoDraftIndefinido === "true",
+        inicio: item.dataset.periodoDraftInicio || "",
+        fim: item.dataset.periodoDraftFim || ""
+    };
+}
+
+/**
+ * Verifica se o usuário alterou alguma coisa no período
+ * depois que o popover foi aberto.
+ */
+function periodoRascunhoFoiAlterado(item) {
+    if (!item) return false;
+
+    /*
+      Se ainda não existe rascunho ativo, não há o que comparar.
+    */
+    if (item.dataset.periodoDraftAtivo !== "true") {
+        return false;
+    }
+
+    const atual = obterEstadoPeriodoAtualDoItem(item);
+    const rascunho = obterEstadoPeriodoRascunhoDoItem(item);
+
+    if (!atual || !rascunho) return false;
+
+    return (
+        atual.indefinido !== rascunho.indefinido ||
+        atual.inicio !== rascunho.inicio ||
+        atual.fim !== rascunho.fim
+    );
+}
+
+/**
+ * Mostra ou esconde os botões "Cancelar" e "Aplicar período".
+ *
+ * Regra:
+ * - se o usuário mexeu no período, mostra;
+ * - se não mexeu, esconde.
+ */
+function atualizarAcoesPeriodoDoItem(item) {
+    if (!item) return;
+
+    const acoes = item.querySelector(".mediaScheduleActions");
+
+    if (!acoes) return;
+
+    const deveMostrar = periodoRascunhoFoiAlterado(item);
+
+    acoes.classList.toggle("isVisible", deveMostrar);
+    acoes.setAttribute("aria-hidden", deveMostrar ? "false" : "true");
+}
+
+/**
  * Guarda o estado atual do período antes do usuário editar.
  */
 function guardarRascunhoPeriodo(item) {
@@ -5222,6 +5327,11 @@ function guardarRascunhoPeriodo(item) {
     item.dataset.periodoDraftInicio = inputInicio.value || "";
     item.dataset.periodoDraftFim = inputFim.value || "";
     item.dataset.periodoDraftAtivo = "true";
+    /*
+      Ao abrir o popover, ainda não houve alteração.
+      Portanto, os botões começam escondidos.
+    */
+    atualizarAcoesPeriodoDoItem(item);
 
 }
 
@@ -5247,6 +5357,7 @@ function cancelarPeriodoDoItem(item) {
     });
 
     item.dataset.periodoDraftAtivo = "false";
+    atualizarAcoesPeriodoDoItem(item);
 
     /*
       Depois de cancelar, recalcula se o card ainda tem alteração real.
@@ -5272,6 +5383,7 @@ function aplicarPeriodoDoItem(item) {
     });
 
     item.dataset.periodoDraftAtivo = "false";
+    atualizarAcoesPeriodoDoItem(item);
 
     /*
       Só agora o período deixa de ser rascunho e entra como alteração real.
@@ -5886,6 +5998,8 @@ async function processarAlteracaoDeMidia(alvo) {
             atualizarBadge: false
         });
 
+        atualizarAcoesPeriodoDoItem(item);
+
         return;
     }
 
@@ -5896,6 +6010,8 @@ async function processarAlteracaoDeMidia(alvo) {
         atualizarCamposValidade(item, {
             atualizarBadge: false
         });
+
+        atualizarAcoesPeriodoDoItem(item);
 
         return;
     }
@@ -5982,6 +6098,25 @@ mediaList.addEventListener("click", (event) => {
  */
 mediaList.addEventListener("input", (event) => {
     const alvo = event.target;
+
+    /*
+      Datas também podem disparar input em alguns navegadores.
+      Aqui atualizamos os botões do período em tempo real.
+    */
+    if (
+        alvo.classList.contains("mediaStartDate") ||
+        alvo.classList.contains("mediaEndDate")
+    ) {
+        const item = alvo.closest(".mediaItem");
+
+        atualizarCamposValidade(item, {
+            atualizarBadge: false
+        });
+
+        atualizarAcoesPeriodoDoItem(item);
+
+        return;
+    }
 
     if (!alvo.classList.contains("mediaTitleInput")) return;
 
