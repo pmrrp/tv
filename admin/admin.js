@@ -537,6 +537,18 @@ function configurarDetailsControlados() {
     }, true);
 }
 
+window.addEventListener("resize", () => {
+    if (repeatSelectBotaoAtual) {
+        posicionarPortalSelectRepeticao(repeatSelectBotaoAtual);
+    }
+});
+
+window.addEventListener("scroll", () => {
+    if (repeatSelectBotaoAtual) {
+        posicionarPortalSelectRepeticao(repeatSelectBotaoAtual);
+    }
+}, true);
+
 /* =========================================================
    PERÍODO - GUARDA ESTADO AO ABRIR POPOVER
    ========================================================= */
@@ -2796,26 +2808,53 @@ function atualizarControleRepeticaoPorPrioridade(item, opcoes = {}) {
         selectRepeticao.innerHTML = renderizarOpcoesRepeticao(0, false);
         selectRepeticao.value = "0";
         selectRepeticao.disabled = true;
+
         item.dataset.repeat = "sem";
+
+        /*
+          Como a prioridade pode alterar opções e valor da repetição,
+          sincronizamos o botão premium com o select real.
+        */
+        sincronizarBotaoSelectRepeticao(selectRepeticao);
+
         return;
     }
 
     selectRepeticao.disabled = false;
 
-    let repeticaoAtual = Number(selectRepeticao.value || 0);
-
     /*
-      Para prioridade Alta/Urgente, "Não repetir" deixa de existir.
-      Se estava em 0, aplicamos a sugestão padrão.
+      Regra de sugestão automática por prioridade.
+
+      Decisão:
+      - Normal não repete;
+      - Alta sugere "A cada 6 mídias";
+      - Urgente sugere "A cada 3 mídias".
+
+      Importante:
+      Ao trocar de Alta para Urgente, a sugestão também deve mudar.
+      Por isso não mantemos o valor anterior nesses dois casos.
     */
-    if (repeticaoAtual === 0) {
-        repeticaoAtual = obterRepeticaoSugeridaPorPrioridade(prioridade);
+    let repeticaoAtual = 0;
+
+    if (prioridade === "alta") {
+        repeticaoAtual = 6;
+    }
+
+    if (prioridade === "urgente") {
+        repeticaoAtual = 3;
     }
 
     selectRepeticao.innerHTML = renderizarOpcoesRepeticao(repeticaoAtual, true);
     selectRepeticao.value = String(repeticaoAtual);
+    selectRepeticao.disabled = false;
 
     item.dataset.repeat = Number(selectRepeticao.value || 0) > 0 ? "com" : "sem";
+
+    /*
+      Como a prioridade pode alterar opções e valor da repetição,
+      sincronizamos o botão premium com o select real.
+    */
+    sincronizarBotaoSelectRepeticao(selectRepeticao);
 }
 
 function renderizarOpcoesRepeticao(repetirACada, prioridadePodeRepetir) {
@@ -2842,6 +2881,248 @@ function renderizarOpcoesRepeticao(repetirACada, prioridadePodeRepetir) {
     });
 
     return opcoes.join("");
+}
+
+/* =========================================================
+   CUSTOM SELECT PREMIUM - REPETIÇÃO VIA PORTAL
+   =========================================================
+   Diferente da tentativa anterior, a lista aberta NÃO fica
+   dentro do card da mídia.
+
+   Estratégia:
+   - o select real continua existindo;
+   - criamos um botão visual premium ao lado dele;
+   - quando abre, a lista é renderizada em um portal fixo no body;
+   - isso evita briga com z-index, overflow e cards abaixo.
+   ========================================================= */
+
+let repeatSelectPortal = null;
+let repeatSelectAtual = null;
+let repeatSelectBotaoAtual = null;
+
+/**
+ * Retorna o texto da opção selecionada de um select.
+ */
+function obterTextoOpcaoSelecionada(select) {
+    if (!select) return "Selecionar";
+
+    const opcao = select.options[select.selectedIndex];
+
+    return opcao ? opcao.textContent.trim() : "Selecionar";
+}
+
+/**
+ * Cria o portal global do select de repetição, se ainda não existir.
+ */
+function obterPortalSelectRepeticao() {
+    if (repeatSelectPortal) {
+        return repeatSelectPortal;
+    }
+
+    repeatSelectPortal = document.createElement("div");
+    repeatSelectPortal.id = "repeatSelectPortal";
+    repeatSelectPortal.className = "repeatSelectPortal hidden";
+    repeatSelectPortal.setAttribute("role", "listbox");
+
+    document.body.appendChild(repeatSelectPortal);
+
+    return repeatSelectPortal;
+}
+
+/**
+ * Fecha o menu premium de repetição.
+ */
+function fecharSelectRepeticaoPremium() {
+    const portal = obterPortalSelectRepeticao();
+
+    portal.classList.add("hidden");
+    portal.innerHTML = "";
+
+    if (repeatSelectBotaoAtual) {
+        repeatSelectBotaoAtual.classList.remove("isOpen");
+        repeatSelectBotaoAtual.setAttribute("aria-expanded", "false");
+    }
+
+    repeatSelectAtual = null;
+    repeatSelectBotaoAtual = null;
+}
+
+/**
+ * Atualiza o botão visual de acordo com o select real.
+ */
+function sincronizarBotaoSelectRepeticao(select) {
+    if (!select) return;
+
+    const botao = select.parentElement
+        ? select.parentElement.querySelector(".repeatSelectPremiumButton")
+        : null;
+
+    if (!botao) return;
+
+    const texto = botao.querySelector(".repeatSelectPremiumText");
+
+    if (texto) {
+        texto.textContent = obterTextoOpcaoSelecionada(select);
+    }
+
+    botao.disabled = Boolean(select.disabled);
+    botao.classList.toggle("isDisabled", Boolean(select.disabled));
+}
+
+/**
+ * Posiciona o portal abaixo do botão.
+ */
+function posicionarPortalSelectRepeticao(botao) {
+    const portal = obterPortalSelectRepeticao();
+
+    if (!botao || portal.classList.contains("hidden")) return;
+
+    const margem = 12;
+    const rect = botao.getBoundingClientRect();
+
+    const largura = Math.max(rect.width, 240);
+    const alturaPortal = portal.offsetHeight || 220;
+
+    let left = rect.left;
+    let top = rect.bottom + 8;
+
+    /*
+      Se passar da direita da tela, puxa para dentro.
+    */
+    if (left + largura > window.innerWidth - margem) {
+        left = window.innerWidth - margem - largura;
+    }
+
+    if (left < margem) {
+        left = margem;
+    }
+
+    /*
+      Se passar do rodapé, abre para cima.
+    */
+    if (top + alturaPortal > window.innerHeight - margem) {
+        top = rect.top - alturaPortal - 8;
+    }
+
+    if (top < margem) {
+        top = margem;
+    }
+
+    portal.style.left = `${left}px`;
+    portal.style.top = `${top}px`;
+    portal.style.width = `${largura}px`;
+}
+
+/**
+ * Abre o menu premium de repetição.
+ */
+function abrirSelectRepeticaoPremium(select, botao) {
+    if (!select || !botao || select.disabled) return;
+
+    const portal = obterPortalSelectRepeticao();
+
+    repeatSelectAtual = select;
+    repeatSelectBotaoAtual = botao;
+
+    portal.innerHTML = "";
+
+    Array.from(select.options).forEach((option) => {
+        if (option.disabled && String(option.value) === "0") {
+            return;
+        }
+
+        const item = document.createElement("button");
+
+        item.type = "button";
+        item.className = "repeatSelectPortalOption";
+        item.dataset.value = String(option.value);
+        item.setAttribute("role", "option");
+
+        const selecionada = String(option.value) === String(select.value);
+
+        item.classList.toggle("isSelected", selecionada);
+        item.setAttribute("aria-selected", selecionada ? "true" : "false");
+
+        item.innerHTML = `
+            <span class="repeatSelectPortalCheck" aria-hidden="true">
+                <i class="fa-solid fa-check"></i>
+            </span>
+            <span>${escaparHtml(option.textContent.trim())}</span>
+        `;
+
+        portal.appendChild(item);
+    });
+
+    portal.classList.remove("hidden");
+
+    botao.classList.add("isOpen");
+    botao.setAttribute("aria-expanded", "true");
+
+    /*
+      Primeiro mostra, depois mede e posiciona.
+    */
+    requestAnimationFrame(() => {
+        posicionarPortalSelectRepeticao(botao);
+    });
+}
+
+/**
+ * Alterna abertura/fechamento do select premium.
+ */
+function alternarSelectRepeticaoPremium(select, botao) {
+    const portal = obterPortalSelectRepeticao();
+
+    const jaAberto =
+        !portal.classList.contains("hidden") &&
+        repeatSelectAtual === select;
+
+    if (jaAberto) {
+        fecharSelectRepeticaoPremium();
+        return;
+    }
+
+    fecharSelectRepeticaoPremium();
+    abrirSelectRepeticaoPremium(select, botao);
+}
+
+/**
+ * Inicializa os botões premium para selects de repetição.
+ */
+function inicializarSelectsRepeticaoPremium() {
+    document.querySelectorAll(".mediaRepeatEvery").forEach((select) => {
+        if (select.dataset.premiumReady === "true") {
+            sincronizarBotaoSelectRepeticao(select);
+            return;
+        }
+
+        select.dataset.premiumReady = "true";
+        select.classList.add("nativeRepeatSelectHidden");
+
+        const botao = document.createElement("button");
+
+        botao.type = "button";
+        botao.className = "repeatSelectPremiumButton";
+        botao.setAttribute("aria-haspopup", "listbox");
+        botao.setAttribute("aria-expanded", "false");
+
+        botao.innerHTML = `
+            <span class="repeatSelectPremiumIcon" aria-hidden="true">
+                <i class="fa-solid fa-repeat"></i>
+            </span>
+
+            <span class="repeatSelectPremiumText">
+                ${escaparHtml(obterTextoOpcaoSelecionada(select))}
+            </span>
+
+            <span class="repeatSelectPremiumChevron" aria-hidden="true">
+                <i class="fa-solid fa-chevron-down"></i>
+            </span>
+        `;
+
+        select.insertAdjacentElement("afterend", botao);
+
+        sincronizarBotaoSelectRepeticao(select);
+    });
 }
 
 /**
@@ -2941,14 +3222,6 @@ function atualizarVisualStatusAtivoDoItem(item, ativo) {
     const statusText = statusToggle ? statusToggle.querySelector("span") : null;
     const checkboxAtivo = item.querySelector(".mediaActive");
 
-    /*
-      Mantém o checkbox sincronizado com o estado visual.
-
-      Importante:
-      Em alguns fluxos chamamos essa função depois de erro,
-      depois de salvamento rápido ou depois de renderização.
-      Então ela precisa ser a "fonte visual única" do status.
-    */
     if (checkboxAtivo) {
         checkboxAtivo.checked = Boolean(ativo);
     }
@@ -2960,7 +3233,7 @@ function atualizarVisualStatusAtivoDoItem(item, ativo) {
         statusToggle.setAttribute(
             "title",
             ativo
-                ? "Clique para desativar esta mídia"
+                ? "Clique para inativar esta mídia"
                 : "Clique para ativar esta mídia"
         );
     }
@@ -2969,16 +3242,7 @@ function atualizarVisualStatusAtivoDoItem(item, ativo) {
         statusText.textContent = ativo ? "Ativo" : "Inativo";
     }
 
-    /*
-      Atualiza o estado do card.
-
-      Esse dataset é usado pelos filtros da biblioteca.
-      Sem isso, ao clicar em Ativo/Inativo, o visual muda,
-      mas filtros como "ativas/inativas" podem continuar usando
-      o valor antigo até recarregar a lista.
-    */
     item.dataset.active = ativo ? "true" : "false";
-
     item.classList.toggle("mediaItemInactive", !ativo);
 }
 
@@ -3271,20 +3535,20 @@ function renderizarMidias(midias) {
 
         const statusBadge = podeEditarMidias
             ? `
-        <label class="mediaStatusToggle ${midia.ativo ? "isActive" : "isInactive"}">
-            <input
-                type="checkbox"
-                class="mediaActive"
-                data-arquivo="${nomeArquivo}"
-                ${midia.ativo ? "checked" : ""}
-            />
-            <span>${midia.ativo ? "Ativo" : "Inativo"}</span>
-        </label>
+                <label class="mediaStatusToggle ${midia.ativo ? "isActive" : "isInactive"}">
+                    <input
+                        type="checkbox"
+                        class="mediaActive"
+                        data-arquivo="${nomeArquivo}"
+                        ${midia.ativo ? "checked" : ""}
+                    />
+                    <span>${midia.ativo ? "Ativo" : "Inativo"}</span>
+                </label>
             `
             : `
-        <span class="mediaStatusToggle ${midia.ativo ? "isActive" : "isInactive"} mediaBadgeStatic">
-            <span>${midia.ativo ? "Ativo" : "Inativo"}</span>
-        </span>
+                <span class="mediaStatusToggle ${midia.ativo ? "isActive" : "isInactive"} mediaBadgeStatic">
+                    <span>${midia.ativo ? "Ativo" : "Inativo"}</span>
+                </span>
         `;
 
         const prioridadeBadge = podeEditarMidias
@@ -3560,6 +3824,15 @@ function renderizarMidias(midias) {
         mediaList.appendChild(item);
         atualizarBloqueioEdicaoDaMidia(item);
     });
+
+    /*
+      Depois que todos os cards foram renderizados,
+      criamos os botões premium de repetição.
+
+      A lista aberta fica em portal global no body,
+      evitando conflito com cards abaixo.
+    */
+    inicializarSelectsRepeticaoPremium();
 
     aplicarFiltrosMidia();
     atualizarDuracaoRealDosVideos();
@@ -6200,6 +6473,8 @@ if (userModal) {
 document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
 
+    fecharSelectRepeticaoPremium();
+
     fecharIndicadorSelectPerfil();
 
     if (mediaDetailsModal && !mediaDetailsModal.classList.contains("hidden")) {
@@ -6750,6 +7025,62 @@ mediaList.addEventListener("click", (event) => {
     limparCliqueNeutro();
 });
 
+/* =========================================================
+   EVENTOS - SELECT PREMIUM DE REPETIÇÃO VIA PORTAL
+   ========================================================= */
+
+mediaList.addEventListener("click", (event) => {
+    const botao = event.target.closest(".repeatSelectPremiumButton");
+
+    if (!botao) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const label = botao.closest(".mediaRepeatEditable");
+    const select = label ? label.querySelector(".mediaRepeatEvery") : null;
+
+    if (!select || select.disabled) return;
+
+    alternarSelectRepeticaoPremium(select, botao);
+});
+
+document.addEventListener("click", (event) => {
+    const clicouNoPortal = event.target.closest("#repeatSelectPortal");
+    const clicouNoBotao = event.target.closest(".repeatSelectPremiumButton");
+
+    if (!clicouNoPortal && !clicouNoBotao) {
+        fecharSelectRepeticaoPremium();
+    }
+});
+
+document.addEventListener("click", (event) => {
+    const opcao = event.target.closest(".repeatSelectPortalOption");
+
+    if (!opcao || !repeatSelectAtual) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const novoValor = String(opcao.dataset.value || "0");
+
+    if (String(repeatSelectAtual.value) !== novoValor) {
+        repeatSelectAtual.value = novoValor;
+
+        sincronizarBotaoSelectRepeticao(repeatSelectAtual);
+
+        /*
+          Dispara change no select real para reaproveitar toda
+          a lógica atual de alteração pendente, filtros e salvamento.
+        */
+        repeatSelectAtual.dispatchEvent(new Event("change", {
+            bubbles: true
+        }));
+    }
+
+    fecharSelectRepeticaoPremium();
+});
+
 mediaList.addEventListener("dragstart", (event) => {
     const item = event.target.closest(".mediaItem");
 
@@ -7020,6 +7351,10 @@ async function processarAlteracaoDeMidia(alvo) {
 
 mediaList.addEventListener("change", (event) => {
     const alvo = event.target;
+
+    if (alvo.classList.contains("mediaRepeatEvery")) {
+        sincronizarBotaoSelectRepeticao(alvo);
+    }
 
     if (alvo.classList.contains("mediaSelect")) {
         atualizarEstadoAcoesEmLote();
