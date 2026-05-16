@@ -40,7 +40,7 @@ Ele serve para:
 - [OK] Faixa superior animada com as cores da identidade visual.
 - [OK] Logo institucional aplicado.
 - [OK] Mensagens de erro no login.
-- [AJUSTE] Ao entrar na página de login, posicionar automaticamente o cursor no campo de usuário/e-mail.
+- [OK] Ao entrar na página de login, posicionar automaticamente o cursor no campo de usuário/e-mail.
 - [BACKLOG] Implementar recuperação de senha por e-mail.
 - [BACKLOG] Implementar logout automático após determinado tempo de inatividade.
 - [BACKLOG] Avaliar limite de sessões/instâncias simultâneas por usuário.
@@ -119,12 +119,15 @@ Ele serve para:
 - [OK] Alça de arraste/reordenação funcionando.
 - [AJUSTE] Revisar popover de detalhes em telas pequenas, pois pode cortar dependendo do tamanho da tela.
 - [AJUSTE] Revisar popovers que ficam cortados quando abrem próximos aos limites do navegador.
-- [AJUSTE] Ajustar largura do select de repetição para exibir o texto completo da opção selecionada.
-- [AJUSTE] Melhorar tratamento visual de mídias inativas.
-- [AJUSTE] Avaliar bloqueio de edição em cards de mídias inativas.
-- [AJUSTE] Revisar se o botão "Salvar" deve aparecer de forma mais destacada mesmo em card inativo.
+- [OK] Ajustar largura do select de repetição para exibir o texto completo da opção selecionada.
+- [OK] Melhorar tratamento visual de mídias inativas.
+- [OK] Bloquear edição de configurações em cards de mídias inativas.
+- [OK] Manter ações essenciais disponíveis em mídia inativa: Ativar/Inativar, Detalhes, Excluir e seleção em lote.
+- [OK] Manter botão Excluir visualmente ativo mesmo quando o card estiver inativo.
+- [OK] Fazer a TAG Ativo/Inativo funcionar como switch com salvamento automático.
+- [OK] Evitar exibição do botão "Salvar alterações" apenas por ativar/inativar mídia.
 - [AJUSTE] Revisar comportamento de alterações não salvas em campos como repetição e período.
-- [AJUSTE] Avaliar se, ao clicar fora ou pressionar ESC, alterações em repetição/período devem ser descartadas como ocorre nos filtros.
+- [AJUSTE] Avaliar se, ao clicar fora ou pressionar ESC, alterações em repetição devem ser descartadas como ocorre nos filtros.
 - [IDEIA] Melhorar visual geral dos selects da dashboard.
 - [IDEIA] Melhorar visual de datepicker e timepicker.
 - [IDEIA] Padronizar aparência dos campos nativos que ainda parecem crus no navegador.
@@ -180,11 +183,10 @@ Ele serve para:
 - [OK] Prioridades Alta/Urgente agora exigem recorrência válida.
 - [OK] Prioridade Normal mantém repetição oculta e recorrência zerada.
 - [OK] Sugestões automáticas de recorrência ajustadas conforme prioridade.
-- [AJUSTE] Revisar comportamento dos botões "Cancelar" e "Aplicar período" no popover de período de exibição.
-- [AJUSTE] Fazer os botões de período aparecerem apenas quando houver alteração real no período.
-- [AJUSTE] Revisar comportamento do período de exibição ao clicar fora ou pressionar ESC sem aplicar.
+- [OK] Botões "Cancelar" e "Aplicar período" aparecem apenas quando há alteração real no período.
+- [OK] Rascunho do período de exibição é descartado ao clicar fora sem aplicar.
+- [OK] Rascunho do período de exibição é descartado ao pressionar ESC sem aplicar.
 - [AJUSTE] Revisar comportamento da repetição ao clicar fora ou pressionar ESC sem salvar.
-
 ---
 
 ## 10. Playlist
@@ -204,6 +206,24 @@ Ele serve para:
 - [OK] Backend revalida automaticamente a playlist a cada 5 segundos.
 - [OK] Player sincroniza silenciosamente a playlist a cada 5 segundos.
 - [OK] Mídias agendadas entram na playlist com atraso reduzido em relação ao horário configurado.
+
+---
+
+## 10.1 Status Ativo/Inativo das mídias
+
+- [OK] TAG Ativo/Inativo funciona como controle de alternância imediata.
+- [OK] Clique na TAG salva automaticamente o novo estado no backend.
+- [OK] Alteração de Ativo/Inativo não exige botão "Salvar alterações".
+- [OK] Ao inativar uma mídia, ela é removida automaticamente da playlist.
+- [OK] Ao reativar uma mídia, ela volta a poder entrar na playlist conforme validade, prioridade e ordem.
+- [OK] Mídia inativa bloqueia edição de nome, duração, período, prioridade e repetição.
+- [OK] Mídia inativa permite reativação.
+- [OK] Mídia inativa permite exclusão.
+- [OK] Mídia inativa permite visualização de detalhes.
+- [OK] Mídia inativa permite seleção em lote.
+- [OK] Botão Excluir permanece visualmente ativo em card inativo.
+- [OK] Filtros são reaplicados após alteração de status.
+- [OK] Card retorna ao estado anterior caso ocorra erro ao salvar o status.
 
 ---
 

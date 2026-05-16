@@ -83,14 +83,38 @@ Navegadores recomendados para teste:
 ## 7. Testes de edição de mídia
 
 - [ ] Alterar título amigável.
-- [ ] Ativar/desativar mídia.
-- [ ] Alterar prioridade.
-- [ ] Alterar recorrência.
-- [ ] Alterar período.
+- [ ] Confirmar que o botão "Salvar alterações" aparece após alterar o título.
 - [ ] Salvar mídia individual.
 - [ ] Confirmar mensagem de sucesso.
 - [ ] Confirmar atualização da playlist.
+- [ ] Alterar prioridade.
+- [ ] Alterar recorrência.
+- [ ] Alterar período.
+- [ ] Confirmar que alterações de configuração exigem salvamento.
 - [ ] Confirmar log de edição.
+
+---
+
+## 7.1 Testes da TAG Ativo/Inativo
+
+- [ ] Clicar na TAG "Ativo" de uma mídia.
+- [ ] Confirmar que a TAG muda imediatamente para "Inativo".
+- [ ] Confirmar que o status é salvo automaticamente sem clicar em "Salvar alterações".
+- [ ] Confirmar que o botão "Salvar alterações" não aparece apenas por ativar/inativar mídia.
+- [ ] Confirmar que a mídia inativa sai da playlist.
+- [ ] Confirmar que o card inativo bloqueia edição de nome.
+- [ ] Confirmar que o card inativo bloqueia edição de duração.
+- [ ] Confirmar que o card inativo bloqueia edição de período.
+- [ ] Confirmar que o card inativo bloqueia edição de prioridade.
+- [ ] Confirmar que o card inativo bloqueia edição de repetição.
+- [ ] Confirmar que o botão Detalhes continua funcionando.
+- [ ] Confirmar que o botão Excluir continua disponível e visualmente ativo.
+- [ ] Confirmar que a seleção em lote continua funcionando, se o modo seleção estiver ativo.
+- [ ] Clicar novamente na TAG "Inativo".
+- [ ] Confirmar que a mídia volta para "Ativo".
+- [ ] Confirmar que os campos de edição voltam a ficar disponíveis.
+- [ ] Confirmar que a playlist é atualizada automaticamente.
+- [ ] Confirmar que os filtros são reaplicados após mudança de status.
 
 ---
 
@@ -237,6 +261,10 @@ Confirmar:
 - [ ] Confirmar relógio.
 - [ ] Confirmar controles temporários.
 - [ ] Confirmar atualização após mudança de playlist.
+- [ ] Inativar uma mídia pelo admin e confirmar que ela sai do player após a sincronização.
+- [ ] Reativar uma mídia pelo admin e confirmar que ela volta ao player após a sincronização.
+- [ ] Agendar uma mídia para horário próximo e confirmar entrada na playlist com atraso reduzido.
+- [ ] Confirmar que o player sincroniza a playlist silenciosamente, sem recarregar a página inteira.
 
 ---
 

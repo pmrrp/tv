@@ -571,30 +571,115 @@ Criar uma solução simples o suficiente para ser operada por equipes não técn
 
 ---
 
----
-
 ## 26. Sincronização automática da playlist
 
 ## Decisão
+
 Reduzir o intervalo de revalidação e sincronização da playlist para 5 segundos.
 
-## Motivo
-O sistema possui mídias com período de exibição configurável, podendo ter data/hora de início e fim. Com intervalos maiores, uma mídia agendada poderia demorar alguns segundos ou até quase um minuto para entrar na playlist publicada e ser percebida pelo player.
+## Motivos
 
-## Como funciona atualmente
-- O backend revalida e republica a playlist automaticamente a cada 5 segundos.
-- O player consulta silenciosamente o `playlist.json` também a cada 5 segundos.
-- Quando detecta alteração, o player atualiza a playlist em memória sem reiniciar desnecessariamente a exibição atual.
+- Diminuir o atraso entre alterações feitas no painel e a exibição no player.
+- Melhorar o comportamento de mídias agendadas por data/hora.
+- Fazer campanhas entrarem e saírem da playlist com mais precisão operacional.
+- Evitar que o usuário administrativo precise aguardar muito tempo para ver o resultado.
+- Manter o sistema simples, sem implementar WebSocket nesta fase.
 
-## Benefício
-Essa configuração reduz o atraso percebido na entrada e saída de mídias agendadas, tornando o comportamento mais próximo do horário configurado pelo usuário.
+## Como ficou
+
+O backend passou a revalidar e publicar a playlist periodicamente a cada 5 segundos.
+
+O player também passou a consultar silenciosamente a playlist a cada 5 segundos.
+
+## Consequência prática
+
+Quando uma mídia chega ao horário configurado, é ativada, inativada, excluída ou tem configuração salva, o player tende a refletir a mudança com atraso reduzido.
 
 ## Observação
-O intervalo de 5 segundos foi considerado adequado para o volume atual do sistema. Caso o número de telas, mídias ou acessos cresça muito, esse intervalo poderá ser revisto futuramente.
+
+Essa decisão é adequada para o volume atual do sistema.
+
+Como o Painel Ribas ainda possui poucos players e baixo volume de requisições, o intervalo de 5 segundos é aceitável e traz ganho prático de usabilidade.
+
+## Possível revisão futura
+
+Caso o sistema cresça para muitas unidades/telas simultâneas, poderá ser avaliada uma estratégia mais sofisticada, como:
+
+- WebSocket;
+- Server-Sent Events;
+- cache com controle de versão;
+- sincronização por grupos de telas;
+- intervalo dinâmico conforme horário de expediente.
 
 ---
 
-## 27. Observação final
+## 27. Status Ativo/Inativo como ação imediata
+
+## Decisão
+
+Tratar a TAG Ativo/Inativo das mídias como uma ação imediata, com salvamento automático no backend.
+
+## Motivos
+
+- Ativar ou inativar uma mídia é uma ação simples e reversível.
+- Se o usuário clicar por engano, basta clicar novamente.
+- Exigir botão "Salvar alterações" para essa ação deixava o fluxo mais burocrático.
+- A interface fica mais parecida com um switch real.
+- O botão "Salvar alterações" deve ser reservado para mudanças de configuração mais sensíveis.
+
+## Como ficou
+
+Ao clicar na TAG Ativo/Inativo:
+
+1. o estado visual muda imediatamente;
+2. o novo status é enviado ao backend;
+3. a playlist é atualizada automaticamente;
+4. os resumos e filtros são atualizados;
+5. em caso de erro, o card volta ao estado anterior.
+
+## Regras adotadas para mídia inativa
+
+Quando uma mídia está inativa, o card continua visível na biblioteca, mas a edição de configurações fica bloqueada.
+
+Campos bloqueados:
+
+- nome;
+- duração;
+- período de exibição;
+- prioridade;
+- repetição.
+
+Ações permitidas:
+
+- reativar;
+- excluir;
+- visualizar detalhes;
+- selecionar em lote.
+
+## Motivo do bloqueio parcial
+
+A mídia inativa representa um conteúdo temporariamente fora da programação.
+
+Por isso, faz sentido impedir ajustes acidentais de configuração, mas manter disponíveis as ações operacionais essenciais.
+
+## Botão Excluir
+
+O botão Excluir permanece visualmente ativo mesmo em mídias inativas.
+
+Essa escolha foi feita porque, na prática, após inativar uma mídia, uma ação provável pode ser removê-la definitivamente da biblioteca.
+
+## Impacto
+
+A operação ficou mais simples, previsível e segura.
+
+O usuário administrativo consegue ativar e inativar conteúdos com rapidez, sem perder acesso às ações principais e sem gerar alterações pendentes desnecessárias.
+
+---
+
+
+
+
+## Observação final
 
 As decisões técnicas deste documento refletem o estágio atual do projeto.
 
