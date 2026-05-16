@@ -151,6 +151,40 @@ const btnDismissUserStatus = document.getElementById("btnDismissUserStatus");
 const btnConfirmUserStatus = document.getElementById("btnConfirmUserStatus");
 
 /* =========================================================
+   ELEMENTOS - MODAL DE DETALHES DA MÍDIA
+   ========================================================= */
+
+const mediaDetailsModal = document.getElementById("mediaDetailsModal");
+const mediaDetailsModalTitle = document.getElementById("mediaDetailsModalTitle");
+const mediaDetailsModalSubtitle = document.getElementById("mediaDetailsModalSubtitle");
+const mediaDetailsModalBody = document.getElementById("mediaDetailsModalBody");
+
+const btnCloseMediaDetailsModal = document.getElementById("btnCloseMediaDetailsModal");
+const btnDismissMediaDetailsModal = document.getElementById("btnDismissMediaDetailsModal");
+
+/* =========================================================
+   ELEMENTOS - MODAL DE SAÍDA COM ALTERAÇÕES PENDENTES
+   ========================================================= */
+
+const pendingExitModal = document.getElementById("pendingExitModal");
+const pendingExitSummaryText = document.getElementById("pendingExitSummaryText");
+
+const btnClosePendingExitModal = document.getElementById("btnClosePendingExitModal");
+const btnCancelPendingExit = document.getElementById("btnCancelPendingExit");
+const btnConfirmPendingExit = document.getElementById("btnConfirmPendingExit");
+
+/* =========================================================
+   ELEMENTOS - MODAL DE SINCRONIZAÇÃO COM ALTERAÇÕES PENDENTES
+   ========================================================= */
+
+const pendingSyncModal = document.getElementById("pendingSyncModal");
+const pendingSyncSummaryText = document.getElementById("pendingSyncSummaryText");
+
+const btnClosePendingSyncModal = document.getElementById("btnClosePendingSyncModal");
+const btnCancelPendingSync = document.getElementById("btnCancelPendingSync");
+const btnSaveBeforeSync = document.getElementById("btnSaveBeforeSync");
+
+/* =========================================================
    USUÁRIO LOGADO - UTILITÁRIO SEGURO
    ========================================================= */
 
@@ -2609,7 +2643,19 @@ function abrirBibliotecaEDestacarMidia(nomeArquivo) {
  */
 async function gerarPlaylist() {
     /*
-      Segurança: o layout criado pelo Codex removeu o card visual de
+      Se existem alterações pendentes, não faz sentido sincronizar
+      manualmente a playlist agora.
+
+      A playlist manual deve refletir o estado salvo no backend.
+      Portanto, primeiro o usuário precisa salvar ou descartar
+      as alterações pendentes.
+    */
+    if (existemAlteracoesPendentes) {
+        abrirModalSincronizacaoPendente();
+        return;
+    }
+    /*
+      Segurança: o layout refinado removeu o card visual de
       publicação manual da playlist, porque a playlist já é publicada
       automaticamente após upload, exclusão, ordenação ou salvamento.
 
@@ -3146,6 +3192,28 @@ function renderizarMidias(midias) {
           para rolar até ele e aplicar um destaque visual.
         */
         item.dataset.arquivo = midia.nome;
+
+        /*
+        Guardamos os principais dados da mídia no próprio card.
+
+        Isso permite abrir o modal de detalhes sem depender do popover
+        antigo e sem precisar fazer nova requisição ao backend.
+        */
+        item.dataset.midiaDetalhes = JSON.stringify({
+            nome: midia.nome,
+            titulo: midia.titulo || midia.nome,
+            caminho: midia.caminho || "",
+            tipo: midia.tipo || "arquivo",
+            extensao: midia.extensao || "",
+            tamanho: midia.tamanho || null,
+            ativo: midia.ativo !== false,
+            duracao: Number(midia.duracao || 0),
+            ordem: Number(midia.ordem || 0),
+            prioridade: midia.prioridade || "normal",
+            repetirACada: Number(midia.repetirACada || 0),
+            inicio: midia.inicio || null,
+            fim: midia.fim || null
+        });
 
         const nomeArquivo = escaparHtml(midia.nome);
         const tituloMidia = escaparHtml(midia.titulo || midia.nome);
@@ -3925,7 +3993,7 @@ function atualizarNomeSelecionado() {
 
       Por isso, mesmo que algum navegador permita seleção/arraste de
       vários arquivos, a interface considera somente o primeiro.
-      Essa escolha mantém o layout bonito do Codex sem exigir alteração
+      Essa escolha mantém o layout bonito sem exigir alteração
       no server.js agora.
     */
     const arquivo = inputArquivo && inputArquivo.files
@@ -4633,8 +4701,96 @@ async function salvarTodasConfiguracoes() {
     }
 }
 
+/* =========================================================
+   MODAL - SAÍDA COM ALTERAÇÕES PENDENTES
+   =========================================================
+   Importante:
+   - navegador não permite modal customizado ao fechar aba
+     ou clicar no botão atualizar do próprio navegador;
+   - por isso mantemos beforeunload como fallback;
+   - este modal funciona para ações controláveis pelo JS:
+     botão Sair, F5 e Ctrl+R.
+   ========================================================= */
+
+let acaoConfirmadaSaidaPendente = null;
+
+/**
+ * Abre o modal de saída com alterações pendentes.
+ */
+function abrirModalSaidaPendente(acaoConfirmada) {
+    if (!pendingExitModal) return;
+
+    acaoConfirmadaSaidaPendente = typeof acaoConfirmada === "function"
+        ? acaoConfirmada
+        : null;
+
+    const totalAlterados = obterItensComAlteracoesPendentes().length;
+
+    if (pendingExitSummaryText) {
+        pendingExitSummaryText.textContent = totalAlterados > 1
+            ? `${totalAlterados} mídias possuem alterações não salvas.`
+            : "1 mídia possui alteração não salva.";
+    }
+
+    pendingExitModal.classList.remove("hidden");
+    document.body.classList.add("modalAberto");
+
+    if (btnCancelPendingExit) {
+        btnCancelPendingExit.focus();
+    }
+}
+
+/**
+ * Fecha o modal sem sair.
+ */
+function fecharModalSaidaPendente() {
+    if (!pendingExitModal) return;
+
+    pendingExitModal.classList.add("hidden");
+    document.body.classList.remove("modalAberto");
+    acaoConfirmadaSaidaPendente = null;
+}
+
+/**
+ * Confirma a saída mesmo perdendo alterações.
+ */
+function confirmarSaidaPendente() {
+    const acao = acaoConfirmadaSaidaPendente;
+
+    fecharModalSaidaPendente();
+
+    /*
+      Desliga o controle local para permitir a saída/reload
+      após confirmação explícita do usuário.
+    */
+    existemAlteracoesPendentes = false;
+
+    if (typeof acao === "function") {
+        acao();
+    }
+}
+
+/**
+ * Executa uma ação somente após validar alterações pendentes.
+ */
+function executarComConfirmacaoDeSaida(acao) {
+    if (!existemAlteracoesPendentes) {
+        acao();
+        return;
+    }
+
+    abrirModalSaidaPendente(acao);
+}
+
 /*
-  Se houver alteração pendente, o navegador avisa antes de sair.
+  Fallback nativo do navegador.
+
+  Importante:
+  Fechar aba, clicar no botão atualizar do navegador ou digitar outra URL
+  não permite modal HTML customizado por segurança dos navegadores.
+
+  Por isso, nesses casos, mantemos o aviso nativo.
+  Para ações controláveis pelo sistema, usamos pendingExitModal.
 */
 window.addEventListener("beforeunload", (event) => {
     if (!existemAlteracoesPendentes) return;
@@ -4642,6 +4798,62 @@ window.addEventListener("beforeunload", (event) => {
     event.preventDefault();
     event.returnValue = "Existem alterações não salvas.";
 });
+
+/* =========================================================
+   MODAL - SINCRONIZAÇÃO COM ALTERAÇÕES PENDENTES
+   =========================================================
+   Impede sincronização manual da playlist enquanto há
+   alterações pendentes na biblioteca.
+
+   A playlist deve refletir o estado salvo no backend.
+   ========================================================= */
+
+/**
+ * Abre o modal de aviso para sincronização bloqueada.
+ */
+function abrirModalSincronizacaoPendente() {
+    if (!pendingSyncModal) return;
+
+    const totalAlterados = obterItensComAlteracoesPendentes().length;
+
+    if (pendingSyncSummaryText) {
+        pendingSyncSummaryText.textContent = totalAlterados > 1
+            ? `${totalAlterados} mídias possuem alterações não salvas.`
+            : "1 mídia possui alteração não salva.";
+    }
+
+    pendingSyncModal.classList.remove("hidden");
+    document.body.classList.add("modalAberto");
+
+    if (btnSaveBeforeSync) {
+        btnSaveBeforeSync.focus();
+    }
+}
+
+/**
+ * Fecha o modal de sincronização bloqueada.
+ */
+function fecharModalSincronizacaoPendente() {
+    if (!pendingSyncModal) return;
+
+    pendingSyncModal.classList.add("hidden");
+    document.body.classList.remove("modalAberto");
+}
+
+/**
+ * Salva alterações pendentes a partir do modal.
+ */
+async function salvarAlteracoesAntesDeSincronizar() {
+    fecharModalSincronizacaoPendente();
+
+    /*
+      Reaproveita o fluxo atual de salvamento em lote.
+      Depois de salvar, a playlist já é atualizada automaticamente
+      pelo backend, então não precisamos chamar gerarPlaylist()
+      em seguida.
+    */
+    await salvarTodasConfiguracoes();
+}
 
 
 /* =========================================================
@@ -5244,6 +5456,215 @@ function obterTextoRepeticaoLeitura(midia) {
 }
 
 /* =========================================================
+   MODAL - DETALHES DA MÍDIA
+   =========================================================
+   Substitui o popover antigo de detalhes.
+
+   Vantagens:
+   - não corta em tela pequena;
+   - segue o padrão visual dos modais;
+   - centraliza as informações da mídia.
+   ========================================================= */
+
+/**
+ * Formata data/hora para exibição no modal.
+ */
+function formatarDataHoraDetalhes(valor) {
+    if (!valor) return "Não definido";
+
+    const data = new Date(valor);
+
+    if (Number.isNaN(data.getTime())) {
+        return "Não definido";
+    }
+
+    return data.toLocaleString("pt-BR", {
+        timeZone: "America/Campo_Grande",
+        dateStyle: "short",
+        timeStyle: "short"
+    });
+}
+
+/**
+ * Formata tamanho de arquivo, quando a API enviar essa informação.
+ */
+function formatarTamanhoArquivoDetalhes(tamanho) {
+    const bytes = Number(tamanho);
+
+    if (!Number.isFinite(bytes) || bytes <= 0) {
+        return "Não informado";
+    }
+
+    const unidades = ["B", "KB", "MB", "GB"];
+    let valor = bytes;
+    let indice = 0;
+
+    while (valor >= 1024 && indice < unidades.length - 1) {
+        valor /= 1024;
+        indice++;
+    }
+
+    return `${valor.toFixed(valor >= 10 || indice === 0 ? 0 : 1)} ${unidades[indice]}`;
+}
+
+/**
+ * Retorna os dados salvos no dataset do card.
+ */
+function obterDetalhesMidiaDoItem(item) {
+    if (!item) return null;
+
+    try {
+        return JSON.parse(item.dataset.midiaDetalhes || "{}");
+    } catch (erro) {
+        console.error("Erro ao ler detalhes da mídia:", erro);
+        return null;
+    }
+}
+
+/**
+ * Cria uma linha visual de detalhe.
+ */
+function criarLinhaDetalheMidia(label, valor, icone = "fa-circle-info") {
+    return `
+        <div class="mediaDetailsModalItem">
+            <span class="mediaDetailsModalIcon" aria-hidden="true">
+                <i class="fa-solid ${icone}"></i>
+            </span>
+
+            <span class="mediaDetailsModalText">
+                <small>${escaparHtml(label)}</small>
+                <strong>${escaparHtml(valor || "Não informado")}</strong>
+            </span>
+        </div>
+    `;
+}
+
+/**
+ * Retorna um texto amigável para o período da mídia no modal.
+ */
+function obterPeriodoDetalhesMidia(midia) {
+    const temInicio = Boolean(midia && midia.inicio);
+    const temFim = Boolean(midia && midia.fim);
+
+    if (!temInicio && !temFim) {
+        return "Exibição contínua";
+    }
+
+    if (temInicio && temFim) {
+        return `${formatarDataHoraDetalhes(midia.inicio)} até ${formatarDataHoraDetalhes(midia.fim)}`;
+    }
+
+    if (temInicio) {
+        return `A partir de ${formatarDataHoraDetalhes(midia.inicio)}`;
+    }
+
+    return `Até ${formatarDataHoraDetalhes(midia.fim)}`;
+}
+
+/**
+ * Abre o modal de detalhes da mídia.
+ */
+function abrirModalDetalhesMidia(item) {
+    if (!mediaDetailsModal || !mediaDetailsModalBody) return;
+
+    const midia = obterDetalhesMidiaDoItem(item);
+
+    if (!midia || !midia.nome) {
+        mostrarToast("Não foi possível carregar os detalhes desta mídia.", "erro");
+        return;
+    }
+
+    /*
+    Normaliza a prioridade no próprio modal.
+
+    O admin.js já possui funções para label/ícone da prioridade,
+    mas não possui uma função chamada normalizarPrioridadeVisual.
+    Então fazemos a normalização aqui de forma local e segura.
+    */
+    const prioridadeValor = String(midia.prioridade || "normal").toLowerCase();
+
+    const prioridade = ["normal", "alta", "urgente"].includes(prioridadeValor)
+        ? prioridadeValor
+        : "normal";
+
+    const prioridadeLabel = obterLabelPrioridade(prioridade);
+    const statusLabel = midia.ativo ? "Ativo" : "Inativo";
+    const tipoLabel = midia.tipo === "video"
+        ? "Vídeo"
+        : midia.tipo === "imagem"
+            ? "Imagem"
+            : "Arquivo";
+
+    const repeticaoLabel = Number(midia.repetirACada) > 0
+        ? `A cada ${Number(midia.repetirACada)} mídias`
+        : "Não repete";
+
+    const duracaoLabel = midia.tipo === "imagem" && Number(midia.duracao) > 0
+        ? `${Number(midia.duracao)} segundos`
+        : "Automática / vídeo";
+
+    const periodoLabel = obterPeriodoDetalhesMidia(midia);
+
+    if (mediaDetailsModalTitle) {
+        mediaDetailsModalTitle.textContent = midia.titulo || midia.nome;
+    }
+
+    if (mediaDetailsModalSubtitle) {
+        mediaDetailsModalSubtitle.textContent = midia.nome;
+    }
+
+    mediaDetailsModalBody.innerHTML = `
+        <div class="mediaDetailsModalStatusRow">
+            <span class="mediaBadge ${midia.tipo === "video" ? "video" : "imagem"} mediaBadgeStatic">
+                <i class="fa-solid ${midia.tipo === "video" ? "fa-film" : "fa-image"}" aria-hidden="true"></i>
+                ${tipoLabel}
+            </span>
+
+            <span class="mediaStatusToggle ${midia.ativo ? "isActive" : "isInactive"} mediaBadgeStatic">
+                <span>${statusLabel}</span>
+            </span>
+
+            <span class="mediaBadge ${prioridade} mediaBadgeStatic">
+                <i class="fa-solid ${obterIconePrioridade(prioridade)}" aria-hidden="true"></i>
+                ${prioridadeLabel}
+            </span>
+        </div>
+
+        <div class="mediaDetailsModalGrid">
+            ${criarLinhaDetalheMidia("Título amigável", midia.titulo || midia.nome, "fa-pen")}
+            ${criarLinhaDetalheMidia("Nome real do arquivo", midia.nome, "fa-file")}
+            ${criarLinhaDetalheMidia("Tipo", tipoLabel, "fa-photo-film")}
+            ${criarLinhaDetalheMidia("Extensão", midia.extensao || "Não informado", "fa-code")}
+            ${criarLinhaDetalheMidia("Caminho", midia.caminho || `midia/${midia.nome}`, "fa-folder-open")}
+            ${criarLinhaDetalheMidia("Tamanho", formatarTamanhoArquivoDetalhes(midia.tamanho), "fa-hard-drive")}
+            ${criarLinhaDetalheMidia("Ordem na playlist", String(midia.ordem || "Não definida"), "fa-arrow-down-1-9")}
+            ${criarLinhaDetalheMidia("Duração", duracaoLabel, "fa-clock")}
+            ${criarLinhaDetalheMidia("Período", periodoLabel, "fa-calendar-check")}
+            ${criarLinhaDetalheMidia("Início", formatarDataHoraDetalhes(midia.inicio), "fa-calendar-plus")}
+            ${criarLinhaDetalheMidia("Fim", formatarDataHoraDetalhes(midia.fim), "fa-calendar-minus")}
+            ${criarLinhaDetalheMidia("Repetição", repeticaoLabel, "fa-repeat")}
+        </div>
+    `;
+
+    mediaDetailsModal.classList.remove("hidden");
+    document.body.classList.add("modalAberto");
+
+    if (btnDismissMediaDetailsModal) {
+        btnDismissMediaDetailsModal.focus();
+    }
+}
+
+/**
+ * Fecha o modal de detalhes.
+ */
+function fecharModalDetalhesMidia() {
+    if (!mediaDetailsModal) return;
+
+    mediaDetailsModal.classList.add("hidden");
+    document.body.classList.remove("modalAberto");
+}
+
+/* =========================================================
    ALTERAÇÕES PENDENTES GLOBAIS
    =========================================================
    Controla o botão "Salvar alterações" do header e o aviso
@@ -5759,6 +6180,21 @@ document.addEventListener("keydown", (event) => {
 
     fecharIndicadorSelectPerfil();
 
+    if (mediaDetailsModal && !mediaDetailsModal.classList.contains("hidden")) {
+        fecharModalDetalhesMidia();
+        return;
+    }
+
+    if (pendingExitModal && !pendingExitModal.classList.contains("hidden")) {
+        fecharModalSaidaPendente();
+        return;
+    }
+
+    if (pendingSyncModal && !pendingSyncModal.classList.contains("hidden")) {
+        fecharModalSincronizacaoPendente();
+        return;
+    }
+
     if (userModal && !userModal.classList.contains("hidden")) {
         fecharFormularioUsuario();
         return;
@@ -5774,6 +6210,74 @@ document.addEventListener("keydown", (event) => {
         return;
     }
 });
+
+/* =========================================================
+   EVENTOS - MODAL DE DETALHES DA MÍDIA
+   ========================================================= */
+
+if (btnCloseMediaDetailsModal) {
+    btnCloseMediaDetailsModal.addEventListener("click", fecharModalDetalhesMidia);
+}
+
+if (btnDismissMediaDetailsModal) {
+    btnDismissMediaDetailsModal.addEventListener("click", fecharModalDetalhesMidia);
+}
+
+if (mediaDetailsModal) {
+    mediaDetailsModal.addEventListener("click", (event) => {
+        if (event.target === mediaDetailsModal) {
+            fecharModalDetalhesMidia();
+        }
+    });
+}
+
+/* =========================================================
+   EVENTOS - MODAL DE SAÍDA COM ALTERAÇÕES PENDENTES
+   ========================================================= */
+
+if (btnClosePendingExitModal) {
+    btnClosePendingExitModal.addEventListener("click", fecharModalSaidaPendente);
+}
+
+if (btnCancelPendingExit) {
+    btnCancelPendingExit.addEventListener("click", fecharModalSaidaPendente);
+}
+
+if (btnConfirmPendingExit) {
+    btnConfirmPendingExit.addEventListener("click", confirmarSaidaPendente);
+}
+
+if (pendingExitModal) {
+    pendingExitModal.addEventListener("click", (event) => {
+        if (event.target === pendingExitModal) {
+            fecharModalSaidaPendente();
+        }
+    });
+}
+
+/* =========================================================
+   EVENTOS - MODAL DE SINCRONIZAÇÃO COM ALTERAÇÕES PENDENTES
+   ========================================================= */
+
+if (btnClosePendingSyncModal) {
+    btnClosePendingSyncModal.addEventListener("click", fecharModalSincronizacaoPendente);
+}
+
+if (btnCancelPendingSync) {
+    btnCancelPendingSync.addEventListener("click", fecharModalSincronizacaoPendente);
+}
+
+if (btnSaveBeforeSync) {
+    btnSaveBeforeSync.addEventListener("click", salvarAlteracoesAntesDeSincronizar);
+}
+
+if (pendingSyncModal) {
+    pendingSyncModal.addEventListener("click", (event) => {
+        if (event.target === pendingSyncModal) {
+            fecharModalSincronizacaoPendente();
+        }
+    });
+}
 
 if (btnToggleUserPassword) {
     btnToggleUserPassword.addEventListener("click", alternarVisibilidadeSenhaUsuario);
@@ -5888,14 +6392,40 @@ if (userStatusModal) {
 
 if (btnReload) {
     btnReload.addEventListener("click", async () => {
+        /*
+          Se existem alterações pendentes, não sincronizamos a biblioteca.
+
+          Motivo:
+          - sincronizar recarrega os dados salvos no backend;
+          - isso descarta visualmente os rascunhos da tela;
+          - mas pode deixar o estado de "alteração pendente" inconsistente.
+
+          Então o fluxo correto é:
+          1. avisar o usuário;
+          2. pedir para salvar ou continuar editando;
+          3. somente sincronizar quando não houver pendências.
+        */
+        if (existemAlteracoesPendentes) {
+            abrirModalSincronizacaoPendente();
+            return;
+        }
+
         btnReload.disabled = true;
-        definirBotaoComIcone(btnReload, "fa-solid fa-spinner fa-spin", "Sincronizando...");
-        mostrarMensagemPlaylist("Sincronizando biblioteca...", "info");
+        definirBotaoComIcone(btnReload, "fa-solid fa-spinner fa-spin", "Sincronizando.");
+        mostrarMensagemPlaylist("Sincronizando biblioteca.", "info");
 
         try {
             await carregarMidias();
             await carregarPlaylistAtual();
             await carregarResumoAdmin();
+
+            /*
+              Garantia extra:
+              se a sincronização foi permitida, não deve sobrar
+              estado visual de alteração pendente.
+            */
+            limparAlteracoesPendentes();
+            sincronizarAlteracoesPendentesGlobais();
 
             mostrarMensagemPlaylist("Biblioteca atualizada.", "sucesso");
         } catch (erro) {
@@ -5953,8 +6483,59 @@ if (btnToggleSelectionMode) {
 }
 
 if (btnLogout) {
-    btnLogout.addEventListener("click", sairDoAdmin);
+    btnLogout.addEventListener("click", () => {
+        executarComConfirmacaoDeSaida(sairDoAdmin);
+    });
 }
+
+/*
+  Intercepta atalhos comuns de atualização.
+
+  Observação:
+  O botão atualizar do navegador ainda usa beforeunload nativo,
+  porque não é possível trocar por modal customizado.
+*/
+/*
+  Intercepta atalhos comuns de atualização.
+
+  Importante:
+  - F5 e Ctrl+R podem ser interceptados pelo JavaScript;
+  - botão atualizar do navegador, fechar aba e digitar outra URL
+    continuam usando o beforeunload nativo por limitação do navegador.
+*/
+document.addEventListener("keydown", (event) => {
+    const tecla = String(event.key || "").toLowerCase();
+
+    const tentouAtualizar =
+        tecla === "f5" ||
+        ((event.ctrlKey || event.metaKey) && tecla === "r");
+
+    if (!tentouAtualizar || !existemAlteracoesPendentes) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    /*
+      Se o aviso de sincronização estiver aberto, fechamos ele
+      antes de abrir o modal de saída pendente.
+
+      Assim o usuário não fica com dois modais competindo.
+    */
+    if (pendingSyncModal && !pendingSyncModal.classList.contains("hidden")) {
+        fecharModalSincronizacaoPendente();
+    }
+
+    /*
+      Se o modal de saída já estiver aberto, não abre outro por cima.
+    */
+    if (pendingExitModal && !pendingExitModal.classList.contains("hidden")) {
+        return;
+    }
+
+    executarComConfirmacaoDeSaida(() => {
+        window.location.reload();
+    });
+}, true);
 
 if (btnSalvarTudo) {
     btnSalvarTudo.addEventListener("click", salvarTodasConfiguracoes);
@@ -6540,25 +7121,15 @@ if (mediaList) {
 
 document.addEventListener("click", (event) => {
     const trigger = event.target.closest(".mediaDetailsTrigger");
-    const detalhes = event.target.closest(".mediaDetailsHover");
 
-    document.querySelectorAll(".mediaDetailsHover.isOpen").forEach((item) => {
-        if (item !== detalhes) {
-            item.classList.remove("isOpen");
-        }
-    });
+    if (!trigger) return;
 
-    if (trigger) {
-        event.preventDefault();
-        detalhes.classList.toggle("isOpen");
-        return;
-    }
+    event.preventDefault();
+    event.stopPropagation();
 
-    if (!detalhes) {
-        document.querySelectorAll(".mediaDetailsHover.isOpen").forEach((item) => {
-            item.classList.remove("isOpen");
-        });
-    }
+    const item = trigger.closest(".mediaItem");
+
+    abrirModalDetalhesMidia(item);
 });
 
 /* =========================================================

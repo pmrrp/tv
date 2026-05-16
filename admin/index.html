@@ -50,7 +50,7 @@
          - sair da sessão administrativa.
 
          Observação importante:
-         O visual abaixo foi mantido no padrão gerado pelo Codex.
+         O visual abaixo foi mantido no padrão gerado.
          Aqui foram feitos apenas ajustes pontuais de segurança/compatibilidade:
          - correção de texto em UTF-8;
          - upload limitado a 1 arquivo por vez para combinar com o backend atual;
@@ -737,6 +737,147 @@
                 <button id="btnConfirmUserStatus" class="dangerAction" type="button">
                     <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
                     Confirmar
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <!-- =====================================================
+     MODAL - DETALHES DA MÍDIA
+     =====================================================
+     Substitui o popover antigo de detalhes.
+
+     Motivo:
+     - evita corte em telas pequenas;
+     - mantém padrão visual dos modais do sistema;
+     - melhora leitura das informações da mídia.
+     ===================================================== -->
+    <div id="mediaDetailsModal" class="modalOverlay hidden" role="dialog" aria-modal="true"
+        aria-labelledby="mediaDetailsModalTitle">
+        <section class="modalCard mediaDetailsModalCard">
+            <div class="modalHeader">
+                <div>
+                    <span class="sectionKicker">Detalhes da mídia</span>
+                    <h2 id="mediaDetailsModalTitle">Informações da mídia</h2>
+                    <p id="mediaDetailsModalSubtitle">
+                        Consulte os dados técnicos e operacionais desta mídia.
+                    </p>
+                </div>
+
+                <button id="btnCloseMediaDetailsModal" class="modalCloseButton" type="button"
+                    aria-label="Fechar detalhes da mídia">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <div id="mediaDetailsModalBody" class="mediaDetailsModalBody">
+                <!-- Conteúdo preenchido pelo admin.js -->
+            </div>
+
+            <div class="confirmModalActions">
+                <button id="btnDismissMediaDetailsModal" class="secondaryAction" type="button">
+                    Fechar
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <!-- =====================================================
+     MODAL - ALTERAÇÕES PENDENTES AO SAIR
+     =====================================================
+     Usado quando a saída é controlável pelo JavaScript, como:
+     - botão Sair;
+     - F5;
+     - Ctrl+R.
+
+     Observação:
+     Fechar aba, botão atualizar do navegador e barra de endereço
+     continuam usando o aviso nativo do navegador por limitação
+     de segurança dos próprios navegadores.
+     ===================================================== -->
+    <div id="pendingExitModal" class="modalOverlay hidden" role="dialog" aria-modal="true"
+        aria-labelledby="pendingExitModalTitle">
+        <section class="modalCard confirmModalCard pendingExitModalCard">
+            <div class="modalHeader">
+                <div>
+                    <span class="sectionKicker">Alterações pendentes</span>
+                    <h2 id="pendingExitModalTitle">Existem alterações não salvas</h2>
+                    <p id="pendingExitModalDescription">
+                        Você possui alterações pendentes nesta página. Se sair agora, essas mudanças serão perdidas.
+                    </p>
+                </div>
+
+                <button id="btnClosePendingExitModal" class="modalCloseButton" type="button"
+                    aria-label="Continuar editando">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <div class="pendingExitSummary pendingSyncSummary">
+                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                <span id="pendingSyncSummaryText">
+                    Salve as alterações pendentes antes de sincronizar a playlist.
+                </span>
+            </div>
+
+            <div class="confirmModalActions">
+                <button id="btnCancelPendingExit" class="secondaryAction" type="button">
+                    Continuar editando
+                </button>
+
+                <button id="btnConfirmPendingExit" class="dangerAction" type="button">
+                    <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
+                    Sair sem salvar
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <!-- =====================================================
+     MODAL - SINCRONIZAÇÃO COM ALTERAÇÕES PENDENTES
+     =====================================================
+     Evita gerar/sincronizar playlist enquanto existem
+     alterações não salvas na biblioteca.
+
+     Motivo:
+     A playlist deve refletir o estado salvo no backend.
+     Se houver rascunho visual na tela, o usuário deve salvar
+     antes de sincronizar manualmente.
+     ===================================================== -->
+    <div id="pendingSyncModal" class="modalOverlay hidden" role="dialog" aria-modal="true"
+        aria-labelledby="pendingSyncModalTitle">
+        <section class="modalCard confirmModalCard pendingSyncModalCard">
+            <div class="modalHeader">
+                <div>
+                    <span class="sectionKicker">Sincronização bloqueada</span>
+                    <h2 id="pendingSyncModalTitle">Salve as alterações antes de sincronizar</h2>
+                    <p id="pendingSyncModalDescription">
+                        Existem alterações não salvas na biblioteca. A playlist manual deve ser sincronizada somente
+                        depois que as configurações forem salvas.
+                    </p>
+                </div>
+
+                <button id="btnClosePendingSyncModal" class="modalCloseButton" type="button"
+                    aria-label="Fechar aviso de sincronização">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <div class="pendingExitSummary pendingSyncSummary">
+                <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                <span id="pendingSyncSummaryText">
+                    Salve as alterações pendentes antes de sincronizar a playlist.
+                </span>
+            </div>
+
+            <div class="confirmModalActions">
+                <button id="btnCancelPendingSync" class="secondaryAction" type="button">
+                    Continuar editando
+                </button>
+
+                <button id="btnSaveBeforeSync" class="warningAction" type="button">
+                    <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                    Salvar alterações
                 </button>
             </div>
         </section>

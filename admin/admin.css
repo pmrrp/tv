@@ -8805,3 +8805,196 @@ body.mediaSelectionMode .mediaRepeatBadge {
     opacity: 1;
     filter: none;
 }
+
+/* =========================================================
+   DETALHES DA MÍDIA EM MODAL
+   =========================================================
+   O botão Detalhes agora abre um modal.
+   O popover antigo é ocultado para evitar cortes em telas pequenas.
+   ========================================================= */
+
+.mediaDetailsHover .mediaDetailsPopover {
+    display: none !important;
+}
+
+/* =========================================================
+   MODAL - DETALHES DA MÍDIA
+   ========================================================= */
+
+.mediaDetailsModalCard {
+    width: min(760px, 100%);
+    max-height: calc(100vh - 32px);
+    overflow: auto;
+    padding: 22px;
+}
+
+.mediaDetailsModalBody {
+    display: grid;
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.mediaDetailsModalStatusRow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    padding: 12px;
+
+    border: 1px solid #dbe7f3;
+    border-radius: 16px;
+
+    background: rgba(248, 250, 252, 0.92);
+}
+
+.mediaDetailsModalGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.mediaDetailsModalItem {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+
+    min-width: 0;
+
+    padding: 12px;
+
+    border: 1px solid #dbe7f3;
+    border-radius: 14px;
+
+    background: #ffffff;
+}
+
+.mediaDetailsModalIcon {
+    width: 38px;
+    height: 38px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 999px;
+
+    background: #e9f4fb;
+    color: #075894;
+}
+
+.mediaDetailsModalText {
+    min-width: 0;
+    display: grid;
+    gap: 3px;
+}
+
+.mediaDetailsModalText small {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.mediaDetailsModalText strong {
+    min-width: 0;
+
+    color: #0f172a;
+
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1.35;
+
+    overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   MODAL - SAÍDA COM ALTERAÇÕES PENDENTES
+   ========================================================= */
+
+.pendingExitSummary {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+
+    margin-top: 18px;
+    padding: 12px;
+
+    border: 1px solid #fde68a;
+    border-radius: 16px;
+
+    background: #fffbeb;
+    color: #92400e;
+
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1.35;
+}
+
+.pendingExitSummary i {
+    width: 38px;
+    height: 38px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 999px;
+
+    background: #fef3c7;
+    color: #b45309;
+}
+
+/*
+  Quando qualquer modal estiver aberto, evita rolagem por trás.
+*/
+body.modalAberto {
+    overflow: hidden;
+}
+
+@media (max-width: 640px) {
+    .mediaDetailsModalGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .mediaDetailsModalCard,
+    .pendingExitModalCard {
+        width: 100%;
+        max-height: calc(100vh - 24px);
+        border-radius: 20px;
+    }
+}
+
+/* =========================================================
+   MODAL - SINCRONIZAÇÃO COM ALTERAÇÕES PENDENTES
+   =========================================================
+   Este modal é um aviso operacional, não uma mensagem de sucesso.
+   Por isso usa tons de atenção/alerta.
+   ========================================================= */
+
+.pendingSyncSummary {
+    border-color: rgba(180, 83, 9, 0.28);
+    background: var(--orange-100);
+    color: var(--orange-700);
+}
+
+.pendingSyncSummary i {
+    background: var(--yellow-100);
+    color: var(--orange-700);
+}
+
+/*
+  Botão principal do modal de sincronização pendente.
+  Mantém destaque, mas com tom de aviso em vez de verde/sucesso.
+*/
+.pendingSyncModalCard #btnSaveBeforeSync {
+    background: linear-gradient(135deg, var(--yellow-600), var(--orange-700));
+    color: #ffffff;
+}
+
+.pendingSyncModalCard #btnSaveBeforeSync:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 10px rgba(180, 83, 9, 0.18);
+}
