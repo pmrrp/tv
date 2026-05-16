@@ -518,6 +518,11 @@ document.addEventListener("toggle", (event) => {
 
     if (!item) return;
 
+    if (item.classList.contains("mediaItemEditingLocked")) {
+        menu.open = false;
+        return;
+    }
+
     /*
       Ao abrir, guardamos o estado atual como rascunho inicial.
     */
@@ -2793,6 +2798,243 @@ function renderizarOpcoesRepeticao(repetirACada, prioridadePodeRepetir) {
     return opcoes.join("");
 }
 
+/**
+ * Verifica se o card de mídia está inativo.
+ */
+function midiaDoCardEstaInativa(item) {
+    if (!item) return false;
+
+    const checkboxAtivo = item.querySelector(".mediaActive");
+
+    if (checkboxAtivo) {
+        return !checkboxAtivo.checked;
+    }
+
+    return item.classList.contains("mediaItemInactive");
+}
+
+/**
+ * Bloqueia ou libera os campos editáveis de uma mídia.
+ *
+ * Mídia inativa:
+ * - bloqueia campos de configuração;
+ * - mantém liberado ativar/desativar, excluir e detalhes.
+ */
+function atualizarBloqueioEdicaoDaMidia(item) {
+    if (!item) return;
+
+    const inativa = midiaDoCardEstaInativa(item);
+
+    item.classList.toggle("mediaItemEditingLocked", inativa);
+
+    const camposEditaveis = item.querySelectorAll(`
+        .mediaTitleInput,
+        .mediaDuration,
+        .mediaPriority,
+        .mediaRepeatEvery,
+        .mediaStartDate,
+        .mediaEndDate
+    `);
+
+    camposEditaveis.forEach((campo) => {
+        campo.disabled = inativa;
+        campo.setAttribute("aria-disabled", inativa ? "true" : "false");
+    });
+
+    const menusBloqueaveis = item.querySelectorAll(`
+        .mediaScheduleMenu,
+        .mediaPriorityMenu
+    `);
+
+    menusBloqueaveis.forEach((menu) => {
+        menu.classList.toggle("mediaControlLocked", inativa);
+
+        if (inativa && menu instanceof HTMLDetailsElement) {
+            menu.open = false;
+        }
+
+        const summary = menu.querySelector("summary");
+
+        if (summary) {
+            summary.setAttribute("aria-disabled", inativa ? "true" : "false");
+            summary.tabIndex = inativa ? -1 : 0;
+        }
+    });
+
+    const botoesPeriodo = item.querySelectorAll(`
+        .mediaScheduleApply,
+        .mediaScheduleCancel
+    `);
+
+    botoesPeriodo.forEach((botao) => {
+        botao.disabled = inativa;
+    });
+}
+
+/**
+ * Aplica o bloqueio em todas as mídias já renderizadas.
+ */
+function atualizarBloqueioEdicaoDasMidiasInativas() {
+    document.querySelectorAll(".mediaItem").forEach((item) => {
+        atualizarBloqueioEdicaoDaMidia(item);
+    });
+}
+
+/**
+ * Atualiza visualmente o status Ativo/Inativo do card.
+ *
+ * Essa função só cuida da interface:
+ * - texto da tag;
+ * - classe visual da tag;
+ * - classe visual do card.
+ */
+function atualizarVisualStatusAtivoDoItem(item, ativo) {
+    if (!item) return;
+
+    const statusToggle = item.querySelector(".mediaStatusToggle");
+    const statusText = statusToggle ? statusToggle.querySelector("span") : null;
+
+    if (statusToggle) {
+        statusToggle.classList.toggle("isActive", ativo);
+        statusToggle.classList.toggle("isInactive", !ativo);
+    }
+
+    if (statusText) {
+        statusText.textContent = ativo ? "Ativo" : "Inativo";
+    }
+
+    item.classList.toggle("mediaItemInactive", !ativo);
+}
+
+/**
+ * Salva rapidamente apenas o status Ativo/Inativo da mídia.
+ *
+ * Por que existe uma função própria?
+ * - Ativo/Inativo funciona como switch;
+ * - não precisa modal;
+ * - não precisa botão Salvar;
+ * - evita recarregar toda a biblioteca sem necessidade;
+ * - mantém outras alterações pendentes do card, se existirem.
+ */
+async function salvarStatusAtivoMidiaRapido(item) {
+    if (!garantirPermissaoParaEditarMidias()) return false;
+    if (!item) return false;
+
+    const checkboxAtivo = item.querySelector(".mediaActive");
+
+    if (!checkboxAtivo) return false;
+
+    const nomeArquivo = checkboxAtivo.dataset.arquivo || item.dataset.arquivo;
+    const ativoAtual = checkboxAtivo.checked;
+
+    if (!nomeArquivo) return false;
+
+    let configuracaoOriginal = {};
+
+    try {
+        configuracaoOriginal = JSON.parse(item.dataset.configOriginal || "{}");
+    } catch (erro) {
+        configuracaoOriginal = {};
+    }
+
+    /*
+      Salvamos somente a mudança de ativo/inativo sobre a última
+      configuração confirmada do card.
+
+      Assim, se o usuário tiver outra alteração pendente no card,
+      ela não é salva silenciosamente junto com o switch.
+    */
+    const configuracaoParaSalvar = {
+        ...configuracaoOriginal,
+        nome: nomeArquivo,
+        ativo: ativoAtual
+    };
+
+    checkboxAtivo.disabled = true;
+
+    try {
+        const resposta = await fetchComSessao(
+            `/api/midias/${encodeURIComponent(nomeArquivo)}/config`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(configuracaoParaSalvar)
+            }
+        );
+
+        const dados = await resposta.json();
+
+        if (!resposta.ok || dados.erro) {
+            throw new Error(dados.mensagem || "Erro ao alterar status da mídia.");
+        }
+
+        /*
+          Atualiza a base original do card com o novo status salvo.
+          Isso impede o botão Salvar de aparecer apenas por causa
+          do clique em Ativo/Inativo.
+        */
+        const novaConfiguracaoOriginal = {
+            ...configuracaoOriginal,
+            ativo: ativoAtual
+        };
+
+        item.dataset.configOriginal = JSON.stringify(novaConfiguracaoOriginal);
+
+        atualizarVisualStatusAtivoDoItem(item, ativoAtual);
+        atualizarBloqueioEdicaoDaMidia(item);
+
+        /*
+          Se não houver outra alteração pendente real, o card volta
+          ao estado limpo. Se houver, o botão Salvar continua aparecendo.
+        */
+        atualizarEstadoVisualAlteracaoDoItem(item);
+        sincronizarAlteracoesPendentesGlobais();
+
+        mostrarMensagemPlaylist(
+            ativoAtual
+                ? "Mídia ativada e playlist atualizada automaticamente."
+                : "Mídia inativada e removida da playlist automaticamente.",
+            "sucesso"
+        );
+
+        await carregarPlaylistAtual();
+        await carregarResumoAdmin();
+
+        /*
+          Reaplica filtros, porque uma mídia pode desaparecer se
+          o filtro atual estiver mostrando apenas ativas/inativas.
+        */
+        aplicarFiltrosMidia();
+
+        return true;
+    } catch (erro) {
+        mostrarMensagemPlaylist(
+            erro.message || "Erro ao alterar status da mídia.",
+            "erro"
+        );
+
+        /*
+          Se falhar, volta visualmente para o estado anterior.
+        */
+        const ativoAnterior = configuracaoOriginal.ativo !== false;
+
+        checkboxAtivo.checked = ativoAnterior;
+
+        atualizarVisualStatusAtivoDoItem(item, ativoAnterior);
+        atualizarBloqueioEdicaoDaMidia(item);
+        atualizarEstadoVisualAlteracaoDoItem(item);
+        sincronizarAlteracoesPendentesGlobais();
+
+        console.error(erro);
+
+        return false;
+    } finally {
+        checkboxAtivo.disabled = false;
+    }
+}
+
 /* =========================================================
    RENDERIZAÇÃO DAS MÍDIAS
    ========================================================= */
@@ -3197,6 +3439,7 @@ function renderizarMidias(midias) {
         );
 
         mediaList.appendChild(item);
+        atualizarBloqueioEdicaoDaMidia(item);
     });
 
     aplicarFiltrosMidia();
@@ -5989,6 +6232,18 @@ async function processarAlteracaoDeMidia(alvo) {
     if (!item) return;
 
     /*
+      Se a mídia estiver inativa, bloqueamos alterações em campos
+      de configuração. A única alteração permitida nesse estado
+      é reativar/desativar pelo próprio toggle de status.
+    */
+    if (
+        item.classList.contains("mediaItemEditingLocked") &&
+        !alvo.classList.contains("mediaActive")
+    ) {
+        return;
+    }
+
+    /*
     Campos de período agora trabalham em modo rascunho.
     Eles só viram alteração real quando o usuário clica em
     "Aplicar período".
@@ -6017,20 +6272,16 @@ async function processarAlteracaoDeMidia(alvo) {
     }
 
     /*
-      Atualiza visualmente a tag Ativo/Inativo.
+    Ativo/Inativo funciona como switch rápido.
+    Ao clicar, já salva automaticamente sem modal e sem botão Salvar.
     */
     if (alvo.classList.contains("mediaActive")) {
-        const statusToggle = alvo.closest(".mediaStatusToggle");
-        const statusText = statusToggle ? statusToggle.querySelector("span") : null;
+        atualizarVisualStatusAtivoDoItem(item, alvo.checked);
+        atualizarBloqueioEdicaoDaMidia(item);
 
-        if (statusToggle) {
-            statusToggle.classList.toggle("isActive", alvo.checked);
-            statusToggle.classList.toggle("isInactive", !alvo.checked);
-        }
+        await salvarStatusAtivoMidiaRapido(item);
 
-        if (statusText) {
-            statusText.textContent = alvo.checked ? "Ativo" : "Inativo";
-        }
+        return;
     }
 
     if (alvo.classList.contains("mediaPriority")) {

@@ -8704,3 +8704,84 @@ body.mediaSelectionMode .mediaRepeatBadge {
 .mediaScheduleActions.isVisible {
     display: flex !important;
 }
+
+/* =========================================================
+   MÍDIA INATIVA - BLOQUEIO DE EDIÇÃO
+   =========================================================
+   Quando uma mídia está inativa:
+   - o card indica visualmente que está fora da playlist;
+   - campos de edição ficam bloqueados;
+   - ações essenciais continuam fortes:
+     ativar/desativar, detalhes e excluir.
+   ========================================================= */
+
+/*
+  Importante:
+  Não usamos opacity no card inteiro, porque isso apagaria
+  também os botões Detalhes e Excluir.
+*/
+.mediaItemInactive,
+.mediaItemInactive.mediaItemEditingLocked {
+    opacity: 1 !important;
+    background: rgba(248, 250, 252, 0.82);
+}
+
+/* Preview fica suavizado */
+.mediaItemEditingLocked .mediaPreview {
+    opacity: 0.58;
+    filter: grayscale(0.22);
+}
+
+/* Campos bloqueados */
+.mediaItemEditingLocked .mediaTitleInput,
+.mediaItemEditingLocked .mediaDuration,
+.mediaItemEditingLocked .mediaPriority,
+.mediaItemEditingLocked .mediaRepeatEvery,
+.mediaItemEditingLocked .mediaStartDate,
+.mediaItemEditingLocked .mediaEndDate {
+    cursor: not-allowed;
+    background: rgba(245, 248, 251, 0.94);
+    color: rgba(101, 115, 134, 0.86);
+    opacity: 0.68;
+}
+
+/* Labels/configurações ficam suavizados */
+.mediaItemEditingLocked .mediaConfigRow {
+    opacity: 0.72;
+}
+
+/* Menus de configuração bloqueados */
+.mediaItemEditingLocked .mediaScheduleMenu,
+.mediaItemEditingLocked .mediaPriorityMenu {
+    pointer-events: none;
+    opacity: 0.58;
+    filter: grayscale(0.25);
+}
+
+/* Ações essenciais continuam fortes e clicáveis */
+.mediaItemEditingLocked .mediaStatusToggle,
+.mediaItemEditingLocked .mediaDetailsHover,
+.mediaItemEditingLocked .mediaDetailsTrigger,
+.mediaItemEditingLocked .mediaDeleteButton,
+.mediaItemEditingLocked .mediaSelectArea,
+.mediaItemEditingLocked .mediaSelect {
+    pointer-events: auto;
+    opacity: 1 !important;
+    filter: none !important;
+}
+
+/* Excluir bem visível mesmo em mídia inativa */
+.mediaItemEditingLocked .mediaDeleteButton {
+    background: #ffffff;
+    color: var(--red-700);
+    border-color: rgba(180, 35, 24, 0.22);
+}
+
+/*
+  O botão salvar não deve aparecer apenas por ativar/desativar.
+  Se aparecer por outra alteração pendente real, continua normal.
+*/
+.mediaItemEditingLocked .mediaSaveButton {
+    opacity: 1;
+    filter: none;
+}
