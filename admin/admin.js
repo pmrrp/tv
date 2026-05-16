@@ -2960,7 +2960,7 @@ function atualizarVisualStatusAtivoDoItem(item, ativo) {
         statusToggle.setAttribute(
             "title",
             ativo
-                ? "Clique para inativar esta mídia"
+                ? "Clique para desativar esta mídia"
                 : "Clique para ativar esta mídia"
         );
     }
@@ -5673,9 +5673,31 @@ function fecharModalDetalhesMidia() {
 
 /**
  * Retorna todos os cards de mídia com alterações reais.
+ *
+ * Importante:
+ * Não confiamos apenas na classe .mediaItemChanged.
+ *
+ * Motivo:
+ * A classe é visual e pode ficar presa em algum fluxo de renderização.
+ * A fonte da verdade deve ser a comparação real entre:
+ * - configuração original carregada/salva;
+ * - configuração atual visível no card.
  */
 function obterItensComAlteracoesPendentes() {
-    return Array.from(document.querySelectorAll(".mediaItemChanged"));
+    const itens = Array.from(document.querySelectorAll(".mediaItem"));
+
+    return itens.filter((item) => {
+        const alterado = itemPossuiAlteracaoReal(item);
+        const botaoSalvar = item.querySelector(".mediaSaveButton");
+
+        item.classList.toggle("mediaItemChanged", alterado);
+
+        if (botaoSalvar) {
+            botaoSalvar.classList.toggle("hidden", !alterado);
+        }
+
+        return alterado;
+    });
 }
 
 /**
@@ -6909,15 +6931,63 @@ async function processarAlteracaoDeMidia(alvo) {
     */
     if (alvo.classList.contains("mediaActive")) {
         /*
-          Ativo/Inativo é um switch imediato.
+          Ativo/Inativo salva automaticamente no backend.
     
-          Fluxo:
-          1. muda o visual na hora;
-          2. bloqueia/desbloqueia os campos conforme o novo estado;
-          3. persiste no backend automaticamente;
-          4. se der erro, a função salvarStatusAtivoMidiaRapido desfaz.
+          Porém, o evento "change" do checkbox só chega aqui depois
+          que o navegador já alterou visualmente o checked.
+    
+          Portanto:
+          - não podemos simplesmente chamar itemPossuiAlteracaoReal(item),
+            porque ele vai enxergar o próprio clique no Ativo/Inativo
+            como alteração pendente;
+          - precisamos testar se existem OUTRAS alterações pendentes,
+            ignorando temporariamente a mudança do status.
         */
-        atualizarVisualStatusAtivoDoItem(item, alvo.checked);
+
+        let configuracaoOriginal = {};
+
+        try {
+            configuracaoOriginal = JSON.parse(item.dataset.configOriginal || "{}");
+        } catch (erro) {
+            configuracaoOriginal = {};
+        }
+
+        const ativoOriginal = configuracaoOriginal.ativo !== false;
+        const ativoClicado = alvo.checked;
+
+        /*
+          Passo 1:
+          Voltamos temporariamente o status para o valor original salvo.
+    
+          Assim, itemPossuiAlteracaoReal(item) consegue responder:
+          "existe alguma alteração pendente além do status?"
+        */
+        atualizarVisualStatusAtivoDoItem(item, ativoOriginal);
+        atualizarBloqueioEdicaoDaMidia(item);
+
+        const existemOutrasAlteracoesPendentes = itemPossuiAlteracaoReal(item);
+
+        /*
+          Se existem outras alterações pendentes, bloqueamos o switch.
+        */
+        if (existemOutrasAlteracoesPendentes) {
+            atualizarEstadoVisualAlteracaoDoItem(item);
+            sincronizarAlteracoesPendentesGlobais();
+
+            mostrarToast(
+                "Salve ou descarte as alterações pendentes antes de ativar/inativar esta mídia.",
+                "aviso"
+            );
+
+            return;
+        }
+
+        /*
+          Passo 2:
+          Se não existem outras alterações pendentes, restauramos o estado
+          clicado pelo usuário e seguimos com o salvamento automático.
+        */
+        atualizarVisualStatusAtivoDoItem(item, ativoClicado);
         atualizarBloqueioEdicaoDaMidia(item);
 
         await salvarStatusAtivoMidiaRapido(item);
