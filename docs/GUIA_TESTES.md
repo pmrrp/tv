@@ -82,6 +82,8 @@ Navegadores recomendados para teste:
 - [ ] Confirmar que o modal de detalhes fecha pelo botão Fechar.
 - [ ] Confirmar que o modal de detalhes fecha ao clicar fora.
 - [ ] Confirmar que o modal de detalhes fecha com ESC.
+- [ ] Confirmar que o status Ativo/Inativo exibe ícone visual adequado.
+- [ ] Confirmar que o status muda corretamente ao ativar/inativar mídia.
 
 ---
 
@@ -179,6 +181,24 @@ Navegadores recomendados para teste:
 
 ---
 
+## 8.2 Testes do select premium de repetição
+
+- [ ] Alterar prioridade de uma mídia para Alta.
+- [ ] Confirmar que o campo de repetição aparece.
+- [ ] Confirmar sugestão automática "A cada 6 mídias".
+- [ ] Abrir o select premium de repetição.
+- [ ] Escolher outro valor.
+- [ ] Confirmar que o card marca alteração pendente.
+- [ ] Salvar a mídia.
+- [ ] Recarregar a página.
+- [ ] Confirmar que o valor salvo permanece.
+- [ ] Alterar prioridade para Urgente.
+- [ ] Confirmar sugestão automática "A cada 3 mídias".
+- [ ] Alterar prioridade para Normal.
+- [ ] Confirmar que o campo de repetição fica oculto/zerado.
+
+---
+
 ## 8.2 Testes de sincronização com alterações pendentes
 
 - [ ] Alterar título amigável de uma mídia sem salvar.
@@ -212,6 +232,33 @@ Navegadores recomendados para teste:
 - [ ] Confirmar botão “Limpar filtros”.
 - [ ] Limpar filtros.
 - [ ] Confirmar listagem completa.
+
+---
+
+## 9.1 Testes de selects premium dos filtros
+
+- [ ] Abrir o popover de filtros.
+- [ ] Confirmar que os filtros aparecem com visual premium.
+- [ ] Abrir filtro de Status.
+- [ ] Selecionar uma opção de Status.
+- [ ] Confirmar que o botão "Aplicar filtros" aparece.
+- [ ] Abrir filtro de Tipo.
+- [ ] Selecionar uma opção de Tipo.
+- [ ] Abrir filtro de Período.
+- [ ] Selecionar uma opção de Período.
+- [ ] Abrir filtro de Prioridade.
+- [ ] Selecionar uma opção de Prioridade.
+- [ ] Abrir filtro de Repetição.
+- [ ] Selecionar uma opção de Repetição.
+- [ ] Clicar fora sem aplicar.
+- [ ] Confirmar que o rascunho é descartado.
+- [ ] Abrir filtros novamente.
+- [ ] Confirmar que os selects premium voltaram ao estado aplicado anterior.
+- [ ] Selecionar filtros e clicar em "Aplicar filtros".
+- [ ] Confirmar que a listagem é filtrada corretamente.
+- [ ] Confirmar que o contador de filtros aplicados aparece.
+- [ ] Clicar em "Limpar filtros".
+- [ ] Confirmar que todos os selects premium voltam ao padrão.
 
 ---
 

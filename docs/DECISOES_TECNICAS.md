@@ -811,6 +811,68 @@ Não foi criada opção de "sincronizar mesmo assim".
 
 A decisão foi evitar perda de rascunho e impedir estados intermediários confusos para o usuário administrativo.
 
+---
+
+## 31. Selects premium com select real preservado
+
+## Decisão
+
+Criar componentes visuais premium para alguns campos de seleção da dashboard, mantendo os elementos `<select>` reais no DOM.
+
+## Motivos
+
+- O menu aberto do `<select>` nativo é controlado pelo navegador/sistema operacional.
+- O CSS consegue melhorar o campo fechado, mas não controla totalmente a aparência do dropdown aberto.
+- O visual nativo destoava do acabamento premium buscado para a dashboard.
+- Era importante melhorar a interface sem reescrever toda a lógica existente.
+- O comportamento de filtros, rascunhos e salvamento já estava funcional e deveria ser preservado.
+
+## Como ficou
+
+Foram criados componentes visuais premium para:
+
+- repetição/recorrência das mídias;
+- filtros da biblioteca.
+
+O `<select>` real continua existindo para:
+
+- guardar o valor;
+- manter compatibilidade com o JavaScript atual;
+- disparar eventos `change`;
+- preservar o fluxo de salvamento;
+- preservar o fluxo de rascunho dos filtros.
+
+## Estratégia usada
+
+O componente premium atua como camada visual.
+
+Ao selecionar uma opção no componente premium:
+
+1. o valor do select real é atualizado;
+2. o evento `change` é disparado;
+3. a lógica existente do sistema continua sendo reaproveitada.
+
+## Uso de portal global
+
+Os menus abertos dos selects premium são renderizados em portal global com posicionamento fixo.
+
+Isso evita problemas como:
+
+- dropdown ficando atrás de outros cards;
+- conflito com `z-index`;
+- corte por `overflow`;
+- interferência visual de cards próximos.
+
+## Resultado
+
+A dashboard ganhou aparência mais profissional sem substituir a lógica funcional já testada.
+
+## Observação futura
+
+Outros campos nativos, como datepicker e timepicker, poderão receber tratamento visual mais refinado na Fase 3.
+
+
+---
 
 ## Observação final
 

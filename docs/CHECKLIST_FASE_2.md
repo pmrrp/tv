@@ -160,6 +160,16 @@ Ele serve para:
 - [OK] Popover de filtros fecha após aplicar.
 - [OK] Popover de filtros fecha após limpar.
 - [OK] Botões aparecem apenas quando necessário.
+- [OK] Selects dos filtros da biblioteca convertidos para visual premium.
+- [OK] Select premium implementado para filtro de status.
+- [OK] Select premium implementado para filtro de tipo.
+- [OK] Select premium implementado para filtro de período.
+- [OK] Select premium implementado para filtro de prioridade.
+- [OK] Select premium implementado para filtro de repetição/recorrência.
+- [OK] Selects premium dos filtros preservam o comportamento de rascunho.
+- [OK] Selects premium dos filtros respeitam o botão "Aplicar filtros".
+- [OK] Selects premium dos filtros respeitam o botão "Limpar filtros".
+- [OK] Selects premium dos filtros são sincronizados ao aplicar, limpar ou descartar rascunho.
 
 ---
 
@@ -191,7 +201,11 @@ Ele serve para:
 - [OK] Botões "Cancelar" e "Aplicar período" aparecem apenas quando há alteração real no período.
 - [OK] Rascunho do período de exibição é descartado ao clicar fora sem aplicar.
 - [OK] Rascunho do período de exibição é descartado ao pressionar ESC sem aplicar.
-- [AJUSTE] Revisar comportamento da repetição ao clicar fora ou pressionar ESC sem salvar.
+- [OK] Repetição permanece como alteração pendente normal, protegida pelos modais de saída/sincronização.
+- [OK] Select de repetição convertido para componente premium.
+- [OK] Select premium de repetição usa portal global para evitar conflito visual com cards.
+- [OK] Prioridade Alta sugere automaticamente repetição "A cada 6 mídias".
+- [OK] Prioridade Urgente sugere automaticamente repetição "A cada 3 mídias".
 ---
 
 ## 10. Playlist
@@ -355,12 +369,6 @@ Ele serve para:
 - [ ] Revisar console do navegador.
 - [ ] Revisar usabilidade geral da dashboard.
 - [ ] Revisar popover de detalhes em tela pequena.
-- [ ] Revisar popovers que ficam cortados próximos aos limites do navegador.
-- [ ] Ajustar largura do select de repetição.
-- [ ] Revisar botões "Cancelar" e "Aplicar período" para aparecerem apenas quando houver alteração real.
-- [ ] Revisar comportamento de alterações não salvas em repetição/período.
-- [ ] Revisar tratamento visual de mídia inativa.
-- [ ] Avaliar bloqueio de edição em mídias inativas.
 - [ ] Validar se a configuração do player está adequada para apresentação.
 - [ ] Confirmar se `config.json` está com opções corretas para produção/apresentação.
 - [ ] Atualizar documentação após os últimos ajustes.
@@ -372,9 +380,9 @@ Ele serve para:
 ## 18. Fase 3 — Polimento, usabilidade e implantação assistida
 
 - [IDEIA] Implementar drag and drop de upload em tela inteira, com efeito visual mais profissional.
-- [IDEIA] Melhorar visual geral dos selects da dashboard.
 - [IDEIA] Melhorar visual de datepicker e timepicker.
-- [IDEIA] Padronizar aparência dos campos nativos.
+- [IDEIA] Refinar datepicker/timepicker com componente mais premium.
+- [IDEIA] Padronizar aparência dos campos nativos restantes.
 - [IDEIA] Criar área de ajuda/tutoriais dentro do admin.
 - [IDEIA] Criar cards de tutorial com texto explicativo.
 - [IDEIA] Avaliar uso de vídeos curtos ou mini previews para demonstrar operações do sistema.
@@ -386,6 +394,7 @@ Ele serve para:
 - [IDEIA] Refinar experiência de uso para usuários não técnicos.
 - [IDEIA] Revisar textos explicativos da interface.
 - [IDEIA] Melhorar microinterações e feedbacks visuais.
+- [IDEIA] Refinar posicionamento e experiência dos modais no mobile.
 
 ---
 

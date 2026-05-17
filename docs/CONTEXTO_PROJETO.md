@@ -457,6 +457,11 @@ Já existem:
 - modal de detalhes da mídia;
 - modal de saída com alterações pendentes;
 - modal de sincronização bloqueada quando existem alterações pendentes.
+- select premium de repetição;
+- selects premium dos filtros da biblioteca;
+- status Ativo/Inativo refinado visualmente;
+- proteção contra alteração de status quando existem outras alterações pendentes;
+- modais para alterações pendentes e sincronização bloqueada.
 
 ---
 
@@ -464,7 +469,7 @@ Já existem:
 
 Pendências e melhorias identificadas:
 
-- refinar posicionamento/experiência do modal de detalhes da mídia no mobile;
+- refinar posicionamento e experiência dos modais no mobile;
 - criar documentação completa de uso;
 - criar documento executivo para apresentação;
 - revisar responsividade/mobile da dashboard;
@@ -473,6 +478,11 @@ Pendências e melhorias identificadas:
 - futuramente modularizar `admin.js`;
 - criar documentação técnica completa;
 - criar checklist final de entrega.
+- melhorar datepicker e timepicker;
+- revisar responsividade/mobile da dashboard;
+- hospedar Font Awesome localmente;
+- futuramente refatorar `admin.css`;
+- futuramente modularizar `admin.js`;
 
 ---
 

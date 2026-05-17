@@ -425,6 +425,41 @@ O modal de detalhes já está funcional, mas seu posicionamento e experiência e
 
 ---
 
+## 2026-05 — Selects premium, status visual e refinamentos finais da biblioteca
+
+### Implementado
+
+- Select de repetição convertido para componente premium.
+- Select de repetição passou a usar menu em portal global, evitando conflito visual com os cards abaixo.
+- Select de repetição mantém o select real como fonte de valor, preservando a lógica existente de salvamento.
+- Prioridade Alta passou a sugerir automaticamente repetição "A cada 6 mídias".
+- Prioridade Urgente passou a sugerir automaticamente repetição "A cada 3 mídias".
+- Selects dos filtros da biblioteca foram convertidos para componentes premium:
+  - status;
+  - tipo;
+  - período;
+  - prioridade;
+  - repetição.
+- Selects premium dos filtros preservam o comportamento de rascunho.
+- Selects premium dos filtros respeitam os botões "Aplicar filtros" e "Limpar filtros".
+- Status Ativo/Inativo recebeu refinamento visual, substituindo o marcador circular simples por ícones mais claros.
+- Ajuste pontual no layout dos cards de mídia para melhorar acomodação de textos maiores.
+- Ajustes visuais foram feitos sem refatoração ampla do CSS.
+
+### Impacto
+
+A biblioteca de mídias passou a ter aparência mais consistente e profissional.
+
+Os componentes de seleção mais visíveis deixaram de depender do visual nativo do navegador, reduzindo a aparência de formulário padrão e aproximando o painel de uma interface mais polida.
+
+A lógica funcional foi preservada: os selects reais continuam existindo como fonte de valor, enquanto os componentes premium atuam como camada visual e interativa.
+
+### Observação
+
+A refatoração geral do `admin.css` continua planejada para momento futuro, após estabilização, testes e apresentação da Fase 2.
+
+---
+
 ## Próximos registros esperados
 
 Próximas entradas deste changelog deverão registrar:
