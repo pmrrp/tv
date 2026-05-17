@@ -9435,3 +9435,364 @@ body.modalAberto {
         transform: translateY(0) scale(1);
     }
 }
+
+/* =========================================================
+   MODAL - PERÍODO DE EXIBIÇÃO
+   ========================================================= */
+
+.mediaPeriodModalCard {
+    width: min(920px, 100%);
+    max-height: calc(100vh - 32px);
+    overflow: auto;
+    padding: 22px;
+}
+
+.mediaPeriodModalBody {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.9fr) minmax(320px, 1.1fr);
+    gap: 18px;
+    margin-top: 18px;
+}
+
+.mediaPeriodModalSidebar,
+.mediaPeriodPickerPanel {
+    display: grid;
+    gap: 14px;
+    align-content: start;
+}
+
+.mediaPeriodIndefiniteToggle {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+
+    padding: 14px;
+
+    border: 1px solid rgba(203, 216, 228, 0.95);
+    border-radius: 18px;
+
+    background: #eef7fd;
+
+    cursor: pointer;
+}
+
+.mediaPeriodIndefiniteToggle input {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--blue-700);
+}
+
+.mediaPeriodIndefiniteToggle strong {
+    display: block;
+    color: var(--blue-950);
+    font-size: 14px;
+    font-weight: 950;
+}
+
+.mediaPeriodIndefiniteToggle small {
+    display: block;
+    margin-top: 2px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.mediaPeriodFields {
+    display: grid;
+    gap: 10px;
+}
+
+.mediaPeriodFieldButton {
+    width: 100%;
+
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+
+    padding: 12px;
+
+    border: 1px solid rgba(203, 216, 228, 0.95);
+    border-radius: 16px;
+
+    background: #ffffff;
+    color: var(--blue-950);
+
+    font-family: inherit;
+    text-align: left;
+
+    cursor: pointer;
+}
+
+.mediaPeriodFieldButton:hover,
+.mediaPeriodFieldButton.isActive {
+    border-color: rgba(10, 111, 181, 0.55);
+    background: #f8fbff;
+
+    box-shadow: 0 0 0 4px rgba(10, 111, 181, 0.10);
+}
+
+.mediaPeriodFieldButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+    box-shadow: none;
+}
+
+.mediaPeriodFieldIcon {
+    width: 38px;
+    height: 38px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 999px;
+
+    background: var(--blue-100);
+    color: var(--blue-800);
+}
+
+.mediaPeriodFieldButton small {
+    display: block;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 950;
+    text-transform: uppercase;
+}
+
+.mediaPeriodFieldButton strong {
+    display: block;
+    margin-top: 3px;
+
+    color: var(--blue-950);
+    font-size: 13px;
+    font-weight: 950;
+}
+
+.mediaPeriodPickerPanel {
+    padding: 14px;
+
+    border: 1px solid rgba(203, 216, 228, 0.95);
+    border-radius: 20px;
+
+    background: #ffffff;
+}
+
+.mediaPeriodPickerHeader,
+.mediaPeriodMonthBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.mediaPeriodMonthBar strong {
+    color: var(--blue-950);
+    font-size: 15px;
+    font-weight: 950;
+    text-transform: capitalize;
+}
+
+.mediaPeriodNavButton {
+    width: 36px;
+    height: 36px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid rgba(203, 216, 228, 0.95);
+    border-radius: 999px;
+
+    background: #ffffff;
+    color: var(--blue-800);
+
+    cursor: pointer;
+}
+
+.mediaPeriodNavButton:hover {
+    background: var(--blue-100);
+}
+
+.mediaPeriodWeekdays,
+.mediaPeriodDays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+
+.mediaPeriodWeekdays span {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 950;
+    text-align: center;
+}
+
+.mediaPeriodDay,
+.mediaPeriodDayPlaceholder {
+    width: 36px;
+    height: 36px;
+    justify-self: center;
+}
+
+.mediaPeriodDay {
+    border: 0;
+    border-radius: 999px;
+
+    background: transparent;
+    color: #334155;
+
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 900;
+
+    cursor: pointer;
+}
+
+.mediaPeriodDay:hover {
+    background: var(--blue-100);
+    color: var(--blue-950);
+}
+
+.mediaPeriodDay.isToday {
+    box-shadow: inset 0 0 0 2px rgba(10, 111, 181, 0.22);
+}
+
+.mediaPeriodDay.isSelected {
+    background: var(--blue-700);
+    color: #ffffff;
+}
+
+.mediaPeriodTimeLabel {
+    display: grid;
+    gap: 6px;
+
+    color: #475569;
+    font-size: 11px;
+    font-weight: 950;
+    text-transform: uppercase;
+}
+
+.mediaPeriodTimeField {
+    min-height: 42px;
+
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+
+    padding: 0 12px;
+
+    border: 1px solid rgba(203, 216, 228, 0.95);
+    border-radius: 14px;
+
+    background: #ffffff;
+}
+
+.mediaPeriodTimeField i {
+    color: var(--blue-800);
+    font-size: 13px;
+}
+
+.mediaPeriodTimeField:focus-within {
+    border-color: rgba(10, 111, 181, 0.62);
+    box-shadow: 0 0 0 4px rgba(10, 111, 181, 0.12);
+}
+
+.mediaPeriodTimeField input {
+    min-height: 40px;
+
+    border: 0;
+    background: transparent;
+    outline: none;
+
+    color: var(--blue-950);
+
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 950;
+}
+
+.mediaPeriodClearField {
+    justify-self: start;
+}
+
+.mediaPeriodModalCard .confirmModalActions {
+    margin-top: 18px;
+}
+
+@media (max-width: 760px) {
+    .mediaPeriodModalBody {
+        grid-template-columns: 1fr;
+    }
+
+    .mediaPeriodModalCard {
+        width: 100%;
+        max-height: calc(100vh - 24px);
+        border-radius: 20px;
+    }
+}
+
+/* =========================================================
+   MODAL PERÍODO - AÇÕES DO CAMPO DATA/HORA
+   ========================================================= */
+
+.mediaPeriodPickerActions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.mediaPeriodApplyField {
+    min-height: 40px;
+    padding-inline: 16px;
+}
+
+.mediaPeriodClearField {
+    justify-self: auto;
+}
+
+/* =========================================================
+   MODAL PERÍODO - AÇÕES DO CAMPO SOMENTE COM DATA
+   ========================================================= */
+
+.mediaPeriodPickerActions {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.mediaPeriodPickerActions.isVisible {
+    display: flex;
+}
+
+/* =========================================================
+   MODAL PERÍODO - FEEDBACK INTERNO
+   ========================================================= */
+
+.mediaPeriodFieldFeedback {
+    margin: 0;
+    padding: 10px 12px;
+
+    border-radius: 14px;
+
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.mediaPeriodFieldFeedback.isSuccess {
+    background: #ecfdf3;
+    color: #166534;
+    border: 1px solid rgba(31, 163, 68, 0.18);
+}
+
+.mediaPeriodFieldFeedback.isWarning {
+    background: var(--orange-100);
+    color: var(--orange-700);
+    border: 1px solid rgba(180, 83, 9, 0.22);
+}

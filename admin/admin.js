@@ -185,6 +185,33 @@ const btnCancelPendingSync = document.getElementById("btnCancelPendingSync");
 const btnSaveBeforeSync = document.getElementById("btnSaveBeforeSync");
 
 /* =========================================================
+   ELEMENTOS - MODAL DE PERÍODO DA MÍDIA
+   ========================================================= */
+
+const mediaPeriodModal = document.getElementById("mediaPeriodModal");
+const mediaPeriodModalTitle = document.getElementById("mediaPeriodModalTitle");
+const mediaPeriodModalSubtitle = document.getElementById("mediaPeriodModalSubtitle");
+
+const btnCloseMediaPeriodModal = document.getElementById("btnCloseMediaPeriodModal");
+const btnCancelMediaPeriodModal = document.getElementById("btnCancelMediaPeriodModal");
+const btnApplyMediaPeriodModal = document.getElementById("btnApplyMediaPeriodModal");
+
+const periodModalIndefinite = document.getElementById("periodModalIndefinite");
+const periodModalStartButton = document.getElementById("periodModalStartButton");
+const periodModalEndButton = document.getElementById("periodModalEndButton");
+const periodModalStartText = document.getElementById("periodModalStartText");
+const periodModalEndText = document.getElementById("periodModalEndText");
+const periodModalActiveFieldTitle = document.getElementById("periodModalActiveFieldTitle");
+const periodModalMonthTitle = document.getElementById("periodModalMonthTitle");
+const periodModalDays = document.getElementById("periodModalDays");
+const periodModalPrevMonth = document.getElementById("periodModalPrevMonth");
+const periodModalNextMonth = document.getElementById("periodModalNextMonth");
+const periodModalTimeInput = document.getElementById("periodModalTimeInput");
+const periodModalClearField = document.getElementById("periodModalClearField");
+const periodModalApplyField = document.getElementById("periodModalApplyField");
+const periodModalFieldFeedback = document.getElementById("periodModalFieldFeedback");
+
+/* =========================================================
    USUÁRIO LOGADO - UTILITÁRIO SEGURO
    ========================================================= */
 
@@ -494,6 +521,11 @@ function configurarDetailsControlados() {
 
     document.addEventListener("keydown", (event) => {
         if (event.key !== "Escape") return;
+
+        if (mediaPeriodModal && !mediaPeriodModal.classList.contains("hidden")) {
+            fecharModalPeriodoMidia();
+            return;
+        }
 
         /*
         ESC também cancela filtros ainda não aplicados.
@@ -6024,11 +6056,10 @@ function coletarConfiguracaoDoItem(item) {
 
     return coletarConfiguracoesDaTela().find((midia) => midia.nome === checkbox.dataset.arquivo) || null;
 }
-
 /**
  * Salva uma única mídia após confirmação.
  */
-async function confirmarESalvarMidia(item, mensagem = "Deseja salvar esta alteração?") {
+async function confirmarESalvarMidia(item, mensagem = "Deseja salvar esta alteração?", opcoes = {}) {
     if (!garantirPermissaoParaEditarMidias()) return false;
 
     const configuracao = coletarConfiguracaoDoItem(item);
@@ -6045,19 +6076,30 @@ async function confirmarESalvarMidia(item, mensagem = "Deseja salvar esta altera
         configuracao.nome ||
         "mídia selecionada";
 
-    const confirmou = await confirmarAcaoModal({
-        kicker: "Biblioteca",
-        titulo: "Salvar mídia",
-        mensagem: "Salvar as alterações desta mídia?",
-        detalhe: nomeMidia,
-        confirmar: "Salvar mídia",
-        cancelar: "Cancelar",
-        variante: "success"
-    });
+    /*
+      Em alguns fluxos, como o modal de período de exibição,
+      o usuário já confirmou a ação dentro do próprio modal.
 
-    if (!confirmou) {
-        await carregarMidias();
-        return false;
+      Nesses casos, podemos salvar direto, sem abrir uma segunda
+      confirmação por cima da primeira experiência.
+    */
+    const pularConfirmacao = opcoes.pularConfirmacao === true;
+
+    if (!pularConfirmacao) {
+        const confirmou = await confirmarAcaoModal({
+            kicker: "Biblioteca",
+            titulo: "Salvar mídia",
+            mensagem: mensagem || "Salvar as alterações desta mídia?",
+            detalhe: nomeMidia,
+            confirmar: "Salvar mídia",
+            cancelar: "Cancelar",
+            variante: "success"
+        });
+
+        if (!confirmou) {
+            await carregarMidias();
+            return false;
+        }
     }
 
     try {
@@ -6092,7 +6134,9 @@ async function confirmarESalvarMidia(item, mensagem = "Deseja salvar esta altera
 
         return true;
     } catch (erro) {
-        mostrarMensagemPlaylist(erro.message || "Não foi possível salvar a mídia.", "erro"); await carregarMidias();
+        mostrarMensagemPlaylist(erro.message || "Não foi possível salvar a mídia.", "erro");
+
+        await carregarMidias();
 
         sincronizarAlteracoesPendentesGlobais();
 
@@ -6428,6 +6472,503 @@ async function sairDoAdmin() {
     }
 }
 
+/* =========================================================
+   MODAL - PERÍODO DE EXIBIÇÃO
+   ========================================================= */
+
+let periodoModalItemAtual = null;
+let periodoModalCampoAtivo = "inicio";
+let periodoModalInicio = null;
+let periodoModalFim = null;
+let periodoModalMesVisivel = null;
+
+/*
+  Controla se o campo atual possui uma data/hora recém-escolhida
+  aguardando o clique em "Aplicar início" ou "Aplicar fim".
+
+  Isso evita que os botões fiquem aparecendo depois que a data
+  já foi aplicada dentro do modal.
+*/
+let periodoModalCampoTemAlteracaoPendente = false;
+
+function mostrarFeedbackCampoPeriodoModal(mensagem, tipo = "sucesso") {
+    if (!periodModalFieldFeedback) return;
+
+    periodModalFieldFeedback.textContent = mensagem;
+    periodModalFieldFeedback.classList.remove("hidden", "isSuccess", "isWarning");
+    periodModalFieldFeedback.classList.add(tipo === "aviso" ? "isWarning" : "isSuccess");
+
+    window.clearTimeout(periodModalFieldFeedback._timeoutId);
+
+    periodModalFieldFeedback._timeoutId = window.setTimeout(() => {
+        periodModalFieldFeedback.classList.add("hidden");
+    }, 2200);
+}
+
+function converterDatetimeLocalParaDatePeriodo(valor) {
+    if (!valor) return null;
+
+    const partes = String(valor).split("T");
+    if (partes.length !== 2) return null;
+
+    const [ano, mes, dia] = partes[0].split("-").map(Number);
+    const [hora, minuto] = partes[1].split(":").map(Number);
+
+    if (!ano || !mes || !dia) return null;
+
+    return new Date(
+        ano,
+        mes - 1,
+        dia,
+        Number.isFinite(hora) ? hora : 0,
+        Number.isFinite(minuto) ? minuto : 0
+    );
+}
+
+function formatarDateParaDatetimeLocalPeriodo(data) {
+    if (!(data instanceof Date) || Number.isNaN(data.getTime())) return "";
+
+    const ano = data.getFullYear();
+    const mes = String(data.getMonth() + 1).padStart(2, "0");
+    const dia = String(data.getDate()).padStart(2, "0");
+    const hora = String(data.getHours()).padStart(2, "0");
+    const minuto = String(data.getMinutes()).padStart(2, "0");
+
+    return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
+}
+
+function formatarPeriodoModalTexto(data) {
+    if (!(data instanceof Date) || Number.isNaN(data.getTime())) {
+        return "Não definido";
+    }
+
+    return data.toLocaleString("pt-BR", {
+        dateStyle: "short",
+        timeStyle: "short"
+    });
+}
+
+function obterDataAtivaPeriodoModal() {
+    return periodoModalCampoAtivo === "inicio"
+        ? periodoModalInicio
+        : periodoModalFim;
+}
+
+function definirDataAtivaPeriodoModal(data) {
+    if (periodoModalCampoAtivo === "inicio") {
+        periodoModalInicio = data;
+    } else {
+        periodoModalFim = data;
+    }
+}
+
+function obterHorarioPeriodoModal() {
+    const valor = String(periodModalTimeInput ? periodModalTimeInput.value : "08:00").trim();
+    const match = valor.match(/^(\d{1,2}):(\d{1,2})$/);
+
+    if (!match) {
+        return {
+            hora: 8,
+            minuto: 0
+        };
+    }
+
+    return {
+        hora: Math.min(23, Math.max(0, Number(match[1]))),
+        minuto: Math.min(59, Math.max(0, Number(match[2])))
+    };
+}
+
+function definirHorarioPeriodoModalPelaData(data) {
+    if (!periodModalTimeInput) return;
+
+    if (!(data instanceof Date) || Number.isNaN(data.getTime())) {
+        periodModalTimeInput.value = "08:00";
+        return;
+    }
+
+    const hora = String(data.getHours()).padStart(2, "0");
+    const minuto = String(data.getMinutes()).padStart(2, "0");
+
+    periodModalTimeInput.value = `${hora}:${minuto}`;
+}
+
+function obterTituloMesPeriodoModal(data) {
+    return data.toLocaleDateString("pt-BR", {
+        month: "long",
+        year: "numeric"
+    });
+}
+
+function renderizarDiasPeriodoModal() {
+    if (!periodModalDays || !periodoModalMesVisivel) return;
+
+    const ano = periodoModalMesVisivel.getFullYear();
+    const mes = periodoModalMesVisivel.getMonth();
+
+    const primeiroDiaMes = new Date(ano, mes, 1);
+    const ultimoDiaMes = new Date(ano, mes + 1, 0);
+
+    const diaSemanaInicio = primeiroDiaMes.getDay();
+    const totalDias = ultimoDiaMes.getDate();
+
+    const hoje = new Date();
+    const dataSelecionada = obterDataAtivaPeriodoModal();
+
+    const html = [];
+
+    for (let i = 0; i < diaSemanaInicio; i++) {
+        html.push(`<span class="mediaPeriodDayPlaceholder"></span>`);
+    }
+
+    for (let dia = 1; dia <= totalDias; dia++) {
+        const dataDia = new Date(ano, mes, dia);
+
+        const selecionado =
+            dataSelecionada &&
+            dataDia.getFullYear() === dataSelecionada.getFullYear() &&
+            dataDia.getMonth() === dataSelecionada.getMonth() &&
+            dataDia.getDate() === dataSelecionada.getDate();
+
+        const ehHoje =
+            dataDia.getFullYear() === hoje.getFullYear() &&
+            dataDia.getMonth() === hoje.getMonth() &&
+            dataDia.getDate() === hoje.getDate();
+
+        html.push(`
+            <button
+                type="button"
+                class="mediaPeriodDay ${selecionado ? "isSelected" : ""} ${ehHoje ? "isToday" : ""}"
+                data-day="${dia}"
+            >
+                ${dia}
+            </button>
+        `);
+    }
+
+    periodModalDays.innerHTML = html.join("");
+}
+
+function atualizarVisualPeriodoModal() {
+    if (!mediaPeriodModal) return;
+
+    const indefinido = periodModalIndefinite ? periodModalIndefinite.checked : false;
+    const dataAtiva = obterDataAtivaPeriodoModal();
+
+    const pickerActions = mediaPeriodModal
+        ? mediaPeriodModal.querySelector(".mediaPeriodPickerActions")
+        : null;
+
+    if (pickerActions) {
+        /*
+          Os botões "Limpar campo selecionado" e "Aplicar início/fim"
+          só aparecem quando o usuário acabou de escolher ou editar
+          uma data/hora no campo ativo.
+        */
+        pickerActions.classList.toggle(
+            "isVisible",
+            Boolean(dataAtiva && periodoModalCampoTemAlteracaoPendente)
+        );
+    }
+
+    if (btnApplyMediaPeriodModal) {
+        const podeAplicarPeriodo =
+            periodModalIndefinite?.checked ||
+            Boolean(periodoModalInicio || periodoModalFim);
+
+        btnApplyMediaPeriodModal.disabled = !podeAplicarPeriodo;
+    }
+
+    if (periodModalApplyField) {
+        periodModalApplyField.disabled = !dataAtiva || !periodoModalCampoTemAlteracaoPendente;
+
+        periodModalApplyField.innerHTML = periodoModalCampoAtivo === "inicio"
+            ? `<i class="fa-solid fa-check" aria-hidden="true"></i> Aplicar início`
+            : `<i class="fa-solid fa-check" aria-hidden="true"></i> Aplicar fim`;
+    }
+
+    if (periodModalStartText) {
+        periodModalStartText.textContent = formatarPeriodoModalTexto(periodoModalInicio);
+    }
+
+    if (periodModalEndText) {
+        periodModalEndText.textContent = formatarPeriodoModalTexto(periodoModalFim);
+    }
+
+    if (periodModalStartButton) {
+        periodModalStartButton.classList.toggle("isActive", periodoModalCampoAtivo === "inicio");
+        periodModalStartButton.disabled = indefinido;
+    }
+
+    if (periodModalStartButton) {
+        periodModalStartButton.classList.toggle("isActive", periodoModalCampoAtivo === "inicio");
+        periodModalStartButton.disabled = false;
+    }
+
+    if (periodModalEndButton) {
+        periodModalEndButton.classList.toggle("isActive", periodoModalCampoAtivo === "fim");
+        periodModalEndButton.disabled = false;
+    }
+
+    if (periodModalActiveFieldTitle) {
+        periodModalActiveFieldTitle.textContent = periodoModalCampoAtivo === "inicio"
+            ? "Início da exibição"
+            : "Fim da exibição";
+    }
+
+    if (periodModalMonthTitle && periodoModalMesVisivel) {
+        periodModalMonthTitle.textContent = obterTituloMesPeriodoModal(periodoModalMesVisivel);
+    }
+
+    if (periodModalTimeInput) {
+        periodModalTimeInput.disabled = false;
+    }
+
+    if (periodModalClearField) {
+        periodModalClearField.disabled = false;
+    }
+
+    if (periodModalApplyField) {
+        /*
+          Só permite aplicar data/hora quando o campo atual
+          realmente possui uma data selecionada.
+        */
+        periodModalApplyField.disabled = !dataAtiva;
+    }
+
+    if (periodModalApplyField) {
+        /*
+          Usamos onclick em vez de addEventListener aqui para evitar
+          múltiplos listeners acumulados durante ajustes/testes.
+    
+          Este botão NÃO salva o período no card.
+          Ele apenas confirma a data/hora do campo atual dentro do modal.
+        */
+        periodModalApplyField.onclick = () => {
+            const dataAtiva = obterDataAtivaPeriodoModal();
+
+            if (!dataAtiva) {
+                mostrarFeedbackCampoPeriodoModal("Escolha uma data antes de aplicar.", "aviso");
+                return;
+            }
+
+            if (periodModalIndefinite) {
+                periodModalIndefinite.checked = false;
+            }
+
+            if (periodoModalCampoAtivo === "inicio") {
+                periodoModalCampoAtivo = "fim";
+
+                /*
+                  A data inicial foi aplicada.
+                  Ao mudar para o campo Fim, os botões devem sumir até
+                  o usuário escolher uma data final.
+                */
+                periodoModalCampoTemAlteracaoPendente = false;
+
+                periodoModalMesVisivel = new Date(
+                    dataAtiva.getFullYear(),
+                    dataAtiva.getMonth(),
+                    1
+                );
+
+                atualizarVisualPeriodoModal();
+                mostrarFeedbackCampoPeriodoModal("Início aplicado. Agora escolha a data final.", "sucesso");
+                return;
+
+            }
+
+            /*
+            A data final foi aplicada.
+            Os botões do campo somem novamente até uma nova edição.
+            */
+            periodoModalCampoTemAlteracaoPendente = false;
+
+            atualizarVisualPeriodoModal();
+            mostrarFeedbackCampoPeriodoModal("Fim aplicado. Agora clique em Aplicar período.", "sucesso");
+        };
+    }
+
+    /*
+      Tempo indeterminado agora é apenas um estado.
+      Ele não bloqueia o calendário.
+      Ao escolher uma data, o checkbox será desmarcado automaticamente.
+    */
+    mediaPeriodModal.classList.toggle("isIndefinite", indefinido);
+
+    mediaPeriodModal.classList.toggle("isIndefinite", indefinido);
+
+    definirHorarioPeriodoModalPelaData(dataAtiva);
+    renderizarDiasPeriodoModal();
+}
+
+function selecionarCampoPeriodoModal(campo) {
+    periodoModalCampoAtivo = campo;
+
+    const dataAtiva = obterDataAtivaPeriodoModal();
+    const base = dataAtiva || new Date();
+
+    periodoModalMesVisivel = new Date(base.getFullYear(), base.getMonth(), 1);
+
+    /*
+      Ao trocar de campo manualmente, não mostramos os botões
+      até o usuário escolher/editar uma data nesse campo.
+    */
+    periodoModalCampoTemAlteracaoPendente = false;
+
+    atualizarVisualPeriodoModal();
+}
+
+function abrirModalPeriodoMidia(item) {
+    if (!item || !mediaPeriodModal) return;
+
+    periodoModalItemAtual = item;
+
+    const inputInicio = item.querySelector(".mediaStartDate");
+    const inputFim = item.querySelector(".mediaEndDate");
+    const inputIndefinido = item.querySelector(".mediaIndefinite");
+
+    periodoModalInicio = converterDatetimeLocalParaDatePeriodo(inputInicio ? inputInicio.value : "");
+    periodoModalFim = converterDatetimeLocalParaDatePeriodo(inputFim ? inputFim.value : "");
+
+    if (periodModalIndefinite) {
+        periodModalIndefinite.checked = inputIndefinido ? inputIndefinido.checked : (!periodoModalInicio && !periodoModalFim);
+    }
+
+    periodoModalCampoAtivo = "inicio";
+
+    const base = periodoModalInicio || periodoModalFim || new Date();
+    periodoModalMesVisivel = new Date(base.getFullYear(), base.getMonth(), 1);
+
+    /*
+    Preferimos mostrar o nome amigável da mídia.
+    Se não houver, caímos para o nome real do arquivo.
+    */
+    const inputTitulo = item.querySelector(".mediaTitleInput");
+    const tituloAmigavel = inputTitulo && inputTitulo.value
+        ? inputTitulo.value.trim()
+        : "";
+
+    let nomeMidia = tituloAmigavel || item.dataset.arquivo || "Mídia selecionada";
+
+    try {
+        const detalhes = JSON.parse(item.dataset.midiaDetalhes || "{}");
+
+        if (!tituloAmigavel && detalhes.titulo) {
+            nomeMidia = detalhes.titulo;
+        }
+    } catch (erro) {
+        // Mantém fallback já definido.
+    }
+
+    if (mediaPeriodModalSubtitle) {
+        mediaPeriodModalSubtitle.textContent = nomeMidia;
+    }
+
+    periodoModalCampoTemAlteracaoPendente = false;
+
+    atualizarVisualPeriodoModal();
+
+    mediaPeriodModal.classList.remove("hidden");
+    document.body.classList.add("modalAberto");
+}
+
+function fecharModalPeriodoMidia() {
+    if (!mediaPeriodModal) return;
+
+    mediaPeriodModal.classList.add("hidden");
+    document.body.classList.remove("modalAberto");
+
+    periodoModalItemAtual = null;
+    periodoModalCampoAtivo = "inicio";
+    periodoModalInicio = null;
+    periodoModalFim = null;
+    periodoModalMesVisivel = null;
+}
+
+async function aplicarPeriodoModalNoCard() {
+    if (!periodoModalItemAtual) return;
+
+    const item = periodoModalItemAtual;
+
+    const inputInicio = item.querySelector(".mediaStartDate");
+    const inputFim = item.querySelector(".mediaEndDate");
+    const inputIndefinido = item.querySelector(".mediaIndefinite");
+
+    const indefinido = periodModalIndefinite ? periodModalIndefinite.checked : false;
+
+    if (!indefinido && periodoModalInicio && periodoModalFim && periodoModalFim < periodoModalInicio) {
+        mostrarFeedbackCampoPeriodoModal("A data final não pode ser anterior à data inicial.", "aviso");
+        return;
+    }
+
+    if (inputIndefinido) {
+        inputIndefinido.checked = indefinido;
+    }
+
+    if (inputInicio) {
+        inputInicio.value = indefinido ? "" : formatarDateParaDatetimeLocalPeriodo(periodoModalInicio);
+        inputInicio.disabled = indefinido;
+    }
+
+    if (inputFim) {
+        inputFim.value = indefinido ? "" : formatarDateParaDatetimeLocalPeriodo(periodoModalFim);
+        inputFim.disabled = indefinido;
+    }
+
+    atualizarCamposValidade(item, {
+        atualizarBadge: true
+    });
+
+    /*
+      Marca visualmente a alteração antes de salvar.
+      Isso mantém a UI coerente caso o salvamento falhe.
+    */
+    atualizarEstadoVisualAlteracaoDoItem(item);
+    sincronizarAlteracoesPendentesGlobais();
+
+    /*
+      Como o modal é um fluxo completo, salvamos a mídia diretamente.
+      Assim o usuário não precisa clicar no botão "Salvar" do card.
+    */
+    const botaoSalvar = item.querySelector(".mediaSaveButton");
+
+    try {
+        if (botaoSalvar) {
+            botaoSalvar.disabled = true;
+        }
+
+        const salvou = await confirmarESalvarMidia(
+            item,
+            "Salvar o período de exibição desta mídia?",
+            {
+                pularConfirmacao: true
+            }
+        );
+
+        if (!salvou) {
+            mostrarFeedbackCampoPeriodoModal("Não foi possível salvar o período.", "aviso");
+
+            if (botaoSalvar) {
+                botaoSalvar.disabled = false;
+            }
+
+            return;
+        }
+
+        fecharModalPeriodoMidia();
+
+        mostrarToast("Período salvo com sucesso.", "sucesso");
+    } catch (erro) {
+        console.error(erro);
+
+        if (botaoSalvar) {
+            botaoSalvar.disabled = false;
+        }
+
+        mostrarFeedbackCampoPeriodoModal("Não foi possível salvar o período.", "aviso");
+    }
+}
 
 /* =========================================================
    EVENTOS
@@ -6708,12 +7249,12 @@ if (btnReload) {
     btnReload.addEventListener("click", async () => {
         /*
           Se existem alterações pendentes, não sincronizamos a biblioteca.
-
+ 
           Motivo:
           - sincronizar recarrega os dados salvos no backend;
           - isso descarta visualmente os rascunhos da tela;
           - mas pode deixar o estado de "alteração pendente" inconsistente.
-
+ 
           Então o fluxo correto é:
           1. avisar o usuário;
           2. pedir para salvar ou continuar editando;
@@ -6804,14 +7345,14 @@ if (btnLogout) {
 
 /*
   Intercepta atalhos comuns de atualização.
-
+ 
   Observação:
   O botão atualizar do navegador ainda usa beforeunload nativo,
   porque não é possível trocar por modal customizado.
 */
 /*
   Intercepta atalhos comuns de atualização.
-
+ 
   Importante:
   - F5 e Ctrl+R podem ser interceptados pelo JavaScript;
   - botão atualizar do navegador, fechar aba e digitar outra URL
@@ -6832,7 +7373,7 @@ document.addEventListener("keydown", (event) => {
     /*
       Se o aviso de sincronização estiver aberto, fechamos ele
       antes de abrir o modal de saída pendente.
-
+ 
       Assim o usuário não fica com dois modais competindo.
     */
     if (pendingSyncModal && !pendingSyncModal.classList.contains("hidden")) {
@@ -6859,13 +7400,13 @@ if (btnSalvarTudo) {
    EVENTOS - FILTROS DE MÍDIA
    =========================================================
    Os filtros funcionam em duas etapas:
-
+ 
    1. Rascunho:
       o usuário escolhe os filtros dentro do popover.
-
+ 
    2. Aplicação:
       a lista só muda quando ele clica em "Aplicar filtros".
-
+ 
    Se clicar fora ou apertar ESC antes de aplicar,
    o rascunho é descartado.
    ========================================================= */
@@ -6922,7 +7463,7 @@ sincronizarFiltrosPremium();
 
 /*
   Delegação de clique na lista de mídias.
-
+ 
   Como os botões de subir/descer são criados dinamicamente,
   ouvimos o clique no container principal.
 */
@@ -7058,7 +7599,7 @@ mediaList.addEventListener("click", (event) => {
    SELECT PREMIUM - FILTROS DA BIBLIOTECA
    =========================================================
    Substitui visualmente os selects nativos dos filtros.
-
+ 
    Estratégia:
    - o select real continua no DOM;
    - o select real fica oculto via CSS;
@@ -7831,6 +8372,188 @@ if (mediaList) {
         if (botaoCancelar) {
             cancelarPeriodoDoItem(item);
         }
+    });
+}
+
+/* =========================================================
+   EVENTOS - MODAL DE PERÍODO DA MÍDIA
+   ========================================================= */
+
+document.addEventListener("click", (event) => {
+    const summary = event.target.closest(".mediaScheduleMenu > summary");
+
+    if (!summary) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const menu = summary.closest(".mediaScheduleMenu");
+    const item = summary.closest(".mediaItem");
+
+    if (menu) {
+        menu.removeAttribute("open");
+    }
+
+    abrirModalPeriodoMidia(item);
+}, true);
+
+if (btnCloseMediaPeriodModal) {
+    btnCloseMediaPeriodModal.addEventListener("click", fecharModalPeriodoMidia);
+}
+
+if (btnCancelMediaPeriodModal) {
+    btnCancelMediaPeriodModal.addEventListener("click", fecharModalPeriodoMidia);
+}
+
+if (btnApplyMediaPeriodModal) {
+    btnApplyMediaPeriodModal.onclick = () => {
+        aplicarPeriodoModalNoCard();
+    };
+}
+
+if (mediaPeriodModal) {
+    mediaPeriodModal.addEventListener("click", (event) => {
+        if (event.target === mediaPeriodModal) {
+            fecharModalPeriodoMidia();
+        }
+    });
+}
+
+if (periodModalIndefinite) {
+    periodModalIndefinite.addEventListener("change", () => {
+        /*
+          Marcar tempo indeterminado limpa o período.
+          Desmarcar apenas permite escolher datas.
+        */
+        if (periodModalIndefinite.checked) {
+            periodoModalInicio = null;
+            periodoModalFim = null;
+        }
+
+        atualizarVisualPeriodoModal();
+    });
+}
+
+if (periodModalStartButton) {
+    periodModalStartButton.addEventListener("click", () => {
+        selecionarCampoPeriodoModal("inicio");
+    });
+}
+
+if (periodModalEndButton) {
+    periodModalEndButton.addEventListener("click", () => {
+        selecionarCampoPeriodoModal("fim");
+    });
+}
+
+if (periodModalPrevMonth) {
+    periodModalPrevMonth.addEventListener("click", () => {
+        periodoModalMesVisivel = new Date(
+            periodoModalMesVisivel.getFullYear(),
+            periodoModalMesVisivel.getMonth() - 1,
+            1
+        );
+
+        atualizarVisualPeriodoModal();
+    });
+}
+
+if (periodModalNextMonth) {
+    periodModalNextMonth.addEventListener("click", () => {
+        periodoModalMesVisivel = new Date(
+            periodoModalMesVisivel.getFullYear(),
+            periodoModalMesVisivel.getMonth() + 1,
+            1
+        );
+
+        atualizarVisualPeriodoModal();
+    });
+}
+
+if (periodModalDays) {
+    periodModalDays.addEventListener("click", (event) => {
+        const dia = event.target.closest(".mediaPeriodDay");
+
+        if (!dia) return;
+
+        const { hora, minuto } = obterHorarioPeriodoModal();
+        const diaSelecionado = Number(dia.dataset.day);
+
+        /*
+  Ao escolher uma data, o sistema entende que o usuário saiu
+  do modo "tempo indeterminado" e passou a configurar período.
+*/
+        definirDataAtivaPeriodoModal(new Date(
+            periodoModalMesVisivel.getFullYear(),
+            periodoModalMesVisivel.getMonth(),
+            diaSelecionado,
+            hora,
+            minuto
+        ));
+
+        /*
+          Escolher uma data cria uma alteração pendente no campo ativo.
+          Por isso os botões de campo devem aparecer.
+        */
+        periodoModalCampoTemAlteracaoPendente = true;
+
+        atualizarVisualPeriodoModal();
+    });
+}
+
+if (periodModalTimeInput) {
+    periodModalTimeInput.addEventListener("input", () => {
+
+        if (periodModalIndefinite) {
+            periodModalIndefinite.checked = false;
+        }
+
+        let valor = periodModalTimeInput.value.replace(/\D/g, "").slice(0, 4);
+
+        if (valor.length >= 3) {
+            valor = `${valor.slice(0, 2)}:${valor.slice(2)}`;
+        }
+
+        periodModalTimeInput.value = valor;
+
+        const dataAtiva = obterDataAtivaPeriodoModal();
+
+        if (dataAtiva) {
+            const { hora, minuto } = obterHorarioPeriodoModal();
+
+            dataAtiva.setHours(hora);
+            dataAtiva.setMinutes(minuto);
+            dataAtiva.setSeconds(0);
+            dataAtiva.setMilliseconds(0);
+
+            definirDataAtivaPeriodoModal(dataAtiva);
+
+            /*
+              Editar o horário também conta como alteração pendente
+              do campo ativo.
+            */
+            periodoModalCampoTemAlteracaoPendente = true;
+
+            atualizarVisualPeriodoModal();
+        }
+    });
+}
+
+if (periodModalClearField) {
+    periodModalClearField.addEventListener("click", () => {
+        definirDataAtivaPeriodoModal(null);
+
+        periodoModalCampoTemAlteracaoPendente = false;
+
+        /*
+          Se não sobrou início nem fim, voltamos automaticamente
+          para tempo indeterminado.
+        */
+        if (!periodoModalInicio && !periodoModalFim && periodModalIndefinite) {
+            periodModalIndefinite.checked = true;
+        }
+
+        atualizarVisualPeriodoModal();
     });
 }
 

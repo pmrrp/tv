@@ -884,6 +884,143 @@
     </div>
 
     <!-- =====================================================
+     MODAL - PERÍODO DE EXIBIÇÃO DA MÍDIA
+     =====================================================
+     Substitui o popover antigo de período.
+
+     Motivo:
+     - evita corte em telas pequenas;
+     - dá mais liberdade visual;
+     - reduz conflito de z-index, overflow e clique fora;
+     - mantém o padrão visual dos modais do sistema.
+     ===================================================== -->
+    <div id="mediaPeriodModal" class="modalOverlay hidden" role="dialog" aria-modal="true"
+        aria-labelledby="mediaPeriodModalTitle">
+        <section class="modalCard mediaPeriodModalCard">
+            <div class="modalHeader">
+                <div>
+                    <span class="sectionKicker">Período de exibição</span>
+                    <h2 id="mediaPeriodModalTitle">Programar exibição da mídia</h2>
+                    <p id="mediaPeriodModalSubtitle">
+                        Defina quando esta mídia deve entrar e sair da playlist.
+                    </p>
+                </div>
+
+                <button id="btnCloseMediaPeriodModal" class="modalCloseButton" type="button"
+                    aria-label="Fechar período de exibição">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <div class="mediaPeriodModalBody">
+                <div class="mediaPeriodModalSidebar">
+                    <label class="mediaPeriodIndefiniteToggle">
+                        <input id="periodModalIndefinite" type="checkbox" />
+                        <span>
+                            <strong>Tempo indeterminado</strong>
+                            <small>Exibe a mídia sem data de início ou fim.</small>
+                        </span>
+                    </label>
+
+                    <div class="mediaPeriodFields">
+                        <button id="periodModalStartButton" class="mediaPeriodFieldButton isActive" type="button">
+                            <span class="mediaPeriodFieldIcon" aria-hidden="true">
+                                <i class="fa-solid fa-calendar-plus"></i>
+                            </span>
+                            <span>
+                                <small>Início</small>
+                                <strong id="periodModalStartText">Não definido</strong>
+                            </span>
+                        </button>
+
+                        <button id="periodModalEndButton" class="mediaPeriodFieldButton" type="button">
+                            <span class="mediaPeriodFieldIcon" aria-hidden="true">
+                                <i class="fa-solid fa-calendar-minus"></i>
+                            </span>
+                            <span>
+                                <small>Fim</small>
+                                <strong id="periodModalEndText">Não definido</strong>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mediaPeriodPickerPanel">
+                    <div class="mediaPeriodPickerHeader">
+                        <div>
+                            <span class="sectionKicker" id="periodModalActiveFieldKicker">Selecionando</span>
+                            <strong id="periodModalActiveFieldTitle">Início da exibição</strong>
+                        </div>
+                    </div>
+
+                    <div class="mediaPeriodMonthBar">
+                        <button id="periodModalPrevMonth" class="mediaPeriodNavButton" type="button"
+                            aria-label="Mês anterior">
+                            <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                        </button>
+
+                        <strong id="periodModalMonthTitle">Mês Ano</strong>
+
+                        <button id="periodModalNextMonth" class="mediaPeriodNavButton" type="button"
+                            aria-label="Próximo mês">
+                            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                        </button>
+                    </div>
+
+                    <div class="mediaPeriodWeekdays">
+                        <span>Dom</span>
+                        <span>Seg</span>
+                        <span>Ter</span>
+                        <span>Qua</span>
+                        <span>Qui</span>
+                        <span>Sex</span>
+                        <span>Sáb</span>
+                    </div>
+
+                    <div id="periodModalDays" class="mediaPeriodDays">
+                        <!-- Dias renderizados pelo admin.js -->
+                    </div>
+
+                    <label class="mediaPeriodTimeLabel">
+                        Horário
+                        <div class="mediaPeriodTimeField">
+                            <i class="fa-solid fa-clock" aria-hidden="true"></i>
+                            <input id="periodModalTimeInput" type="text" inputmode="numeric" maxlength="5"
+                                placeholder="08:00" />
+                        </div>
+                    </label>
+
+                    <p id="periodModalFieldFeedback" class="mediaPeriodFieldFeedback hidden">
+                        Data aplicada.
+                    </p>
+
+                    <div class="mediaPeriodPickerActions">
+                        <button id="periodModalClearField" class="secondaryAction mediaPeriodClearField" type="button">
+                            Limpar campo selecionado
+                        </button>
+
+                        <button id="periodModalApplyField" class="primaryAction mediaPeriodApplyField" type="button">
+                            <i class="fa-solid fa-check" aria-hidden="true"></i>
+                            Aplicar data/hora
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="confirmModalActions">
+                <button id="btnCancelMediaPeriodModal" class="secondaryAction" type="button">
+                    Cancelar
+                </button>
+
+                <button id="btnApplyMediaPeriodModal" class="successAction" type="button">
+                    <i class="fa-solid fa-check" aria-hidden="true"></i>
+                    Aplicar período
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <!-- =====================================================
      BOTÃO - VOLTAR AO TOPO
      =====================================================
      Ajuda em listas grandes de mídia.
