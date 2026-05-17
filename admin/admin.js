@@ -3974,6 +3974,9 @@ function definirValoresCamposFiltrosMidia(filtros) {
     if (mediaPeriodFilter) mediaPeriodFilter.value = valores.periodo || "todos";
     if (mediaPriorityFilter) mediaPriorityFilter.value = valores.prioridade || "todas";
     if (mediaRepeatFilter) mediaRepeatFilter.value = valores.repeticao || "todas";
+
+    sincronizarFiltrosPremium();
+
 }
 
 /**
@@ -6475,6 +6478,8 @@ document.addEventListener("keydown", (event) => {
 
     fecharSelectRepeticaoPremium();
 
+    fecharSelectFiltroPremium();
+
     fecharIndicadorSelectPerfil();
 
     if (mediaDetailsModal && !mediaDetailsModal.classList.contains("hidden")) {
@@ -6506,6 +6511,18 @@ document.addEventListener("keydown", (event) => {
         fecharModalStatusUsuario();
         return;
     }
+    window.addEventListener("resize", () => {
+        if (filtroBotaoAtual) {
+            posicionarPortalFiltroPremium(filtroBotaoAtual);
+        }
+    });
+
+    window.addEventListener("scroll", () => {
+        if (filtroBotaoAtual) {
+            posicionarPortalFiltroPremium(filtroBotaoAtual);
+        }
+    }, true);
+
 });
 
 /* =========================================================
@@ -6887,9 +6904,21 @@ if (mediaSearch) {
 ]
     .filter(Boolean)
     .forEach((campoFiltro) => {
-        campoFiltro.addEventListener("input", atualizarAcoesFiltrosMidia);
-        campoFiltro.addEventListener("change", atualizarAcoesFiltrosMidia);
+        const atualizarFiltro = () => {
+            atualizarAcoesFiltrosMidia();
+            sincronizarFiltrosPremium();
+        };
+
+        campoFiltro.addEventListener("input", atualizarFiltro);
+        campoFiltro.addEventListener("change", atualizarFiltro);
     });
+
+/*
+  Inicializa o visual premium dos filtros.
+  Os selects reais continuam existindo e controlando a lógica.
+*/
+inicializarFiltrosPremium();
+sincronizarFiltrosPremium();
 
 /*
   Delegação de clique na lista de mídias.
@@ -7024,6 +7053,327 @@ mediaList.addEventListener("click", (event) => {
     atualizarEstadoAcoesEmLote();
     limparCliqueNeutro();
 });
+
+/* =========================================================
+   SELECT PREMIUM - FILTROS DA BIBLIOTECA
+   =========================================================
+   Substitui visualmente os selects nativos dos filtros.
+
+   Estratégia:
+   - o select real continua no DOM;
+   - o select real fica oculto via CSS;
+   - o botão premium mostra o valor atual;
+   - a lista aberta é renderizada em um portal global no body;
+   - a escolha atualiza o select real e dispara change.
+   ========================================================= */
+
+let filtrosSelectPortal = null;
+let filtroSelectAtual = null;
+let filtroBotaoAtual = null;
+
+/**
+ * Retorna os selects de filtros que terão visual premium.
+ */
+function obterSelectsFiltrosPremium() {
+    return [
+        mediaStatusFilter,
+        mediaTypeFilter,
+        mediaPeriodFilter,
+        mediaPriorityFilter,
+        mediaRepeatFilter
+    ].filter(Boolean);
+}
+
+/**
+ * Retorna texto da opção selecionada.
+ */
+function obterTextoSelectFiltro(select) {
+    if (!select) return "Selecionar";
+
+    const option = select.options[select.selectedIndex];
+
+    return option ? option.textContent.trim() : "Selecionar";
+}
+
+/**
+ * Cria o portal global dos filtros.
+ */
+function obterPortalFiltrosPremium() {
+    if (filtrosSelectPortal) {
+        return filtrosSelectPortal;
+    }
+
+    filtrosSelectPortal = document.createElement("div");
+    filtrosSelectPortal.id = "filtrosSelectPortal";
+    filtrosSelectPortal.className = "filtrosSelectPortal hidden";
+    filtrosSelectPortal.setAttribute("role", "listbox");
+
+    document.body.appendChild(filtrosSelectPortal);
+
+    return filtrosSelectPortal;
+}
+
+/**
+ * Fecha o dropdown premium dos filtros.
+ */
+function fecharSelectFiltroPremium() {
+    const portal = obterPortalFiltrosPremium();
+
+    portal.classList.add("hidden");
+    portal.innerHTML = "";
+
+    if (filtroBotaoAtual) {
+        filtroBotaoAtual.classList.remove("isOpen");
+        filtroBotaoAtual.setAttribute("aria-expanded", "false");
+    }
+
+    filtroSelectAtual = null;
+    filtroBotaoAtual = null;
+}
+
+/**
+ * Sincroniza o botão premium com o select real.
+ */
+function sincronizarBotaoFiltroPremium(select) {
+    if (!select) return;
+
+    const label = select.closest(".mediaFilterLabel");
+    const botao = label ? label.querySelector(".filtroSelectPremiumButton") : null;
+
+    if (!botao) return;
+
+    const texto = botao.querySelector(".filtroSelectPremiumText");
+
+    if (texto) {
+        texto.textContent = obterTextoSelectFiltro(select);
+    }
+
+    botao.disabled = Boolean(select.disabled);
+    botao.classList.toggle("isDisabled", Boolean(select.disabled));
+}
+
+/**
+ * Sincroniza todos os filtros premium.
+ */
+function sincronizarFiltrosPremium() {
+    obterSelectsFiltrosPremium().forEach((select) => {
+        sincronizarBotaoFiltroPremium(select);
+    });
+}
+
+/**
+ * Posiciona o portal abaixo do botão.
+ */
+function posicionarPortalFiltroPremium(botao) {
+    const portal = obterPortalFiltrosPremium();
+
+    if (!botao || portal.classList.contains("hidden")) return;
+
+    const margem = 12;
+    const rect = botao.getBoundingClientRect();
+    const largura = Math.max(rect.width, 240);
+    const alturaPortal = portal.offsetHeight || 220;
+
+    let left = rect.left;
+    let top = rect.bottom + 8;
+
+    if (left + largura > window.innerWidth - margem) {
+        left = window.innerWidth - margem - largura;
+    }
+
+    if (left < margem) {
+        left = margem;
+    }
+
+    if (top + alturaPortal > window.innerHeight - margem) {
+        top = rect.top - alturaPortal - 8;
+    }
+
+    if (top < margem) {
+        top = margem;
+    }
+
+    portal.style.left = `${left}px`;
+    portal.style.top = `${top}px`;
+    portal.style.width = `${largura}px`;
+}
+
+/**
+ * Abre o dropdown premium de um filtro.
+ */
+function abrirSelectFiltroPremium(select, botao) {
+    if (!select || !botao || select.disabled) return;
+
+    const portal = obterPortalFiltrosPremium();
+
+    filtroSelectAtual = select;
+    filtroBotaoAtual = botao;
+
+    portal.innerHTML = "";
+
+    Array.from(select.options).forEach((option) => {
+        const item = document.createElement("button");
+
+        item.type = "button";
+        item.className = "filtrosSelectPortalOption";
+        item.dataset.value = String(option.value);
+        item.setAttribute("role", "option");
+
+        const selecionada = String(option.value) === String(select.value);
+
+        item.classList.toggle("isSelected", selecionada);
+        item.setAttribute("aria-selected", selecionada ? "true" : "false");
+
+        item.innerHTML = `
+            <span class="filtrosSelectPortalCheck" aria-hidden="true">
+                <i class="fa-solid fa-check"></i>
+            </span>
+
+            <span>${escaparHtml(option.textContent.trim())}</span>
+        `;
+
+        portal.appendChild(item);
+    });
+
+    portal.classList.remove("hidden");
+
+    botao.classList.add("isOpen");
+    botao.setAttribute("aria-expanded", "true");
+
+    requestAnimationFrame(() => {
+        posicionarPortalFiltroPremium(botao);
+    });
+}
+
+/**
+ * Alterna abertura/fechamento do filtro premium.
+ */
+function alternarSelectFiltroPremium(select, botao) {
+    const portal = obterPortalFiltrosPremium();
+
+    const jaAberto =
+        !portal.classList.contains("hidden") &&
+        filtroSelectAtual === select;
+
+    if (jaAberto) {
+        fecharSelectFiltroPremium();
+        return;
+    }
+
+    fecharSelectFiltroPremium();
+    abrirSelectFiltroPremium(select, botao);
+}
+
+/**
+ * Inicializa os botões premium dos filtros.
+ */
+function inicializarFiltrosPremium() {
+    obterSelectsFiltrosPremium().forEach((select) => {
+        if (select.dataset.filtroPremiumReady === "true") {
+            sincronizarBotaoFiltroPremium(select);
+            return;
+        }
+
+        select.dataset.filtroPremiumReady = "true";
+        select.classList.add("filtroSelectNativoOculto");
+
+        const botao = document.createElement("button");
+
+        botao.type = "button";
+        botao.className = "filtroSelectPremiumButton";
+        botao.setAttribute("aria-haspopup", "listbox");
+        botao.setAttribute("aria-expanded", "false");
+
+        botao.innerHTML = `
+            <span class="filtroSelectPremiumText">
+                ${escaparHtml(obterTextoSelectFiltro(select))}
+            </span>
+
+            <span class="filtroSelectPremiumChevron" aria-hidden="true">
+                <i class="fa-solid fa-chevron-down"></i>
+            </span>
+        `;
+
+        select.insertAdjacentElement("afterend", botao);
+
+        sincronizarBotaoFiltroPremium(select);
+    });
+}
+
+/* =========================================================
+   EVENTOS - SELECT PREMIUM DOS FILTROS
+   =========================================================
+   Usamos pointerdown em captura porque o painel já possui
+   regras de clique fora para fechar popovers/details.
+   ========================================================= */
+
+document.addEventListener("pointerdown", (event) => {
+    const botao = event.target.closest(".filtroSelectPremiumButton");
+
+    if (!botao) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const label = botao.closest(".mediaFilterLabel");
+    const select = label ? label.querySelector("select") : null;
+
+    if (!select || select.disabled) return;
+
+    alternarSelectFiltroPremium(select, botao);
+}, true);
+
+document.addEventListener("pointerdown", (event) => {
+    const opcao = event.target.closest(".filtrosSelectPortalOption");
+
+    if (!opcao || !filtroSelectAtual) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const novoValor = String(opcao.dataset.value || "");
+
+    if (String(filtroSelectAtual.value) !== novoValor) {
+        filtroSelectAtual.value = novoValor;
+
+        sincronizarBotaoFiltroPremium(filtroSelectAtual);
+
+        /*
+          Dispara change no select real para manter o fluxo atual:
+          - cria rascunho;
+          - mostra Aplicar/Limpar;
+          - não aplica automaticamente.
+        */
+        filtroSelectAtual.dispatchEvent(new Event("change", {
+            bubbles: true
+        }));
+    }
+
+    fecharSelectFiltroPremium();
+}, true);
+
+/*
+  Impede clique dentro do portal de acionar fechamento de details/popover.
+ */
+document.addEventListener("click", (event) => {
+    if (event.target.closest("#filtrosSelectPortal")) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+}, true);
+
+/*
+  Clique fora fecha apenas o dropdown premium.
+  O fechamento do popover de filtros continua com a lógica existente.
+*/
+document.addEventListener("pointerdown", (event) => {
+    const clicouNoPortal = event.target.closest("#filtrosSelectPortal");
+    const clicouNoBotao = event.target.closest(".filtroSelectPremiumButton");
+
+    if (!clicouNoPortal && !clicouNoBotao) {
+        fecharSelectFiltroPremium();
+    }
+}, true);
 
 /* =========================================================
    EVENTOS - SELECT PREMIUM DE REPETIÇÃO VIA PORTAL

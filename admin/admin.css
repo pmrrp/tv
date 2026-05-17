@@ -1879,16 +1879,6 @@ body::before {
     border-color: rgba(220, 229, 238, 0.9);
 }
 
-.mediaStatusToggle span::before {
-    content: "";
-    width: 7px;
-    height: 7px;
-    display: inline-block;
-    margin-right: 6px;
-    border-radius: 50%;
-    background: currentColor;
-}
-
 .mediaScheduleMenu {
     position: relative;
 }
@@ -5468,10 +5458,6 @@ body:not(.can-edit-media) .mediaStatusToggle.isInactive {
     line-height: 1;
 }
 
-.mediaStatusToggle span::before {
-    flex: 0 0 auto;
-}
-
 /* =========================================================
    INPUTS / SELECTS PEQUENOS DA MÍDIA
    ========================================================= */
@@ -5970,14 +5956,43 @@ body:not(.can-edit-media) .mediaStatusToggle.isInactive {
     gap: 6px;
 }
 
+/* =========================================================
+   STATUS ATIVO/INATIVO - ÍCONE NO LUGAR DA BOLINHA
+   =========================================================
+   Mantém o HTML original, mas troca o marcador circular por
+   ícones Font Awesome mais claros.
+   ========================================================= */
+
+.mediaStatusToggle span::before,
 .mediaBadges .mediaStatusToggle span::before {
-    content: "";
-    width: 7px;
-    height: 7px;
-    display: inline-block;
+    width: auto;
+    height: auto;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
     flex: 0 0 auto;
-    border-radius: 999px;
-    background: currentColor;
+
+    border-radius: 0;
+    background: transparent;
+
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.mediaStatusToggle.isActive span::before,
+.mediaBadges .mediaStatusToggle.isActive span::before {
+    content: "\f058";
+    /* fa-circle-check */
+}
+
+.mediaStatusToggle.isInactive span::before,
+.mediaBadges .mediaStatusToggle.isInactive span::before {
+    content: "\f056";
+    /* fa-circle-minus */
 }
 
 /* Cores da tag de status */
@@ -9238,4 +9253,185 @@ body.modalAberto {
 .mediaStatusToggle .mediaStatusIcon,
 .mediaStatusToggle .mediaStatusText {
     display: none !important;
+}
+
+/* =========================================================
+   SELECT PREMIUM - FILTROS DA BIBLIOTECA
+   =========================================================
+   O select real fica oculto, mas segue no DOM para manter:
+   - value;
+   - change;
+   - rascunho;
+   - aplicar/limpar filtros.
+   ========================================================= */
+
+.filtroSelectNativoOculto {
+    display: none !important;
+}
+
+.mediaFilterLabel .filtroSelectPremiumButton {
+    width: 100%;
+    min-height: 42px;
+
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 18px;
+    align-items: center;
+    gap: 8px;
+
+    padding: 9px 12px;
+
+    border: 1px solid rgba(203, 216, 228, 0.95);
+    border-radius: 14px;
+
+    background: #ffffff;
+    color: var(--blue-950);
+
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 950;
+    line-height: 1.2;
+    text-align: left;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.95),
+        0 8px 20px rgba(15, 23, 42, 0.04);
+
+    cursor: pointer;
+
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.mediaFilterLabel .filtroSelectPremiumButton:hover {
+    border-color: rgba(10, 111, 181, 0.34);
+    background: #f8fbff;
+}
+
+.mediaFilterLabel .filtroSelectPremiumButton:focus-visible,
+.mediaFilterLabel .filtroSelectPremiumButton.isOpen {
+    outline: none;
+
+    border-color: rgba(10, 111, 181, 0.62);
+
+    box-shadow:
+        0 0 0 4px rgba(10, 111, 181, 0.12),
+        0 12px 26px rgba(15, 23, 42, 0.07);
+}
+
+.filtroSelectPremiumText {
+    min-width: 0;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.filtroSelectPremiumChevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    color: #64748b;
+    font-size: 11px;
+
+    transition: transform 0.18s ease;
+}
+
+.filtroSelectPremiumButton.isOpen .filtroSelectPremiumChevron {
+    transform: rotate(180deg);
+}
+
+/* Portal global dos filtros */
+.filtrosSelectPortal {
+    position: fixed;
+    z-index: 99999;
+
+    max-height: min(320px, calc(100vh - 24px));
+    overflow-y: auto;
+
+    display: grid;
+    gap: 4px;
+
+    padding: 7px;
+
+    border: 1px solid rgba(203, 216, 228, 0.95);
+    border-radius: 16px;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 22px 50px rgba(15, 23, 42, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.96);
+
+    animation: filtroSelectPortalIn 0.16s ease both;
+}
+
+.filtrosSelectPortal.hidden {
+    display: none !important;
+}
+
+.filtrosSelectPortalOption {
+    width: 100%;
+    min-height: 40px;
+
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+
+    padding: 9px 10px;
+
+    border: 0;
+    border-radius: 12px;
+
+    background: transparent;
+    color: #334155;
+
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 900;
+    text-align: left;
+
+    cursor: pointer;
+}
+
+.filtrosSelectPortalOption:hover {
+    background: var(--blue-100);
+    color: var(--blue-950);
+}
+
+.filtrosSelectPortalOption.isSelected {
+    background: var(--blue-100);
+    color: var(--blue-950);
+}
+
+.filtrosSelectPortalCheck {
+    width: 26px;
+    height: 26px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 999px;
+
+    color: transparent;
+    font-size: 11px;
+}
+
+.filtrosSelectPortalOption.isSelected .filtrosSelectPortalCheck {
+    background: #d8edf9;
+    color: var(--blue-800);
+}
+
+@keyframes filtroSelectPortalIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
