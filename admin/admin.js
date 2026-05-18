@@ -206,7 +206,15 @@ const periodModalMonthTitle = document.getElementById("periodModalMonthTitle");
 const periodModalDays = document.getElementById("periodModalDays");
 const periodModalPrevMonth = document.getElementById("periodModalPrevMonth");
 const periodModalNextMonth = document.getElementById("periodModalNextMonth");
-const periodModalTimeInput = document.getElementById("periodModalTimeInput");
+const periodModalTimeButton = document.getElementById("periodModalTimeButton");
+const periodModalTimeText = document.getElementById("periodModalTimeText");
+
+const periodTimeMiniModal = document.getElementById("periodTimeMiniModal");
+const periodTimeMiniClose = document.getElementById("periodTimeMiniClose");
+const periodTimeMiniClear = document.getElementById("periodTimeMiniClear");
+const periodTimeMiniApply = document.getElementById("periodTimeMiniApply");
+const periodTimeHourValue = document.getElementById("periodTimeHourValue");
+const periodTimeMinuteValue = document.getElementById("periodTimeMinuteValue");
 const periodModalClearField = document.getElementById("periodModalClearField");
 const periodModalApplyField = document.getElementById("periodModalApplyField");
 const periodModalFieldFeedback = document.getElementById("periodModalFieldFeedback");
@@ -522,16 +530,33 @@ function configurarDetailsControlados() {
     document.addEventListener("keydown", (event) => {
         if (event.key !== "Escape") return;
 
-        if (mediaPeriodModal && !mediaPeriodModal.classList.contains("hidden")) {
-            fecharModalPeriodoMidia();
+        /*
+          Este listener cuida apenas de details/popovers.
+    
+          Modais maiores, como:
+          - modal de período;
+          - mini modal de horário;
+          - modal de detalhes;
+          - modal de confirmação;
+          são tratados no listener global principal de ESC.
+    
+          Isso evita que o modal de período seja fechado antes
+          do mini modal de horário.
+        */
+        if (
+            (periodTimeMiniModal && !periodTimeMiniModal.classList.contains("hidden")) ||
+            (mediaPeriodModal && !mediaPeriodModal.classList.contains("hidden")) ||
+            (mediaDetailsModal && !mediaDetailsModal.classList.contains("hidden")) ||
+            (pendingExitModal && !pendingExitModal.classList.contains("hidden")) ||
+            (pendingSyncModal && !pendingSyncModal.classList.contains("hidden"))
+        ) {
             return;
         }
 
         /*
-        ESC também cancela filtros ainda não aplicados.
+          ESC também cancela filtros ainda não aplicados.
         */
         descartarRascunhoFiltrosMidia();
-
         fecharDetailsControlados();
 
         const dropdownFiltros = document.querySelector(".mediaFiltersDropdown");
@@ -4381,6 +4406,7 @@ function receberArquivoArrastado(event) {
  *   variante: "danger"
  * })
  */
+
 function confirmarAcaoModal({
     kicker = "Confirmação",
     titulo = "Confirmar ação",
@@ -6491,6 +6517,22 @@ let periodoModalMesVisivel = null;
 */
 let periodoModalCampoTemAlteracaoPendente = false;
 
+/*
+  Horário selecionado no modal.
+
+  Agora o horário é controlado por um mini modal premium,
+  evitando input nativo e horários inválidos.
+*/
+let periodoModalHoraSelecionada = 8;
+let periodoModalMinutoSelecionado = 0;
+
+/*
+  Horário temporário usado enquanto o mini modal está aberto.
+  Só vira horário real quando o usuário clica em "Aplicar".
+*/
+let periodoMiniHoraTemporaria = 8;
+let periodoMiniMinutoTemporario = 0;
+
 function mostrarFeedbackCampoPeriodoModal(mensagem, tipo = "sucesso") {
     if (!periodModalFieldFeedback) return;
 
@@ -6563,34 +6605,34 @@ function definirDataAtivaPeriodoModal(data) {
 }
 
 function obterHorarioPeriodoModal() {
-    const valor = String(periodModalTimeInput ? periodModalTimeInput.value : "08:00").trim();
-    const match = valor.match(/^(\d{1,2}):(\d{1,2})$/);
-
-    if (!match) {
-        return {
-            hora: 8,
-            minuto: 0
-        };
-    }
-
     return {
-        hora: Math.min(23, Math.max(0, Number(match[1]))),
-        minuto: Math.min(59, Math.max(0, Number(match[2])))
+        hora: periodoModalHoraSelecionada,
+        minuto: periodoModalMinutoSelecionado
     };
 }
 
-function definirHorarioPeriodoModalPelaData(data) {
-    if (!periodModalTimeInput) return;
+function obterHorarioPeriodoModal() {
+    return {
+        hora: periodoModalHoraSelecionada,
+        minuto: periodoModalMinutoSelecionado
+    };
+}
 
+/**
+ * Define o horário visual do modal com base em uma data.
+ *
+ * Se não houver data válida, volta para o padrão 08:00.
+ * Esse horário é usado pelo mini modal premium de horário.
+ */
+function definirHorarioPeriodoModalPelaData(data) {
     if (!(data instanceof Date) || Number.isNaN(data.getTime())) {
-        periodModalTimeInput.value = "08:00";
+        periodoModalHoraSelecionada = 8;
+        periodoModalMinutoSelecionado = 0;
         return;
     }
 
-    const hora = String(data.getHours()).padStart(2, "0");
-    const minuto = String(data.getMinutes()).padStart(2, "0");
-
-    periodModalTimeInput.value = `${hora}:${minuto}`;
+    periodoModalHoraSelecionada = data.getHours();
+    periodoModalMinutoSelecionado = data.getMinutes();
 }
 
 function obterTituloMesPeriodoModal(data) {
@@ -6720,8 +6762,10 @@ function atualizarVisualPeriodoModal() {
         periodModalMonthTitle.textContent = obterTituloMesPeriodoModal(periodoModalMesVisivel);
     }
 
-    if (periodModalTimeInput) {
-        periodModalTimeInput.disabled = false;
+    atualizarTextoHorarioPeriodoModal();
+
+    if (periodModalTimeButton) {
+        periodModalTimeButton.disabled = false;
     }
 
     if (periodModalClearField) {
@@ -6798,7 +6842,6 @@ function atualizarVisualPeriodoModal() {
 
     mediaPeriodModal.classList.toggle("isIndefinite", indefinido);
 
-    definirHorarioPeriodoModalPelaData(dataAtiva);
     renderizarDiasPeriodoModal();
 }
 
@@ -6808,15 +6851,126 @@ function selecionarCampoPeriodoModal(campo) {
     const dataAtiva = obterDataAtivaPeriodoModal();
     const base = dataAtiva || new Date();
 
-    periodoModalMesVisivel = new Date(base.getFullYear(), base.getMonth(), 1);
+    periodoModalMesVisivel = new Date(
+        base.getFullYear(),
+        base.getMonth(),
+        1
+    );
 
     /*
-      Ao trocar de campo manualmente, não mostramos os botões
-      até o usuário escolher/editar uma data nesse campo.
+      Sempre que troca entre Início e Fim, o horário visual
+      deve acompanhar a data daquele campo.
     */
+    definirHorarioPeriodoModalPelaData(dataAtiva);
+
     periodoModalCampoTemAlteracaoPendente = false;
 
     atualizarVisualPeriodoModal();
+}
+
+function formatarHorarioPeriodoModal(hora, minuto) {
+    return `${String(hora).padStart(2, "0")}:${String(minuto).padStart(2, "0")}`;
+}
+
+function atualizarTextoHorarioPeriodoModal() {
+    const texto = formatarHorarioPeriodoModal(
+        periodoModalHoraSelecionada,
+        periodoModalMinutoSelecionado
+    );
+
+    if (periodModalTimeText) {
+        periodModalTimeText.textContent = texto;
+    }
+}
+
+function atualizarVisualMiniHorarioPeriodo() {
+    if (periodTimeHourValue) {
+        periodTimeHourValue.textContent = String(periodoMiniHoraTemporaria).padStart(2, "0");
+    }
+
+    if (periodTimeMinuteValue) {
+        periodTimeMinuteValue.textContent = String(periodoMiniMinutoTemporario).padStart(2, "0");
+    }
+}
+
+function abrirMiniModalHorarioPeriodo() {
+    if (!periodTimeMiniModal || !periodModalTimeButton) return;
+
+    periodoMiniHoraTemporaria = periodoModalHoraSelecionada;
+    periodoMiniMinutoTemporario = periodoModalMinutoSelecionado;
+
+    atualizarVisualMiniHorarioPeriodo();
+
+    periodTimeMiniModal.classList.remove("hidden");
+    periodModalTimeButton.classList.add("isOpen");
+    periodModalTimeButton.setAttribute("aria-expanded", "true");
+}
+
+function fecharMiniModalHorarioPeriodo() {
+    if (!periodTimeMiniModal || !periodModalTimeButton) return;
+
+    periodTimeMiniModal.classList.add("hidden");
+    periodModalTimeButton.classList.remove("isOpen");
+    periodModalTimeButton.setAttribute("aria-expanded", "false");
+}
+
+function ajustarValorCircular(valor, minimo, maximo, passo) {
+    const novoValor = valor + passo;
+
+    if (novoValor > maximo) return minimo;
+    if (novoValor < minimo) return maximo;
+
+    return novoValor;
+}
+
+function aplicarHorarioSelecionadoNaDataAtivaPeriodoModal() {
+    const dataAtiva = obterDataAtivaPeriodoModal();
+
+    if (!dataAtiva) {
+        return false;
+    }
+
+    dataAtiva.setHours(periodoModalHoraSelecionada);
+    dataAtiva.setMinutes(periodoModalMinutoSelecionado);
+    dataAtiva.setSeconds(0);
+    dataAtiva.setMilliseconds(0);
+
+    definirDataAtivaPeriodoModal(dataAtiva);
+
+    return true;
+}
+
+function aplicarHorarioDoMiniModalPeriodo() {
+    periodoModalHoraSelecionada = periodoMiniHoraTemporaria;
+    periodoModalMinutoSelecionado = periodoMiniMinutoTemporario;
+
+    atualizarTextoHorarioPeriodoModal();
+
+    const aplicouNaData = aplicarHorarioSelecionadoNaDataAtivaPeriodoModal();
+
+    if (periodModalIndefinite) {
+        periodModalIndefinite.checked = false;
+    }
+
+    /*
+      Se já existe data ativa, alterar o horário conta como
+      alteração pendente do campo atual.
+    */
+    if (aplicouNaData) {
+        periodoModalCampoTemAlteracaoPendente = true;
+    } else {
+        mostrarFeedbackCampoPeriodoModal("Escolha uma data antes de aplicar o horário.", "aviso");
+    }
+
+    fecharMiniModalHorarioPeriodo();
+    atualizarVisualPeriodoModal();
+}
+
+function limparHorarioDoMiniModalPeriodo() {
+    periodoMiniHoraTemporaria = 8;
+    periodoMiniMinutoTemporario = 0;
+
+    atualizarVisualMiniHorarioPeriodo();
 }
 
 function abrirModalPeriodoMidia(item) {
@@ -6839,6 +6993,13 @@ function abrirModalPeriodoMidia(item) {
 
     const base = periodoModalInicio || periodoModalFim || new Date();
     periodoModalMesVisivel = new Date(base.getFullYear(), base.getMonth(), 1);
+
+    /*
+    Ao abrir o modal, o campo ativo começa em Início.
+    Por isso o horário visual também precisa refletir o Início,
+    não o Fim e nem o padrão 08:00.
+    */
+    definirHorarioPeriodoModalPelaData(periodoModalInicio);
 
     /*
     Preferimos mostrar o nome amigável da mídia.
@@ -6874,6 +7035,8 @@ function abrirModalPeriodoMidia(item) {
 }
 
 function fecharModalPeriodoMidia() {
+    fecharMiniModalHorarioPeriodo();
+
     if (!mediaPeriodModal) return;
 
     mediaPeriodModal.classList.add("hidden");
@@ -7018,10 +7181,25 @@ document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
 
     fecharSelectRepeticaoPremium();
-
     fecharSelectFiltroPremium();
-
     fecharIndicadorSelectPerfil();
+
+    /*
+      Se o mini modal de horário estiver aberto, fechamos apenas ele.
+      O modal principal de período permanece aberto.
+    */
+    if (periodTimeMiniModal && !periodTimeMiniModal.classList.contains("hidden")) {
+        fecharMiniModalHorarioPeriodo();
+        return;
+    }
+
+    /*
+      Se o modal de período estiver aberto, fechamos ele.
+    */
+    if (mediaPeriodModal && !mediaPeriodModal.classList.contains("hidden")) {
+        fecharModalPeriodoMidia();
+        return;
+    }
 
     if (mediaDetailsModal && !mediaDetailsModal.classList.contains("hidden")) {
         fecharModalDetalhesMidia();
@@ -7052,19 +7230,19 @@ document.addEventListener("keydown", (event) => {
         fecharModalStatusUsuario();
         return;
     }
-    window.addEventListener("resize", () => {
-        if (filtroBotaoAtual) {
-            posicionarPortalFiltroPremium(filtroBotaoAtual);
-        }
-    });
-
-    window.addEventListener("scroll", () => {
-        if (filtroBotaoAtual) {
-            posicionarPortalFiltroPremium(filtroBotaoAtual);
-        }
-    }, true);
-
 });
+
+window.addEventListener("resize", () => {
+    if (filtroBotaoAtual) {
+        posicionarPortalFiltroPremium(filtroBotaoAtual);
+    }
+});
+
+window.addEventListener("scroll", () => {
+    if (filtroBotaoAtual) {
+        posicionarPortalFiltroPremium(filtroBotaoAtual);
+    }
+}, true);
 
 /* =========================================================
    EVENTOS - MODAL DE DETALHES DA MÍDIA
@@ -8375,6 +8553,76 @@ if (mediaList) {
     });
 }
 
+if (periodModalTimeButton) {
+    periodModalTimeButton.addEventListener("click", () => {
+        abrirMiniModalHorarioPeriodo();
+    });
+}
+
+if (periodTimeMiniClose) {
+    periodTimeMiniClose.addEventListener("click", fecharMiniModalHorarioPeriodo);
+}
+
+if (periodTimeMiniClear) {
+    periodTimeMiniClear.addEventListener("click", limparHorarioDoMiniModalPeriodo);
+}
+
+if (periodTimeMiniApply) {
+    periodTimeMiniApply.addEventListener("click", aplicarHorarioDoMiniModalPeriodo);
+}
+
+if (periodTimeMiniModal) {
+    periodTimeMiniModal.addEventListener("click", (event) => {
+        const botaoPasso = event.target.closest("[data-time-step]");
+
+        if (!botaoPasso) return;
+
+        const acao = botaoPasso.dataset.timeStep;
+
+        if (acao === "hour-up") {
+            periodoMiniHoraTemporaria = ajustarValorCircular(
+                periodoMiniHoraTemporaria,
+                0,
+                23,
+                1
+            );
+        }
+
+        if (acao === "hour-down") {
+            periodoMiniHoraTemporaria = ajustarValorCircular(
+                periodoMiniHoraTemporaria,
+                0,
+                23,
+                -1
+            );
+        }
+
+        /*
+          Minutos de 5 em 5:
+          simples, elegante e suficiente para programação institucional.
+        */
+        if (acao === "minute-up") {
+            periodoMiniMinutoTemporario = ajustarValorCircular(
+                periodoMiniMinutoTemporario,
+                0,
+                55,
+                5
+            );
+        }
+
+        if (acao === "minute-down") {
+            periodoMiniMinutoTemporario = ajustarValorCircular(
+                periodoMiniMinutoTemporario,
+                0,
+                55,
+                -5
+            );
+        }
+
+        atualizarVisualMiniHorarioPeriodo();
+    });
+}
+
 /* =========================================================
    EVENTOS - MODAL DE PERÍODO DA MÍDIA
    ========================================================= */
@@ -8498,44 +8746,6 @@ if (periodModalDays) {
         periodoModalCampoTemAlteracaoPendente = true;
 
         atualizarVisualPeriodoModal();
-    });
-}
-
-if (periodModalTimeInput) {
-    periodModalTimeInput.addEventListener("input", () => {
-
-        if (periodModalIndefinite) {
-            periodModalIndefinite.checked = false;
-        }
-
-        let valor = periodModalTimeInput.value.replace(/\D/g, "").slice(0, 4);
-
-        if (valor.length >= 3) {
-            valor = `${valor.slice(0, 2)}:${valor.slice(2)}`;
-        }
-
-        periodModalTimeInput.value = valor;
-
-        const dataAtiva = obterDataAtivaPeriodoModal();
-
-        if (dataAtiva) {
-            const { hora, minuto } = obterHorarioPeriodoModal();
-
-            dataAtiva.setHours(hora);
-            dataAtiva.setMinutes(minuto);
-            dataAtiva.setSeconds(0);
-            dataAtiva.setMilliseconds(0);
-
-            definirDataAtivaPeriodoModal(dataAtiva);
-
-            /*
-              Editar o horário também conta como alteração pendente
-              do campo ativo.
-            */
-            periodoModalCampoTemAlteracaoPendente = true;
-
-            atualizarVisualPeriodoModal();
-        }
     });
 }
 

@@ -981,14 +981,22 @@
                         <!-- Dias renderizados pelo admin.js -->
                     </div>
 
-                    <label class="mediaPeriodTimeLabel">
-                        Horário
-                        <div class="mediaPeriodTimeField">
-                            <i class="fa-solid fa-clock" aria-hidden="true"></i>
-                            <input id="periodModalTimeInput" type="text" inputmode="numeric" maxlength="5"
-                                placeholder="08:00" />
-                        </div>
-                    </label>
+                    <div class="mediaPeriodTimeLabel">
+                        <span>Horário</span>
+
+                        <button id="periodModalTimeButton" class="mediaPeriodTimeButton" type="button"
+                            aria-haspopup="dialog" aria-expanded="false">
+                            <span class="mediaPeriodTimeButtonIcon" aria-hidden="true">
+                                <i class="fa-solid fa-clock"></i>
+                            </span>
+
+                            <strong id="periodModalTimeText">08:00</strong>
+
+                            <span class="mediaPeriodTimeButtonChevron" aria-hidden="true">
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </span>
+                        </button>
+                    </div>
 
                     <p id="periodModalFieldFeedback" class="mediaPeriodFieldFeedback hidden">
                         Data aplicada.
@@ -1002,6 +1010,76 @@
                         <button id="periodModalApplyField" class="primaryAction mediaPeriodApplyField" type="button">
                             <i class="fa-solid fa-check" aria-hidden="true"></i>
                             Aplicar data/hora
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =====================================================
+     MINI MODAL - HORÁRIO DO PERÍODO
+     =====================================================
+     Seletor premium de horário usado dentro do modal
+     de período de exibição.
+     ===================================================== -->
+            <div id="periodTimeMiniModal" class="periodTimeMiniModal hidden" role="dialog" aria-modal="false"
+                aria-labelledby="periodTimeMiniModalTitle">
+                <div class="periodTimeMiniModalCard">
+                    <div class="periodTimeMiniHeader">
+                        <div>
+                            <span class="sectionKicker">Horário</span>
+                            <strong id="periodTimeMiniModalTitle">Selecionar horário</strong>
+                        </div>
+
+                        <button id="periodTimeMiniClose" class="periodTimeMiniClose" type="button"
+                            aria-label="Fechar seletor de horário">
+                            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                        </button>
+                    </div>
+
+                    <div class="periodTimeStepper">
+                        <div class="periodTimeUnit">
+                            <button class="periodTimeStepButton" type="button" data-time-step="hour-up"
+                                aria-label="Aumentar hora">
+                                <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
+                            </button>
+
+                            <strong id="periodTimeHourValue" class="periodTimeValue">08</strong>
+
+                            <button class="periodTimeStepButton" type="button" data-time-step="hour-down"
+                                aria-label="Diminuir hora">
+                                <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                            </button>
+
+                            <span>Hora</span>
+                        </div>
+
+                        <div class="periodTimeColon">:</div>
+
+                        <div class="periodTimeUnit">
+                            <button class="periodTimeStepButton" type="button" data-time-step="minute-up"
+                                aria-label="Aumentar minuto">
+                                <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
+                            </button>
+
+                            <strong id="periodTimeMinuteValue" class="periodTimeValue">00</strong>
+
+                            <button class="periodTimeStepButton" type="button" data-time-step="minute-down"
+                                aria-label="Diminuir minuto">
+                                <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                            </button>
+
+                            <span>Minuto</span>
+                        </div>
+                    </div>
+
+                    <div class="periodTimeMiniActions">
+                        <button id="periodTimeMiniClear" class="secondaryAction" type="button">
+                            Limpar
+                        </button>
+
+                        <button id="periodTimeMiniApply" class="successAction" type="button">
+                            <i class="fa-solid fa-check" aria-hidden="true"></i>
+                            Aplicar
                         </button>
                     </div>
                 </div>
