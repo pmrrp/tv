@@ -128,14 +128,16 @@ Ele serve para:
 - [OK] Manter botão Excluir visualmente ativo mesmo quando o card estiver inativo.
 - [OK] Fazer a TAG Ativo/Inativo funcionar como switch com salvamento automático.
 - [OK] Evitar exibição do botão "Salvar alterações" apenas por ativar/inativar mídia.
-- [AJUSTE] Revisar comportamento de alterações não salvas em campos como repetição e período.
+- [OK] Revisar comportamento de alterações não salvas em campos como repetição e período.
+- [OK] Melhorar visual geral dos selects da dashboard.
+- [OK] Melhorar visual de datepicker e timepicker.
+- [OK] Padronizar aparência dos campos nativos que ainda parecem crus no navegador.
+
 - [AJUSTE] Avaliar se, ao clicar fora ou pressionar ESC, alterações em repetição devem ser descartadas como ocorre nos filtros.
 - [AJUSTE] Melhorar posicionamento/experiência do modal de detalhes no mobile durante a Fase 3.
 - [AJUSTE] Revisar popovers restantes que ficam cortados quando abrem próximos aos limites do navegador.
 
-- [IDEIA] Melhorar visual geral dos selects da dashboard.
-- [IDEIA] Melhorar visual de datepicker e timepicker.
-- [IDEIA] Padronizar aparência dos campos nativos que ainda parecem crus no navegador.
+
 
 ---
 
@@ -206,6 +208,22 @@ Ele serve para:
 - [OK] Select premium de repetição usa portal global para evitar conflito visual com cards.
 - [OK] Prioridade Alta sugere automaticamente repetição "A cada 6 mídias".
 - [OK] Prioridade Urgente sugere automaticamente repetição "A cada 3 mídias".
+- [OK] Popover de período de exibição substituído por modal premium.
+- [OK] Modal de período segue o padrão visual dos demais modais do sistema.
+- [OK] Modal de período exibe o nome amigável da mídia.
+- [OK] Modal de período permite configurar início e fim da exibição.
+- [OK] Calendário premium implementado dentro do modal de período.
+- [OK] Seletor premium de horário implementado dentro do modal de período.
+- [OK] Seletor de horário usa mini modal compacto com setas de hora/minuto.
+- [OK] Ao escolher uma data, o sistema sai automaticamente de "Tempo indeterminado".
+- [OK] Botões "Limpar campo selecionado" e "Aplicar início/fim" aparecem apenas quando há alteração real no campo ativo.
+- [OK] Aplicar início direciona automaticamente o usuário para a escolha do fim.
+- [OK] Aplicar fim exibe feedback interno e mantém o fluxo dentro do modal.
+- [OK] Aplicar período salva diretamente no backend, sem exigir clique adicional no botão Salvar do card.
+- [OK] Modal de período valida data final anterior à data inicial.
+- [OK] ESC fecha primeiro o mini modal de horário, depois o modal principal de período.
+- [OK] Repetição permanece como alteração pendente normal, protegida pelos modais de saída/sincronização.
+
 ---
 
 ## 10. Playlist
@@ -368,7 +386,6 @@ Ele serve para:
 - [ ] Testar todas as funcionalidades em produção.
 - [ ] Revisar console do navegador.
 - [ ] Revisar usabilidade geral da dashboard.
-- [ ] Revisar popover de detalhes em tela pequena.
 - [ ] Validar se a configuração do player está adequada para apresentação.
 - [ ] Confirmar se `config.json` está com opções corretas para produção/apresentação.
 - [ ] Atualizar documentação após os últimos ajustes.
@@ -380,8 +397,22 @@ Ele serve para:
 ## 18. Fase 3 — Polimento, usabilidade e implantação assistida
 
 - [IDEIA] Implementar drag and drop de upload em tela inteira, com efeito visual mais profissional.
-- [IDEIA] Melhorar visual de datepicker e timepicker.
-- [IDEIA] Refinar datepicker/timepicker com componente mais premium.
+- [IDEIA] Refinar visualização resumida do período diretamente no card da mídia, sem poluir a interface.
+- [IDEIA] Revisar redundância das informações de período no modal de detalhes.
+- [IDEIA] Refinar posicionamento e experiência dos modais no mobile.
+- [IDEIA] Implementar drag and drop de upload em tela inteira, com efeito visual mais profissional.
+- [IDEIA] Padronizar aparência dos campos nativos restantes.
+- [IDEIA] Criar área de ajuda/tutoriais dentro do admin.
+- [IDEIA] Criar cards de tutorial com texto explicativo.
+- [IDEIA] Avaliar uso de vídeos curtos ou mini previews para demonstrar operações do sistema.
+- [IDEIA] Criar usuário de treinamento/teste para gravação dos tutoriais.
+- [IDEIA] Gravar tutoriais em vídeo usando OBS Studio.
+- [IDEIA] Criar manual visual com prints e textos objetivos.
+- [IDEIA] Melhorar responsividade/mobile da dashboard.
+- [IDEIA] Fazer polimento visual geral da interface administrativa.
+- [IDEIA] Refinar experiência de uso para usuários não técnicos.
+- [IDEIA] Revisar textos explicativos da interface.
+- [IDEIA] Melhorar microinterações e feedbacks visuais.
 - [IDEIA] Padronizar aparência dos campos nativos restantes.
 - [IDEIA] Criar área de ajuda/tutoriais dentro do admin.
 - [IDEIA] Criar cards de tutorial com texto explicativo.

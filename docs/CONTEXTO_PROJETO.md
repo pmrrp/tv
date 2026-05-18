@@ -462,6 +462,11 @@ Já existem:
 - status Ativo/Inativo refinado visualmente;
 - proteção contra alteração de status quando existem outras alterações pendentes;
 - modais para alterações pendentes e sincronização bloqueada.
+- modal premium de período de exibição;
+- calendário premium para início/fim da mídia;
+- seletor premium de horário dentro do modal de período;
+- salvamento direto do período pelo modal;
+- validação de período com data final anterior ao início;
 
 ---
 
@@ -469,20 +474,22 @@ Já existem:
 
 Pendências e melhorias identificadas:
 
-- refinar posicionamento e experiência dos modais no mobile;
 - criar documentação completa de uso;
 - criar documento executivo para apresentação;
+- gerar PDF executivo final;
+- testar todas as funcionalidades em produção;
+- revisar console do navegador em produção;
+- revisar usabilidade geral da dashboard após deploy;
+- validar configuração do player para apresentação;
+- confirmar `config.json` em produção/apresentação;
+- refinar posicionamento e experiência dos modais no mobile;
+- revisar exibição resumida do período diretamente no card da mídia;
+- revisar redundância das informações de período no modal de detalhes;
 - revisar responsividade/mobile da dashboard;
 - hospedar Font Awesome localmente;
 - futuramente refatorar `admin.css`;
 - futuramente modularizar `admin.js`;
-- criar documentação técnica completa;
 - criar checklist final de entrega.
-- melhorar datepicker e timepicker;
-- revisar responsividade/mobile da dashboard;
-- hospedar Font Awesome localmente;
-- futuramente refatorar `admin.css`;
-- futuramente modularizar `admin.js`;
 
 ---
 

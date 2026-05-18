@@ -871,6 +871,90 @@ A dashboard ganhou aparência mais profissional sem substituir a lógica funcion
 
 Outros campos nativos, como datepicker e timepicker, poderão receber tratamento visual mais refinado na Fase 3.
 
+---
+
+## 32. Período de exibição em modal premium
+
+## Decisão
+
+Substituir o popover de período de exibição por um modal premium no padrão visual do sistema.
+
+## Motivos
+
+- O popover de período possuía interação complexa demais para um componente pequeno.
+- A configuração de período envolve rascunho, início, fim, calendário, horário, validação, limpeza e aplicação.
+- Popovers dentro de cards podem sofrer corte por largura, altura, bordas da tela, `overflow` e conflitos de `z-index`.
+- O padrão de modal já estava consolidado no painel.
+- O modal oferece mais liberdade visual e reduz falhas de clique fora.
+
+## Como ficou
+
+Ao clicar em "Período de exibição", o sistema abre um modal com:
+
+- nome da mídia;
+- opção de tempo indeterminado;
+- escolha de início;
+- escolha de fim;
+- calendário premium;
+- seletor premium de horário;
+- feedback interno;
+- botão de aplicar período.
+
+## Regra de salvamento
+
+Diferente de ajustes rápidos feitos diretamente no card, o período de exibição passou a ser tratado como fluxo completo.
+
+Por isso, ao clicar em "Aplicar período":
+
+1. o sistema valida as datas;
+2. atualiza a configuração da mídia;
+3. salva diretamente no backend;
+4. recarrega/destaca a mídia;
+5. não exige clique posterior no botão "Salvar" do card.
+
+## Resultado
+
+A experiência ficou mais consistente, segura e próxima do padrão visual premium adotado na dashboard.
+
+---
+
+## 33. Seletor premium de horário no período
+
+## Decisão
+
+Substituir o campo manual/nativo de horário por um mini modal premium com controle visual de hora e minuto.
+
+## Motivos
+
+- O campo nativo de horário varia conforme navegador e sistema operacional.
+- O seletor nativo aberto não segue o padrão visual da dashboard.
+- Digitar horário manualmente podia ser pouco intuitivo.
+- Horários inválidos não tinham feedback visual claro.
+- O modal principal de período já oferecia espaço para uma experiência mais refinada.
+
+## Como ficou
+
+O horário é exibido como botão premium dentro do modal de período.
+
+Ao clicar nele, é aberto um mini modal com:
+
+- hora;
+- minuto;
+- setas para aumentar/diminuir;
+- botão Limpar;
+- botão Aplicar.
+
+## Regras adotadas
+
+- Hora varia entre `00` e `23`.
+- Minuto é ajustado por passos controlados.
+- O horário só é aplicado ao campo ativo após confirmação.
+- ESC fecha primeiro o mini modal de horário.
+- O modal principal permanece aberto enquanto o usuário ajusta o horário.
+
+## Resultado
+
+O seletor ficou mais previsível, visualmente coerente e sem dependência de componentes nativos do navegador.
 
 ---
 

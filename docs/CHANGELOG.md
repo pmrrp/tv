@@ -460,6 +460,45 @@ A refatoração geral do `admin.css` continua planejada para momento futuro, ap�
 
 ---
 
+## 2026-05 — Modal premium de período e seletor de horário
+
+### Implementado
+
+- Substituição do popover de período de exibição por modal premium.
+- Modal de período passou a seguir o padrão visual dos demais modais da dashboard.
+- Modal exibe o nome amigável da mídia em edição.
+- Calendário premium implementado dentro do modal de período.
+- Campo de horário substituído por seletor premium em mini modal.
+- Mini modal de horário permite ajustar hora e minuto por setas.
+- O fluxo de período passou a trabalhar com etapas mais claras:
+  - escolher início;
+  - aplicar início;
+  - escolher fim;
+  - aplicar fim;
+  - aplicar período.
+- Ao escolher uma data, o sistema desmarca automaticamente "Tempo indeterminado".
+- Botões "Limpar campo selecionado" e "Aplicar início/fim" aparecem apenas quando há alteração real no campo ativo.
+- Feedbacks do fluxo de período passaram a aparecer dentro do próprio modal.
+- "Aplicar período" salva diretamente no backend, sem exigir clique posterior no botão Salvar do card.
+- Validação impede salvar período com data final anterior à data inicial.
+- ESC foi ajustado para fechar primeiro o mini modal de horário e somente depois o modal principal de período.
+
+### Impacto
+
+A configuração de período de exibição ficou mais clara, previsível e profissional.
+
+O uso de modal elimina problemas anteriores de popover cortado, conflito de bordas, `z-index`, clique fora e limitação de espaço dentro dos cards.
+
+O seletor premium de horário evita o uso de campos nativos inconsistentes entre navegadores e impede horários inválidos por seleção visual controlada.
+
+### Observação
+
+O período de exibição agora é tratado como fluxo completo dentro de modal. Por isso, ao clicar em "Aplicar período", o sistema já salva a configuração da mídia diretamente no backend.
+
+Melhorias futuras podem incluir exibição resumida do período no card e simplificação das informações redundantes no modal de detalhes.
+
+---
+
 ## Próximos registros esperados
 
 Próximas entradas deste changelog deverão registrar:
