@@ -468,6 +468,29 @@ Já existem:
 - salvamento direto do período pelo modal;
 - validação de período com data final anterior ao início;
 
+## Estado atual de fechamento
+
+A Fase 2 do Painel Ribas foi validada localmente e em produção.
+
+Foram testados e aprovados:
+
+- login administrativo;
+- dashboard;
+- biblioteca de mídias;
+- upload;
+- filtros premium;
+- select premium de repetição;
+- modal premium de período;
+- mini modal premium de horário;
+- ativação/inativação de mídias;
+- prioridade e recorrência;
+- sincronização da playlist;
+- player em produção;
+- fluxo de alterações pendentes;
+- deploy na VM.
+
+A Fase 2 encontra-se pronta para apresentação institucional.
+
 ---
 
 ## 12. Pendências atuais conhecidas

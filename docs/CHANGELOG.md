@@ -499,6 +499,37 @@ Melhorias futuras podem incluir exibição resumida do período no card e simpli
 
 ---
 
+## 2026-05 — Fechamento da Fase 2 em produção
+
+### Validado
+
+- Validação local completa realizada.
+- Deploy realizado na VM de produção.
+- Testes pós-deploy executados em produção.
+- Dashboard administrativa validada.
+- Biblioteca de mídias validada.
+- Filtros premium validados.
+- Select premium de repetição validado.
+- Modal premium de período de exibição validado.
+- Mini modal premium de horário validado.
+- Fluxo de ativação/inativação validado.
+- Fluxo de alterações pendentes validado.
+- Fluxo de sincronização com alterações pendentes validado.
+- Player validado em produção.
+- Console revisado durante os testes.
+
+### Impacto
+
+A Fase 2 passou a ser considerada pronta para apresentação institucional.
+
+O sistema encontra-se funcional em produção, com dashboard administrativa, player, gerenciamento de mídias, usuários, logs, filtros, agendamento, prioridade, recorrência, upload em partes, modais premium e validações principais operando corretamente.
+
+### Observação
+
+Os próximos ajustes foram classificados como Fase 3/backlog, incluindo refatoração de CSS/JavaScript, melhorias mobile, refinamentos no modal de detalhes, exibição resumida de período no card, Font Awesome local e melhorias futuras de documentação/manual.
+
+---
+
 ## Próximos registros esperados
 
 Próximas entradas deste changelog deverão registrar:

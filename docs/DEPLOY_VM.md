@@ -471,6 +471,33 @@ A reversão deve ser feita com cautela e, de preferência, registrada em novo co
 
 ---
 
+## Deploy de fechamento da Fase 2
+
+Após a implementação dos refinamentos finais da dashboard administrativa, foi realizado deploy da branch `fix-admin-funcionalidades` na VM de produção.
+
+Foram validados em produção:
+
+- login;
+- dashboard;
+- biblioteca;
+- filtros premium;
+- modal premium de período;
+- mini modal premium de horário;
+- ativação/inativação de mídias;
+- sincronização;
+- player;
+- console do navegador.
+
+Resultado:
+
+```txt
+Deploy realizado com sucesso.
+Processo PM2 online.
+Testes em produção aprovados.
+Fase 2 pronta para apresentação.
+
+---
+
 ## 17. Observação final
 
 Este documento deve ser mantido atualizado sempre que mudar:
