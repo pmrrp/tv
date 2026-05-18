@@ -217,6 +217,79 @@ Navegadores recomendados para teste:
 
 ---
 
+## 8.3 Testes do modal premium de período
+
+- [ ] Abrir a biblioteca.
+- [ ] Clicar em "Período de exibição" de uma mídia.
+- [ ] Confirmar que o modal premium de período abre.
+- [ ] Confirmar que o nome amigável da mídia aparece no modal.
+- [ ] Confirmar que o modal fecha pelo botão X.
+- [ ] Confirmar que o modal fecha pelo botão Cancelar.
+- [ ] Confirmar que o modal fecha ao clicar fora.
+- [ ] Confirmar que o modal fecha com ESC.
+- [ ] Confirmar que "Tempo indeterminado" aparece marcado quando a mídia não possui início/fim.
+- [ ] Escolher uma data de início.
+- [ ] Confirmar que "Tempo indeterminado" é desmarcado automaticamente.
+- [ ] Confirmar que aparecem os botões "Limpar campo selecionado" e "Aplicar início".
+- [ ] Clicar em "Aplicar início".
+- [ ] Confirmar que aparece feedback interno.
+- [ ] Confirmar que o modal passa para seleção de fim.
+- [ ] Escolher uma data de fim.
+- [ ] Clicar em "Aplicar fim".
+- [ ] Confirmar que aparece feedback interno.
+- [ ] Confirmar que os botões do campo somem após aplicar.
+- [ ] Clicar em "Aplicar período".
+- [ ] Confirmar que o período é salvo diretamente no backend.
+- [ ] Confirmar que não aparece confirmação extra.
+- [ ] Confirmar que o card não fica com botão Salvar pendente.
+- [ ] Recarregar a página.
+- [ ] Confirmar que o período salvo permanece.
+
+---
+
+## 8.4 Testes do seletor premium de horário
+
+- [ ] Abrir o modal premium de período.
+- [ ] Escolher uma data de início.
+- [ ] Clicar no campo Horário.
+- [ ] Confirmar que o mini modal de horário abre.
+- [ ] Clicar na seta para aumentar hora.
+- [ ] Clicar na seta para diminuir hora.
+- [ ] Clicar na seta para aumentar minuto.
+- [ ] Clicar na seta para diminuir minuto.
+- [ ] Clicar em Aplicar no mini modal.
+- [ ] Confirmar que o horário visual é atualizado.
+- [ ] Confirmar que o mini modal fecha.
+- [ ] Confirmar que o botão "Aplicar início" aparece quando houver data ativa.
+- [ ] Pressionar ESC com o mini modal aberto.
+- [ ] Confirmar que apenas o mini modal fecha.
+- [ ] Pressionar ESC novamente.
+- [ ] Confirmar que o modal principal de período fecha.
+- [ ] Repetir o fluxo para a data final.
+- [ ] Salvar o período.
+- [ ] Recarregar a página.
+- [ ] Confirmar que datas e horários persistem corretamente.
+
+---
+
+## 8.3 Testes de validação do período
+
+- [ ] Escolher uma data inicial.
+- [ ] Escolher uma data final anterior à inicial.
+- [ ] Clicar em "Aplicar período".
+- [ ] Confirmar que o sistema não salva.
+- [ ] Confirmar que aparece aviso interno no modal.
+- [ ] Corrigir a data final.
+- [ ] Clicar novamente em "Aplicar período".
+- [ ] Confirmar que salva corretamente.
+- [ ] Marcar "Tempo indeterminado" em uma mídia que possuía período.
+- [ ] Clicar em "Aplicar período".
+- [ ] Confirmar que início e fim são limpos.
+- [ ] Recarregar a página.
+- [ ] Confirmar que a mídia permanece sem período definido.
+
+---
+
 ## 9. Testes de filtros
 
 - [ ] Abrir filtros.
