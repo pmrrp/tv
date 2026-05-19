@@ -441,6 +441,11 @@ function limparMidias() {
 
 /**
  * Pré-carrega o próximo vídeo.
+ *
+ * Importante:
+ * O vídeo de preload nunca deve tocar áudio.
+ * Ele existe apenas para deixar o próximo arquivo mais pronto
+ * para reprodução quando chegar a vez dele na playlist.
  */
 function preCarregarProximoVideo() {
   if (!playlist.length) return;
@@ -450,6 +455,15 @@ function preCarregarProximoVideo() {
 
   if (proximo && proximo.tipo === "video") {
     const proximoUrlAbsoluto = new URL(proximo.arquivo, window.location.href).href;
+
+    /*
+      Blindagem de segurança:
+      mesmo que algum navegador tente ser "esperto",
+      o preload fica sempre mutado e sem volume.
+    */
+    videoPreload.muted = true;
+    videoPreload.volume = 0;
+    videoPreload.pause();
 
     if (videoPreload.src !== proximoUrlAbsoluto) {
       videoPreload.src = proximo.arquivo;
@@ -601,15 +615,27 @@ async function tocarItemAtual() {
       mostrarVideo();
 
       /*
-        IMPORTANTE PARA SMART TV:
-        muitos navegadores de TV bloqueiam autoplay quando o vídeo
-        começa com áudio. Então iniciamos MUTADO e, após o play()
-        ser aceito, tentamos religar o som se o usuário já havia
-        ativado som anteriormente.
-      */
-      videoPlayer.muted = true;
+      Política de áudio do player:
 
-      debugMensagem("Tentando executar videoPlayer.play()...");
+      - Por padrão, iniciamos mutado para garantir autoplay.
+      - Se config.iniciarComSom = true, tentamos iniciar com som.
+      - Se o navegador bloquear autoplay com som, fazemos fallback
+        automático para mutado e tocamos mesmo assim.
+
+      Isso preserva compatibilidade com Smart TVs e permite testar
+      som automático em PCs configurados como quiosque.
+    */
+      const tentarComSom = somHabilitadoPeloUsuario === true;
+
+      videoPlayer.muted = !tentarComSom;
+      videoPlayer.volume = tentarComSom ? 1 : 0;
+
+      debugMensagem(
+        tentarComSom
+          ? "Tentando executar videoPlayer.play() com som..."
+          : "Tentando executar videoPlayer.play() mutado..."
+      );
+
       debugEstadoVideo("Antes do play()");
 
       videoPlayer.play()
@@ -617,19 +643,7 @@ async function tocarItemAtual() {
           debugMensagem("videoPlayer.play() executado com sucesso.");
           debugEstadoVideo("Depois do play()");
 
-          if (somHabilitadoPeloUsuario) {
-            setTimeout(() => {
-              try {
-                videoPlayer.muted = false;
-                videoPlayer.volume = 1;
-                debugMensagem("Som religado após o vídeo iniciar.");
-                atualizarBotaoSom();
-                debugEstadoVideo("Depois de religar o som");
-              } catch (erro) {
-                debugMensagem(`Falha ao religar som: ${erro.message || erro}`);
-              }
-            }, 400);
-          }
+          atualizarBotaoSom();
 
           preCarregarProximaMidia();
           emTransicao = false;
@@ -637,6 +651,46 @@ async function tocarItemAtual() {
           atualizarTextoBotaoPlayPause();
         })
         .catch((erro) => {
+          /*
+            Se tentou com som e o navegador bloqueou, não avançamos a mídia.
+            Fazemos fallback para mutado e tentamos tocar novamente.
+          */
+          if (tentarComSom) {
+            debugMensagem(
+              `Autoplay com som bloqueado ou falhou: ${erro && erro.message ? erro.message : erro}`
+            );
+
+            debugMensagem("Tentando fallback mutado...");
+
+            somHabilitadoPeloUsuario = false;
+            videoPlayer.muted = true;
+            videoPlayer.volume = 0;
+            atualizarBotaoSom();
+
+            videoPlayer.play()
+              .then(() => {
+                debugMensagem("Fallback mutado executado com sucesso.");
+                debugEstadoVideo("Depois do fallback mutado");
+
+                preCarregarProximaMidia();
+                emTransicao = false;
+                primeiraInicializacaoConcluida = true;
+                atualizarTextoBotaoPlayPause();
+              })
+              .catch((erroFallback) => {
+                debugMensagem(
+                  `Falha também no fallback mutado: ${erroFallback && erroFallback.message ? erroFallback.message : erroFallback}`
+                );
+
+                debugEstadoVideo("Falha ao tentar fallback mutado");
+                atualizarStatus("Falha ao abrir mídia, avançando...");
+                emTransicao = false;
+                setTimeout(proximoItem, 1000);
+              });
+
+            return;
+          }
+
           debugMensagem(`Falha no play(): ${erro && erro.message ? erro.message : erro}`);
           debugEstadoVideo("Falha ao tentar play()");
           atualizarStatus("Falha ao abrir mídia, avançando...");
@@ -665,8 +719,17 @@ async function tocarItemAtual() {
     videoPlayer.removeAttribute("src");
     videoPlayer.load();
 
-    videoPlayer.muted = true;
-    videoPlayer.src = item.arquivo; videoPlayer.load();
+    /*
+    Define o estado inicial antes de carregar o arquivo.
+
+    Se o modo com som estiver habilitado, carregamos já com som.
+    Se não, mantemos mutado para compatibilidade com autoplay.
+  */
+    videoPlayer.muted = !somHabilitadoPeloUsuario;
+    videoPlayer.volume = somHabilitadoPeloUsuario ? 1 : 0;
+
+    videoPlayer.src = item.arquivo;
+    videoPlayer.load();
 
     debugMensagem(`src definido: ${videoPlayer.src}`);
   } else if (item.tipo === "imagem") {
@@ -724,6 +787,18 @@ function itemAnterior() {
 
   indiceAtual = (indiceAtual - 1 + playlist.length) % playlist.length;
   tocarItemAtual();
+}
+
+/**
+ * Define se o player deve tentar iniciar vídeos com som.
+ *
+ * Observação:
+ * - Em Smart TVs e navegadores comuns, autoplay com som pode ser bloqueado.
+ * - Em PCs configurados como quiosque, usando Chrome com política adequada,
+ *   pode funcionar.
+ */
+function deveTentarIniciarComSom() {
+  return config && config.iniciarComSom === true;
 }
 
 /* =========================================================
@@ -839,10 +914,18 @@ function alternarPlayPause() {
  */
 function alternarSom() {
   somHabilitadoPeloUsuario = !somHabilitadoPeloUsuario;
+
   videoPlayer.muted = !somHabilitadoPeloUsuario;
+  videoPlayer.volume = somHabilitadoPeloUsuario ? 1 : 0;
 
   atualizarBotaoSom();
-  debugMensagem(somHabilitadoPeloUsuario ? "Som ativado pelo usuário." : "Som desativado pelo usuário.");
+
+  debugMensagem(
+    somHabilitadoPeloUsuario
+      ? "Som ativado pelo usuário."
+      : "Som desativado pelo usuário."
+  );
+
   debugEstadoVideo("Após alternar som");
 
   atualizarStatus(
@@ -969,7 +1052,18 @@ async function iniciarSistema() {
       sleep(tempoMinimoSplash)
     ]);
 
+    /*
+    Define o estado inicial de áudio.
+
+    Por padrão, o sistema continua seguro para autoplay mutado.
+    Quando config.iniciarComSom = true, tentamos iniciar com som,
+    útil para PCs em modo quiosque.
+  */
+    somHabilitadoPeloUsuario = deveTentarIniciarComSom();
+
     videoPlayer.muted = !somHabilitadoPeloUsuario;
+    videoPlayer.volume = somHabilitadoPeloUsuario ? 1 : 0;
+
     atualizarBotaoSom();
     atualizarBotaoFullscreen();
 
@@ -1080,6 +1174,7 @@ btnPlayPause.addEventListener("click", () => {
   */
   somHabilitadoPeloUsuario = true;
   videoPlayer.muted = false;
+  videoPlayer.volume = 1;
   atualizarBotaoSom();
 
   alternarPlayPause();
@@ -1236,6 +1331,7 @@ document.addEventListener("keydown", (event) => {
 
     somHabilitadoPeloUsuario = true;
     videoPlayer.muted = false;
+    videoPlayer.volume = 1;
     atualizarBotaoSom();
     return;
   }

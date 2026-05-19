@@ -8,5 +8,6 @@
   "wallpaperInicial": "assets/wallpaper.jpg",
   "tempoMinimoSplash": 6000,
   "duracaoFadeMidia": 600,
-  "tempoOcultarPainel": 3500
+  "tempoOcultarPainel": 3500,
+  "iniciarComSom": true
 }
