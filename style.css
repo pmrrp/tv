@@ -898,3 +898,732 @@ body.debug-mode #debugPanel {
     max-height: 42vh;
   }
 }
+
+/* =========================================================
+   PLAYER PREMIUM UI - SIDEBAR INSTITUCIONAL
+   =========================================================
+   Camada visual premium para o player.
+
+   Objetivos:
+   - aproximar o player do visual premium da dashboard;
+   - manter o player leve para mini PC/TV;
+   - preservar toda a lógica atual do JavaScript;
+   - melhorar sidebar, status, botões, relógio e identidade visual.
+   ========================================================= */
+
+:root {
+  --player-blue-950: #082f49;
+  --player-blue-900: #0b426f;
+  --player-blue-800: #0f5f9f;
+  --player-blue-700: #0f70c4;
+  --player-blue-100: #e8f5ff;
+  --player-blue-50: #f5fbff;
+
+  --player-slate-950: #0f172a;
+  --player-slate-700: #334155;
+  --player-slate-500: #64748b;
+
+  --player-success: #16a34a;
+  --player-danger: #dc2626;
+
+  --player-glass: rgba(255, 255, 255, 0.92);
+  --player-border: rgba(203, 216, 228, 0.88);
+}
+
+/* =========================================================
+   FUNDO DA ÁREA DE MÍDIA
+   ========================================================= */
+
+#mediaArea {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(15, 112, 196, 0.18), transparent 32%),
+    radial-gradient(circle at 80% 78%, rgba(32, 176, 56, 0.10), transparent 34%),
+    linear-gradient(135deg, #030712 0%, #07111f 44%, #020617 100%);
+}
+
+#mediaArea::after {
+  background-size: min(46vw, 46vh);
+  opacity: 0.035;
+  filter: saturate(0.75);
+}
+
+/* =========================================================
+   STATUS - TOAST DISCRETO
+   ========================================================= */
+
+#status {
+  left: 22px;
+  bottom: 22px;
+  z-index: 46;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  min-height: 38px;
+  padding: 10px 14px;
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+
+  background: rgba(2, 6, 23, 0.74);
+  color: rgba(255, 255, 255, 0.92);
+
+  backdrop-filter: blur(14px);
+
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+#status::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+
+  border-radius: 999px;
+
+  background: var(--player-blue-700);
+  box-shadow: 0 0 0 5px rgba(15, 112, 196, 0.16);
+}
+
+/* =========================================================
+   SIDEBAR - CARD PREMIUM FLUTUANTE
+   ========================================================= */
+
+#sidePanel {
+  top: 18px;
+  right: 18px;
+  bottom: 18px;
+
+  width: 292px;
+  height: auto;
+
+  overflow: hidden;
+
+  border: 1px solid var(--player-border);
+  border-radius: 32px;
+
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(244, 249, 253, 0.94)),
+    var(--player-glass);
+
+  color: var(--player-slate-950);
+
+  backdrop-filter: blur(22px);
+
+  box-shadow:
+    -22px 28px 70px rgba(2, 6, 23, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+
+  transform: translateX(calc(100% + 42px)) scale(0.985);
+  opacity: 0;
+
+  transition:
+    transform 0.42s cubic-bezier(.2, .8, .2, 1),
+    opacity 0.32s ease;
+}
+
+#sidePanel.panel-open {
+  transform: translateX(0) scale(1);
+  opacity: 1;
+}
+
+/* Marca d’água suave dentro da sidebar */
+#sidePanel::before {
+  content: "";
+  position: absolute;
+  inset: 96px -96px auto auto;
+
+  width: 270px;
+  height: 270px;
+
+  pointer-events: none;
+
+  background-image: url("assets/watermark-prefeitura.svg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+
+  opacity: 0.045;
+
+  animation: playerSidebarWatermarkFloat 12s ease-in-out infinite;
+}
+
+@keyframes playerSidebarWatermarkFloat {
+  0% {
+    transform: translateX(20px) translateY(0) rotate(-3deg);
+  }
+
+  50% {
+    transform: translateX(-8px) translateY(10px) rotate(2deg);
+  }
+
+  100% {
+    transform: translateX(20px) translateY(0) rotate(-3deg);
+  }
+}
+
+/* A faixa superior antiga deixa de ser uma barra chapada */
+.sidePanelTopBar {
+  height: 0;
+  background: transparent;
+}
+
+.sidePanelBody {
+  position: relative;
+  z-index: 1;
+
+  align-items: stretch;
+  gap: 16px;
+
+  padding: 18px;
+
+  overflow: hidden;
+}
+
+/* =========================================================
+   RELÓGIO
+   ========================================================= */
+
+.sidePanelTopContent {
+  width: 100%;
+  align-items: stretch;
+}
+
+.sidePanelClock {
+  position: relative;
+
+  width: 100%;
+  padding: 18px 14px 16px;
+
+  border: 1px solid rgba(203, 216, 228, 0.72);
+  border-radius: 24px;
+
+  background:
+    radial-gradient(circle at top right, rgba(15, 112, 196, 0.14), transparent 48%),
+    #ffffff;
+
+  box-shadow:
+    0 12px 28px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+
+  text-align: left;
+}
+
+.sidePanelClock::before {
+  content: "Agora";
+
+  display: inline-flex;
+  align-items: center;
+
+  margin-bottom: 8px;
+
+  color: var(--player-blue-800);
+
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+#sidebarClockTime {
+  color: var(--player-blue-950);
+
+  font-size: 38px;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+
+#sidebarClockDate {
+  margin-top: 8px;
+
+  color: var(--player-slate-500);
+
+  font-size: 13px;
+  font-weight: 900;
+}
+
+/* =========================================================
+   BOTÕES PREMIUM
+   ========================================================= */
+
+#controls {
+  width: 100%;
+  gap: 9px;
+}
+
+#controls button {
+  position: relative;
+
+  justify-content: flex-start;
+
+  width: 100%;
+  max-width: none;
+  min-height: 48px;
+
+  padding: 10px 12px;
+
+  border: 1px solid rgba(203, 216, 228, 0.80);
+  border-radius: 18px;
+
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--player-slate-950);
+
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 950;
+
+  box-shadow:
+    0 10px 22px rgba(15, 23, 42, 0.055),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+
+  backdrop-filter: blur(10px);
+
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease;
+}
+
+#controls button i {
+  width: 30px;
+  height: 30px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 999px;
+
+  background: var(--player-blue-100);
+  color: var(--player-blue-800);
+
+  font-size: 12px;
+
+  flex-shrink: 0;
+}
+
+#controls button span {
+  min-width: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#controls button:hover {
+  transform: translateY(-2px);
+
+  border-color: rgba(15, 112, 196, 0.34);
+  background: #ffffff;
+
+  box-shadow:
+    0 16px 30px rgba(15, 23, 42, 0.10),
+    0 0 0 4px rgba(15, 112, 196, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+
+#controls button:active {
+  transform: scale(0.975);
+}
+
+/* Botão principal */
+#btnPlayPause {
+  border-color: rgba(15, 112, 196, 0.42) !important;
+
+  background:
+    linear-gradient(180deg, #1688df, #0f70c4) !important;
+
+  color: #ffffff !important;
+
+  box-shadow:
+    0 16px 34px rgba(15, 112, 196, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+}
+
+#btnPlayPause i {
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+}
+
+/*
+  Estados visuais do botão de som.
+  :has funciona no Chrome moderno, que é nosso alvo para modo quiosque.
+*/
+#btnMute:has(.fa-volume-high) i {
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--player-success);
+}
+
+#btnMute:has(.fa-volume-xmark) i {
+  background: rgba(220, 38, 38, 0.09);
+  color: var(--player-danger);
+}
+
+#btnFullscreen i {
+  background: rgba(15, 112, 196, 0.10);
+}
+
+/* Feedback do clique */
+#controls button.feedback {
+  animation: playerPremiumButtonPulse 0.28s ease;
+}
+
+@keyframes playerPremiumButtonPulse {
+  0% {
+    transform: scale(1);
+  }
+
+  45% {
+    transform: scale(0.965);
+    filter: brightness(1.04);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* =========================================================
+   TEXTO DE APOIO
+   ========================================================= */
+
+.sidePanelHint {
+  padding: 12px;
+
+  border: 1px solid rgba(203, 216, 228, 0.60);
+  border-radius: 18px;
+
+  background: rgba(248, 251, 255, 0.72);
+
+  color: var(--player-slate-500);
+
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.sidePanelHint p+p {
+  margin-top: 5px;
+}
+
+/* =========================================================
+   LOGO / RODAPÉ
+   ========================================================= */
+
+.sidePanelLogoArea {
+  margin-top: auto;
+
+  padding: 14px 12px 10px;
+
+  border: 1px solid rgba(203, 216, 228, 0.70);
+  border-radius: 22px;
+
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 251, 255, 0.78));
+}
+
+#sidePanelLogo {
+  max-width: 205px;
+  margin: 0 auto;
+}
+
+/* Faixa colorida mais elegante */
+.sidePanelBottomColors {
+  position: relative;
+  z-index: 1;
+
+  height: 6px;
+  margin: 0 18px 16px;
+
+  overflow: hidden;
+
+  border-radius: 999px;
+}
+
+.colorStrip {
+  opacity: 0.96;
+}
+
+/* =========================================================
+   DEBUG PANEL - PEQUENO POLIMENTO
+   ========================================================= */
+
+#debugPanel {
+  border-radius: 16px;
+  border-left: 0;
+  border: 1px solid rgba(64, 255, 153, 0.22);
+
+  background: rgba(2, 6, 23, 0.86);
+  backdrop-filter: blur(14px);
+
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* =========================================================
+   RESPONSIVIDADE PREMIUM
+   ========================================================= */
+
+@media (max-width: 1024px) {
+  #sidePanel {
+    top: 12px;
+    right: 12px;
+    bottom: 12px;
+
+    width: min(292px, 84vw);
+    max-width: 292px;
+
+    border-radius: 28px;
+  }
+
+  .sidePanelBody {
+    gap: 12px;
+    padding: 14px;
+  }
+
+  #sidebarClockTime {
+    font-size: 30px;
+  }
+
+  #sidebarClockDate {
+    font-size: 12px;
+  }
+
+  #controls button {
+    min-height: 44px;
+    border-radius: 16px;
+    font-size: 12px;
+  }
+
+  #controls button i {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+
+  #sidePanelLogo {
+    max-width: 170px;
+  }
+
+  #status {
+    left: 12px;
+    right: auto;
+    bottom: 12px;
+
+    max-width: calc(100vw - 24px);
+
+    font-size: 11px;
+  }
+}
+
+/* Mobile/tablet em retrato: painel inferior premium */
+@media (max-width: 1024px) and (orientation: portrait) {
+  body.mobile-mode #sidePanel {
+    top: auto;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+
+    width: auto;
+    max-width: none;
+    height: auto;
+
+    border-radius: 28px;
+
+    transform: translateY(calc(100% + 32px)) scale(0.985);
+  }
+
+  body.mobile-mode #sidePanel.panel-open {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+
+  body.mobile-mode #sidePanel::before {
+    inset: -70px -70px auto auto;
+    width: 220px;
+    height: 220px;
+    opacity: 0.035;
+  }
+
+  body.mobile-mode .sidePanelBody {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  body.mobile-mode .sidePanelTopContent {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  body.mobile-mode .sidePanelClock {
+    flex: 1;
+    padding: 12px;
+
+    text-align: left;
+  }
+
+  body.mobile-mode .sidePanelClock::before {
+    margin-bottom: 5px;
+    font-size: 10px;
+  }
+
+  body.mobile-mode #sidebarClockTime {
+    font-size: 24px;
+  }
+
+  body.mobile-mode #sidebarClockDate {
+    font-size: 11px;
+    margin-top: 4px;
+  }
+
+  body.mobile-mode .sidePanelLogoInline {
+    width: 112px;
+    min-height: 72px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 10px;
+
+    border: 1px solid rgba(203, 216, 228, 0.70);
+    border-radius: 20px;
+
+    background: rgba(255, 255, 255, 0.82);
+  }
+
+  body.mobile-mode #sidePanelLogoInlineImg {
+    max-width: 96px;
+  }
+
+  body.mobile-mode .sidePanelLogoArea,
+  body.mobile-mode .sidePanelHint {
+    display: none;
+  }
+
+  body.mobile-mode #controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  body.mobile-mode #controls button {
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+
+  body.mobile-mode #btnPlayPause,
+  body.mobile-mode #btnMute,
+  body.mobile-mode #btnFullscreen {
+    grid-column: span 2;
+  }
+
+  body.mobile-mode .sidePanelBottomColors {
+    margin: 0 12px 12px;
+  }
+}
+
+/* Mobile/tablet em paisagem: sidebar compacta */
+@media (max-width: 1024px) and (orientation: landscape) {
+  body.mobile-mode #sidePanel {
+    top: 10px;
+    right: 10px;
+    bottom: 10px;
+
+    width: min(238px, 32vw);
+    max-width: 238px;
+
+    border-radius: 24px;
+  }
+
+  body.mobile-mode #sidePanel::before {
+    width: 190px;
+    height: 190px;
+    opacity: 0.032;
+  }
+
+  body.mobile-mode .sidePanelBody {
+    padding: 10px;
+    gap: 7px;
+  }
+
+  body.mobile-mode .sidePanelClock {
+    padding: 10px;
+  }
+
+  body.mobile-mode .sidePanelClock::before {
+    margin-bottom: 3px;
+    font-size: 9px;
+  }
+
+  body.mobile-mode #sidebarClockTime {
+    font-size: 20px;
+  }
+
+  body.mobile-mode #sidebarClockDate {
+    font-size: 10px;
+    margin-top: 3px;
+  }
+
+  body.mobile-mode #controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  body.mobile-mode #controls button {
+    min-height: 38px;
+    padding: 7px 8px;
+    border-radius: 13px;
+    gap: 6px;
+  }
+
+  body.mobile-mode #controls button i {
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+  }
+
+  body.mobile-mode #controls button span {
+    font-size: 10px;
+    line-height: 1.1;
+  }
+
+  body.mobile-mode #btnPlayPause,
+  body.mobile-mode #btnMute,
+  body.mobile-mode #btnFullscreen {
+    grid-column: span 2;
+  }
+
+  body.mobile-mode .sidePanelHint {
+    display: none;
+  }
+
+  body.mobile-mode .sidePanelLogoArea {
+    padding: 8px;
+    border-radius: 16px;
+  }
+
+  body.mobile-mode #sidePanelLogo {
+    max-width: 106px;
+  }
+
+  body.mobile-mode .sidePanelBottomColors {
+    height: 4px;
+    margin: 0 10px 10px;
+  }
+}
