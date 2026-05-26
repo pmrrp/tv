@@ -811,7 +811,18 @@ async function carregarBackups() {
         renderizarBackups(backups);
 
         if (backupsDropdownCount) {
-            backupsDropdownCount.textContent = `${dados.total || backups.length || 0} backup(s) encontrado(s)`;
+            const total = dados.total || backups.length || 0;
+
+            const totalDatabase = backups.filter((backup) => backup.tipo === "database").length;
+            const totalPlaylist = backups.filter((backup) => backup.tipo === "playlist").length;
+            const totalMidiaConfig = backups.filter((backup) => backup.tipo === "midia-config").length;
+
+            backupsDropdownCount.textContent = [
+                `${formatarNumero(total)} backup(s)`,
+                `${formatarNumero(totalMidiaConfig)} config(s)`,
+                `${formatarNumero(totalPlaylist)} playlist(s)`,
+                `${formatarNumero(totalDatabase)} banco(s)`
+            ].join(" • ");
         }
     } catch (erro) {
         backupsList.innerHTML = `<div class="message error">Erro ao carregar backups.</div>`;
