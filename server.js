@@ -131,13 +131,16 @@ function obterUltimaAlteracaoDaPasta(pasta) {
  * - só remove diretórios;
  * - ignora arquivos soltos;
  * - só remove pastas com última alteração acima do limite configurado;
- * - usa recursive + force para limpar a pasta temporária inteira.
+ * - usa recursive + force para limpar a pasta temporária inteira;
+ * - registra auditoria quando alguma limpeza é executada.
  */
 function limparChunksAntigos() {
     if (!fs.existsSync(chunksFolder)) return;
 
     const agora = Date.now();
     let totalRemovido = 0;
+    let tamanhoTotalRemovidoBytes = 0;
+    const uploadsRemovidos = [];
 
     try {
         const entradas = fs.readdirSync(chunksFolder, { withFileTypes: true });
@@ -153,12 +156,23 @@ function limparChunksAntigos() {
 
                 if (idade < TEMPO_MAXIMO_CHUNK_MS) return;
 
+                const tamanhoPastaBytes = calcularTamanhoPastaBytes(caminhoUpload);
+
                 fs.rmSync(caminhoUpload, {
                     recursive: true,
                     force: true
                 });
 
                 totalRemovido++;
+                tamanhoTotalRemovidoBytes += tamanhoPastaBytes;
+
+                uploadsRemovidos.push({
+                    uploadId: entrada.name,
+                    idadeHoras: Number((idade / (60 * 60 * 1000)).toFixed(2)),
+                    ultimaAlteracao: new Date(ultimaAlteracao).toISOString(),
+                    tamanhoBytes: tamanhoPastaBytes,
+                    tamanhoFormatado: formatarBytes(tamanhoPastaBytes)
+                });
             } catch (erroPasta) {
                 console.error(`Erro ao limpar chunk antigo "${entrada.name}":`, erroPasta);
             }
@@ -166,6 +180,25 @@ function limparChunksAntigos() {
 
         if (totalRemovido > 0) {
             console.log(`[manutencao] ${totalRemovido} upload(s) temporário(s) antigo(s) removido(s).`);
+
+            registrarAuditoriaSistema("sistema.chunks.limpeza", {
+                totalRemovido,
+                tamanhoTotalRemovidoBytes,
+                tamanhoTotalRemovidoFormatado: formatarBytes(tamanhoTotalRemovidoBytes),
+
+                /*
+                  Mantemos a lista completa, mas se futuramente isso ficar grande demais,
+                  podemos limitar ou criar uma tabela técnica separada.
+                */
+                uploadsRemovidos,
+
+                politica: {
+                    tempoMaximoMs: TEMPO_MAXIMO_CHUNK_MS,
+                    tempoMaximoHoras: Number((TEMPO_MAXIMO_CHUNK_MS / (60 * 60 * 1000)).toFixed(2)),
+                    intervaloLimpezaMs: INTERVALO_LIMPEZA_CHUNKS_MS,
+                    intervaloLimpezaHoras: Number((INTERVALO_LIMPEZA_CHUNKS_MS / (60 * 60 * 1000)).toFixed(2))
+                }
+            });
         }
     } catch (erro) {
         console.error("Erro ao executar limpeza de chunks antigos:", erro);
@@ -1527,6 +1560,45 @@ function registrarAuditoria(req, acao, detalhes = {}) {
         );
     } catch (erro) {
         console.error("Erro ao registrar auditoria:", erro);
+    }
+}
+
+/**
+ * Registra auditorias executadas automaticamente pelo sistema,
+ * sem depender de uma requisição HTTP ou usuário logado.
+ *
+ * Usado para rotinas internas como:
+ * - limpeza automática de chunks antigos;
+ * - futuras manutenções agendadas;
+ * - rotinas preventivas da Fase 3.
+ */
+function registrarAuditoriaSistema(acao, detalhes = {}) {
+    try {
+        db.prepare(`
+            INSERT INTO audit_logs (
+                user_id,
+                user_name,
+                user_email,
+                user_role,
+                action,
+                details,
+                ip,
+                user_agent,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+        `).run(
+            null,
+            "Sistema",
+            null,
+            "system",
+            acao,
+            JSON.stringify(detalhes || {}),
+            null,
+            "rotina-interna"
+        );
+    } catch (erro) {
+        console.error("Erro ao registrar auditoria do sistema:", erro);
     }
 }
 
