@@ -886,20 +886,29 @@ function jsonFoiAlterado(caminhoArquivo, dadosNovos) {
 }
 
 /**
- * Gera timestamp seguro para nome de arquivo.
+ * Gera timestamp seguro para nome de arquivo usando horário local.
  *
- * Exemplo:
- * 2026-05-04T22:30:15.000Z
+ * Por que não usamos toISOString()?
+ * ---------------------------------------------------------
+ * toISOString() sempre usa UTC. Isso faria o nome do backup
+ * ficar com horário diferente do horário local exibido no Windows
+ * e no painel administrativo.
  *
- * vira:
- * 2026-05-04_22-30-15
+ * Exemplo gerado:
+ * 2026-05-26_14-50-08
  */
 function gerarTimestampSeguro() {
-    return new Date()
-        .toISOString()
-        .replace(/\.\d{3}Z$/, "")
-        .replace("T", "_")
-        .replace(/:/g, "-");
+    const agora = new Date();
+
+    const ano = agora.getFullYear();
+    const mes = String(agora.getMonth() + 1).padStart(2, "0");
+    const dia = String(agora.getDate()).padStart(2, "0");
+
+    const hora = String(agora.getHours()).padStart(2, "0");
+    const minuto = String(agora.getMinutes()).padStart(2, "0");
+    const segundo = String(agora.getSeconds()).padStart(2, "0");
+
+    return `${ano}-${mes}-${dia}_${hora}-${minuto}-${segundo}`;
 }
 
 /**

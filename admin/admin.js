@@ -224,6 +224,18 @@ const periodModalApplyField = document.getElementById("periodModalApplyField");
 const periodModalFieldFeedback = document.getElementById("periodModalFieldFeedback");
 
 /* =========================================================
+   ELEMENTOS - BACKUPS DO SISTEMA
+   =========================================================
+   Esta seção permite listar backups existentes e criar
+   backup manual do banco SQLite.
+   ========================================================= */
+
+const backupsList = document.getElementById("backupsList");
+const backupsDropdownCount = document.getElementById("backupsDropdownCount");
+const btnReloadBackups = document.getElementById("btnReloadBackups");
+const btnCreateDatabaseBackup = document.getElementById("btnCreateDatabaseBackup");
+
+/* =========================================================
    USUÁRIO LOGADO - UTILITÁRIO SEGURO
    ========================================================= */
 
@@ -646,6 +658,232 @@ document.addEventListener("toggle", (event) => {
         cancelarPeriodoDoItem(item);
     }
 }, true);
+
+/* =========================================================
+   BACKUPS DO SISTEMA
+   =========================================================
+   Funções responsáveis por:
+   - carregar backups existentes;
+   - renderizar lista de backups;
+   - criar backup manual do banco SQLite.
+   ========================================================= */
+
+/**
+ * Retorna um rótulo amigável para o tipo do backup.
+ */
+function formatarTipoBackup(tipo) {
+    const valor = String(tipo || "").toLowerCase();
+
+    const mapa = {
+        "playlist": "Playlist",
+        "midia-config": "Configurações de mídia",
+        "database": "Banco SQLite",
+        "outro": "Outro"
+    };
+
+    return mapa[valor] || tipo || "Outro";
+}
+
+/**
+ * Retorna ícone visual conforme o tipo do backup.
+ */
+function obterIconeBackup(tipo) {
+    const valor = String(tipo || "").toLowerCase();
+
+    if (valor === "database") return "fa-database";
+    if (valor === "playlist") return "fa-list-check";
+    if (valor === "midia-config") return "fa-sliders";
+
+    return "fa-file-shield";
+}
+
+/**
+ * Retorna classe visual conforme o tipo do backup.
+ */
+function obterClasseBackup(tipo) {
+    const valor = String(tipo || "").toLowerCase();
+
+    if (valor === "database") return "backupTypeDatabase";
+    if (valor === "playlist") return "backupTypePlaylist";
+    if (valor === "midia-config") return "backupTypeMediaConfig";
+
+    return "backupTypeDefault";
+}
+
+/**
+ * Formata data de backup para exibição.
+ */
+function formatarDataBackup(valor) {
+    if (!valor) return "--";
+
+    try {
+        const data = new Date(valor);
+
+        if (Number.isNaN(data.getTime())) {
+            return valor;
+        }
+
+        return data.toLocaleString("pt-BR", {
+            dateStyle: "short",
+            timeStyle: "short"
+        });
+    } catch (erro) {
+        return valor;
+    }
+}
+
+/**
+ * Renderiza a lista de backups retornada pela API.
+ */
+function renderizarBackups(backups) {
+    if (!backupsList) return;
+
+    if (!Array.isArray(backups) || !backups.length) {
+        backupsList.innerHTML = `<div class="message">Nenhum backup encontrado.</div>`;
+        return;
+    }
+
+    backupsList.innerHTML = backups.map((backup) => {
+        const tipo = backup.tipo || "outro";
+        const classe = obterClasseBackup(tipo);
+        const icone = obterIconeBackup(tipo);
+        const tipoFormatado = formatarTipoBackup(tipo);
+        const tamanho = backup.tamanhoFormatado || formatarTamanho(backup.tamanho);
+        const modificadoEm = formatarDataBackup(backup.modificadoEm);
+        const criadoEm = formatarDataBackup(backup.criadoEm);
+
+        return `
+            <article class="backupItem ${classe}">
+                <div class="backupItemMain">
+                    <span class="backupItemIcon" aria-hidden="true">
+                        <i class="fa-solid ${icone}"></i>
+                    </span>
+
+                    <div class="backupItemInfo">
+                        <strong>${escaparHtml(backup.nome || "Backup")}</strong>
+                        <span>${escaparHtml(tipoFormatado)}</span>
+                    </div>
+                </div>
+
+                <div class="backupItemMeta">
+                    <span>
+                        <i class="fa-solid fa-hard-drive" aria-hidden="true"></i>
+                        ${escaparHtml(tamanho || "--")}
+                    </span>
+
+                    <span>
+                        <i class="fa-solid fa-clock" aria-hidden="true"></i>
+                        Modificado: ${escaparHtml(modificadoEm)}
+                    </span>
+
+                    <span>
+                        <i class="fa-solid fa-calendar-plus" aria-hidden="true"></i>
+                        Criado: ${escaparHtml(criadoEm)}
+                    </span>
+                </div>
+            </article>
+        `;
+    }).join("");
+}
+
+/**
+ * Carrega a listagem de backups existentes no servidor.
+ */
+async function carregarBackups() {
+    if (!backupsList) return;
+
+    backupsList.innerHTML = `<div class="message">Carregando backups...</div>`;
+
+    if (backupsDropdownCount) {
+        backupsDropdownCount.textContent = "Carregando backups...";
+    }
+
+    try {
+        const resposta = await fetchComSessao("/api/admin/backups");
+        const dados = await resposta.json();
+
+        if (!resposta.ok || dados.erro) {
+            throw new Error(dados.mensagem || "Não foi possível carregar os backups.");
+        }
+
+        const backups = dados.backups || [];
+
+        renderizarBackups(backups);
+
+        if (backupsDropdownCount) {
+            backupsDropdownCount.textContent = `${dados.total || backups.length || 0} backup(s) encontrado(s)`;
+        }
+    } catch (erro) {
+        backupsList.innerHTML = `<div class="message error">Erro ao carregar backups.</div>`;
+
+        if (backupsDropdownCount) {
+            backupsDropdownCount.textContent = "Erro ao carregar backups";
+        }
+
+        console.error(erro);
+    }
+}
+
+/**
+ * Cria manualmente um backup seguro do banco SQLite.
+ *
+ * A rota do backend usa db.backup(), evitando cópia inconsistente
+ * enquanto o banco está em uso.
+ */
+async function criarBackupBancoPeloAdmin() {
+    if (!btnCreateDatabaseBackup) return;
+
+    const confirmou = await confirmarAcaoModal({
+        kicker: "Backup",
+        titulo: "Gerar backup do banco SQLite?",
+        mensagem: "Será criada uma cópia segura do banco de dados do sistema, incluindo usuários e logs de auditoria.",
+        detalhe: "O backup será salvo na pasta backups/ do servidor.",
+        confirmar: "Gerar backup",
+        cancelar: "Cancelar",
+        variante: "success"
+    });
+
+    if (!confirmou) return;
+
+    btnCreateDatabaseBackup.disabled = true;
+    definirBotaoComIcone(btnCreateDatabaseBackup, "fa-solid fa-spinner fa-spin", "Gerando...");
+
+    try {
+        const resposta = await fetchComSessao("/api/admin/backups/database", {
+            method: "POST"
+        });
+
+        const dados = await resposta.json();
+
+        if (!resposta.ok || dados.erro) {
+            throw new Error(dados.mensagem || "Não foi possível gerar backup do banco.");
+        }
+
+        await carregarBackups();
+        await carregarLogsAuditoria();
+
+        const nomeBackup = dados.backup && dados.backup.nome
+            ? dados.backup.nome
+            : "backup do banco";
+
+        if (typeof mostrarToast === "function") {
+            mostrarToast(`Backup criado com sucesso: ${nomeBackup}`, "sucesso");
+        } else {
+            alert(`Backup criado com sucesso: ${nomeBackup}`);
+        }
+    } catch (erro) {
+        console.error(erro);
+
+        if (typeof mostrarToast === "function") {
+            mostrarToast(erro.message || "Erro ao gerar backup do banco.", "erro");
+        } else {
+            alert(erro.message || "Erro ao gerar backup do banco.");
+        }
+    } finally {
+        btnCreateDatabaseBackup.disabled = false;
+        definirBotaoComIcone(btnCreateDatabaseBackup, "fa-solid fa-database", "Backup do banco");
+    }
+}
 
 /* =========================================================
    USUÁRIOS - HELPERS VISUAIS
@@ -1165,6 +1403,34 @@ function resumirDetalhesAuditoria(details, acao = "") {
         return "Playlist atualizada/publicada.";
     }
 
+    if (acaoNormalizada === "sistema.backup.json") {
+        if (details && details.backupCriado && details.backupCriado.nome) {
+            return `Backup automático criado: ${details.backupCriado.nome}.`;
+        }
+
+        if (details && details.arquivoAtualizado) {
+            return `Backup automático executado para ${details.arquivoAtualizado}.`;
+        }
+
+        return "Backup automático de arquivo JSON executado.";
+    }
+
+    if (acaoNormalizada === "sistema.backup.database") {
+        if (details && details.backupCriado && details.backupCriado.nome) {
+            return `Backup do banco SQLite criado: ${details.backupCriado.nome}.`;
+        }
+
+        return "Backup do banco SQLite criado com sucesso.";
+    }
+
+    if (acaoNormalizada === "sistema.backup.database.falha") {
+        if (details && details.erro) {
+            return `Falha ao criar backup do banco SQLite: ${details.erro}`;
+        }
+
+        return "Falha ao criar backup do banco SQLite.";
+    }
+
     if (acaoNormalizada.includes("backup")) {
         if (details && details.arquivo) {
             return `Backup processado: ${details.arquivo}.`;
@@ -1199,34 +1465,6 @@ function resumirDetalhesAuditoria(details, acao = "") {
 
     if (details.arquivo) {
         return `Arquivo: ${details.arquivo}.`;
-    }
-
-    if (acaoNormalizada === "sistema.backup.json") {
-        if (details && details.backupCriado && details.backupCriado.nome) {
-            return `Backup automático criado: ${details.backupCriado.nome}.`;
-        }
-
-        if (details && details.arquivoAtualizado) {
-            return `Backup automático executado para ${details.arquivoAtualizado}.`;
-        }
-
-        return "Backup automático de arquivo JSON executado.";
-    }
-
-    if (acaoNormalizada === "sistema.backup.database") {
-        if (details && details.backupCriado && details.backupCriado.nome) {
-            return `Backup do banco SQLite criado: ${details.backupCriado.nome}.`;
-        }
-
-        return "Backup do banco SQLite criado com sucesso.";
-    }
-
-    if (acaoNormalizada === "sistema.backup.database.falha") {
-        if (details && details.erro) {
-            return `Falha ao criar backup do banco SQLite: ${details.erro}`;
-        }
-
-        return "Falha ao criar backup do banco SQLite.";
     }
 
     return "Detalhes técnicos disponíveis.";
@@ -7812,6 +8050,18 @@ async function aplicarPeriodoModalNoCard() {
    ========================================================= */
 
 /* =========================================================
+   EVENTOS - BACKUPS DO SISTEMA
+   ========================================================= */
+
+if (btnReloadBackups) {
+    btnReloadBackups.addEventListener("click", carregarBackups);
+}
+
+if (btnCreateDatabaseBackup) {
+    btnCreateDatabaseBackup.addEventListener("click", criarBackupBancoPeloAdmin);
+}
+
+/* =========================================================
    EVENTOS - USUÁRIOS
    ========================================================= */
 
@@ -9501,23 +9751,40 @@ document.addEventListener("click", (event) => {
 async function iniciarAdmin() {
     await carregarUsuarioLogado();
 
-    function aplicarVisibilidadeAuditoria() {
+    /**
+     * Aplica regras de visibilidade para áreas administrativas sensíveis.
+     *
+     * Por enquanto:
+     * - Auditoria: somente superadmin;
+     * - Backups: somente superadmin.
+     *
+     * Motivo:
+     * essas áreas exibem informações técnicas/sensíveis do sistema
+     * e permitem ações de manutenção importantes, como backup do banco SQLite.
+     */
+    function aplicarVisibilidadeAreasRestritas() {
         const auditCard = document.getElementById("auditCard");
-
-        if (!auditCard) return;
+        const backupsCard = document.getElementById("backupsCard");
 
         const ehSuperadmin = usuarioLogado && usuarioLogado.role === "superadmin";
 
-        auditCard.classList.toggle("hidden", !ehSuperadmin);
+        if (auditCard) {
+            auditCard.classList.toggle("hidden", !ehSuperadmin);
+        }
+
+        if (backupsCard) {
+            backupsCard.classList.toggle("hidden", !ehSuperadmin);
+        }
     }
 
     await carregarResumoAdmin();
     await carregarMidias();
     await carregarPlaylistAtual();
 
-    await aplicarVisibilidadeAuditoria();
+    aplicarVisibilidadeAreasRestritas();
 
     if (usuarioLogado && usuarioLogado.role === "superadmin") {
+        await carregarBackups();
         await carregarLogsAuditoria();
     }
 

@@ -10517,3 +10517,422 @@ body.modalAberto {
     background: rgba(6, 43, 73, 0.08);
     color: var(--blue-950);
 }
+
+/* =========================================================
+   FASE 3 - SEÇÃO DE BACKUPS DO SISTEMA
+   ========================================================= */
+
+.backupsList {
+    display: grid;
+    gap: 12px;
+}
+
+.backupItem {
+    position: relative;
+
+    padding: 14px;
+    border: 1px solid rgba(220, 229, 238, 0.88);
+    border-radius: 18px;
+
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 252, 255, 0.92));
+
+    box-shadow: 0 12px 30px rgba(17, 32, 51, 0.055);
+    overflow: hidden;
+}
+
+.backupItem::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--blue-700);
+}
+
+.backupItemMain {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.backupItemIcon {
+    width: 36px;
+    height: 36px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    border-radius: 999px;
+    background: var(--blue-100);
+    color: var(--blue-800);
+}
+
+.backupItemInfo {
+    min-width: 0;
+}
+
+.backupItemInfo strong {
+    display: block;
+
+    color: var(--blue-950);
+    font-size: 14px;
+    line-height: 1.2;
+
+    overflow-wrap: anywhere;
+}
+
+.backupItemInfo span {
+    display: block;
+    margin-top: 4px;
+
+    color: var(--muted);
+    font-size: 11.5px;
+    font-weight: 800;
+}
+
+.backupItemMeta {
+    margin-top: 10px;
+
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.backupItemMeta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    padding: 6px 9px;
+    border-radius: 999px;
+
+    background: rgba(241, 246, 251, 0.92);
+    color: var(--muted);
+
+    font-size: 11.5px;
+    font-weight: 800;
+}
+
+/* Tipos de backup */
+
+.backupItem.backupTypeDatabase::before {
+    background: var(--blue-900);
+}
+
+.backupItem.backupTypeDatabase .backupItemIcon {
+    background: rgba(6, 43, 73, 0.08);
+    color: var(--blue-950);
+}
+
+.backupItem.backupTypePlaylist::before {
+    background: var(--green-600);
+}
+
+.backupItem.backupTypePlaylist .backupItemIcon {
+    background: var(--green-100);
+    color: var(--green-700);
+}
+
+.backupItem.backupTypeMediaConfig::before {
+    background: var(--yellow-600);
+}
+
+.backupItem.backupTypeMediaConfig .backupItemIcon {
+    background: var(--yellow-100);
+    color: #8a6800;
+}
+
+/* =========================================================
+   FASE 3 - ROLAGEM INTERNA DA LISTA DE BACKUPS
+   =========================================================
+   Evita que o dropdown de backups cresça indefinidamente
+   quando houver muitos arquivos.
+   ========================================================= */
+
+.backupsDropdownBody,
+.backupsList {
+    max-height: 450px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+/*
+  Como o HTML atual usa diretamente .backupsList dentro do details,
+  aplicamos padding e respiro na própria lista.
+*/
+.backupsList {
+    padding-right: 8px;
+}
+
+/*
+  Scrollbar discreta no padrão premium.
+*/
+.backupsList::-webkit-scrollbar {
+    width: 10px;
+}
+
+.backupsList::-webkit-scrollbar-track {
+    background: rgba(237, 242, 247, 0.85);
+    border-radius: 999px;
+}
+
+.backupsList::-webkit-scrollbar-thumb {
+    background: rgba(10, 111, 181, 0.30);
+    border-radius: 999px;
+    border: 2px solid rgba(237, 242, 247, 0.85);
+}
+
+.backupsList::-webkit-scrollbar-thumb:hover {
+    background: rgba(10, 111, 181, 0.48);
+}
+
+/* =========================================================
+   FASE 3 - PADRONIZAÇÃO VISUAL DO CARD DE BACKUPS
+   =========================================================
+   A seção de backups foi criada depois dos demais cards
+   principais do admin.
+
+   Este bloco aproxima o visual dela do padrão já usado em:
+   - Biblioteca de Mídias;
+   - Usuários do sistema;
+   - Auditoria.
+
+   Importante:
+   - não redesenha o card inteiro;
+   - só inclui .backupsCard nas mesmas regras visuais;
+   - evita mexer nos cards antigos agora;
+   - mantém o CSS antigo funcionando até uma refatoração futura.
+   ========================================================= */
+
+/*
+  Faixinha premium superior, igual à Biblioteca.
+
+  Usamos ::before como bloco normal no fluxo do card.
+  Isso evita sobreposição com o conteúdo e mantém o respiro superior.
+*/
+.backupsCard::before {
+    content: "";
+    display: block;
+
+    width: 100%;
+    height: 1px;
+
+    margin-bottom: 20px;
+
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(15, 112, 196, 0.22),
+            rgba(31, 163, 68, 0.18),
+            transparent);
+}
+
+/*
+  Cabeçalho da seção de backups no mesmo padrão de Biblioteca/Auditoria.
+*/
+.backupsCard>.cardHeader {
+    padding: 0 !important;
+    margin-bottom: 22px !important;
+
+    align-items: flex-start;
+}
+
+/*
+  Título principal do card.
+
+  Segue o padrão aplicado nos demais cards administrativos.
+*/
+.backupsCard .cardHeader h2 {
+    margin: 0;
+
+    color: #082f4f;
+
+    font-size: 22px !important;
+    font-weight: 500 !important;
+    line-height: 1.12 !important;
+    letter-spacing: -0.02em;
+}
+
+/*
+  Descrição abaixo do título.
+
+  Mantém leitura e altura visual parecidas com Usuários/Auditoria.
+*/
+.backupsCard .cardHeader p {
+    margin-top: 10px;
+
+    max-width: 1080px;
+
+    color: #64748b;
+
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.45;
+}
+
+/*
+  Kicker azul pequeno acima do título.
+*/
+.backupsCard .sectionKicker {
+    display: block;
+
+    margin-bottom: 8px;
+
+    color: #0f70c4;
+
+    font-size: 11px;
+    font-weight: 950;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+/*
+  Ações do card de backups.
+
+  Mantém os botões no mesmo alinhamento visual dos cards
+  que têm ações no cabeçalho.
+*/
+.backupsCard .usersActions {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/*
+  Evita que os botões pareçam desalinhados verticalmente.
+*/
+.backupsCard .successAction,
+.backupsCard .secondaryAction {
+    min-height: 42px;
+    white-space: nowrap;
+}
+
+/*
+  Dropdown interno do card de backups.
+
+  Como ele usa a mesma estrutura visual dos usuários/auditoria,
+  reaproveitamos o padrão de .usersDropdown.
+*/
+.backupsCard .usersDropdown {
+    margin-top: 18px;
+}
+
+/*
+  Lista interna com rolagem controlada.
+
+  Mantém cerca de quatro cards visíveis e evita que o dropdown
+  aumente indefinidamente a altura da página.
+*/
+.backupsCard .backupsList {
+    max-height: 450px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+
+    padding-right: 8px;
+}
+
+/*
+  Scrollbar discreta no padrão premium.
+*/
+.backupsCard .backupsList::-webkit-scrollbar {
+    width: 10px;
+}
+
+.backupsCard .backupsList::-webkit-scrollbar-track {
+    background: rgba(237, 242, 247, 0.85);
+    border-radius: 999px;
+}
+
+.backupsCard .backupsList::-webkit-scrollbar-thumb {
+    background: rgba(10, 111, 181, 0.30);
+    border-radius: 999px;
+    border: 2px solid rgba(237, 242, 247, 0.85);
+}
+
+.backupsCard .backupsList::-webkit-scrollbar-thumb:hover {
+    background: rgba(10, 111, 181, 0.48);
+}
+
+/*
+  Responsivo:
+  em telas menores, botões ocupam largura total,
+  igual ao padrão administrativo já existente.
+*/
+@media (max-width: 760px) {
+    .backupsCard .cardHeader {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .backupsCard .usersActions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .backupsCard .successAction,
+    .backupsCard .secondaryAction {
+        width: 100%;
+    }
+
+    .backupsCard .cardHeader p {
+        font-size: 14px;
+    }
+}
+
+/* =========================================================
+   FASE 3 - AJUSTE FINO DO CARD DE BACKUPS
+   =========================================================
+   Corrige:
+   - respiro entre o card de usuários e o card de backups;
+   - arredondamento dos botões do cabeçalho de backups,
+     para ficar igual ao padrão premium do painel.
+   ========================================================= */
+
+/*
+  Dá um respiro apenas quando o card de backups vier logo
+  depois do card de usuários.
+*/
+.usersCard+.backupsCard {
+    margin-top: 25px;
+}
+
+/*
+  Se quiser um respiro mais evidente, pode trocar para 20px ou 22px.
+*/
+
+/*
+  Padroniza os botões do cabeçalho de backups com o mesmo
+  arredondamento premium usado no restante do sistema.
+*/
+.backupsCard .successAction,
+.backupsCard .secondaryAction,
+.backupsCard .primaryAction,
+.backupsCard button {
+    border-radius: var(--radius-button-premium) !important;
+}
+
+/*
+  Garante altura/alinhamento visual bonitos no cabeçalho.
+*/
+.backupsCard .successAction,
+.backupsCard .secondaryAction {
+    min-height: 42px;
+    padding-inline: 18px;
+}
+
+/* =========================================================
+   FASE 3 - AJUSTE FINAL DOS BOTÕES DE BACKUP
+   =========================================================
+   Deixa os botões do card de backups no mesmo formato
+   pílula usado nos botões principais do painel.
+   ========================================================= */
+
+#btnCreateDatabaseBackup,
+#btnReloadBackups {
+    border-radius: 999px !important;
+}

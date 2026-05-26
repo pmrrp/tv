@@ -3,8 +3,8 @@
 
 <head>
     <!-- =====================================================
-         CONFIGURAÇÕES BÁSICAS
-         ===================================================== -->
+    CONFIGURAÇÕES BÁSICAS
+    ===================================================== -->
     <meta charset="UTF-8" />
 
     <!--
@@ -34,34 +34,34 @@
     <div id="toastContainer" class="toastContainer" aria-live="polite" aria-atomic="true"></div>
 
     <!-- =====================================================
-         PÁGINA ADMINISTRATIVA
-         =====================================================
+    PÁGINA ADMINISTRATIVA
+    =====================================================
 
-         Esta tela é a área de gestão das mídias exibidas no player.
+    Esta tela é a área de gestão das mídias exibidas no player.
 
-         Principais funções:
-         - enviar imagens e vídeos;
-         - configurar mídias cadastradas;
-         - ordenar playlist;
-         - ativar/desativar conteúdos;
-         - definir validade de exibição;
-         - salvar alterações em lote;
-         - abrir o player;
-         - sair da sessão administrativa.
+    Principais funções:
+    - enviar imagens e vídeos;
+    - configurar mídias cadastradas;
+    - ordenar playlist;
+    - ativar/desativar conteúdos;
+    - definir validade de exibição;
+    - salvar alterações em lote;
+    - abrir o player;
+    - sair da sessão administrativa.
 
-         Observação importante:
-         O visual abaixo foi mantido no padrão gerado.
-         Aqui foram feitos apenas ajustes pontuais de segurança/compatibilidade:
-         - correção de texto em UTF-8;
-         - upload limitado a 1 arquivo por vez para combinar com o backend atual;
-         - manutenção do painel de publicação manual removido.
-         ===================================================== -->
+    Observação importante:
+    O visual abaixo foi mantido no padrão gerado.
+    Aqui foram feitos apenas ajustes pontuais de segurança/compatibilidade:
+    - correção de texto em UTF-8;
+    - upload limitado a 1 arquivo por vez para combinar com o backend atual;
+    - manutenção do painel de publicação manual removido.
+    ===================================================== -->
 
     <main class="adminPage">
 
         <!-- =================================================
-             CABEÇALHO
-             ================================================= -->
+        CABEÇALHO
+        ================================================= -->
         <header class="adminHeader">
             <div class="adminBrand">
                 <img class="adminBrandLogo" src="/assets/watermark-prefeitura.svg"
@@ -124,12 +124,12 @@
         </header>
 
         <!-- =================================================
-             RESUMO OPERACIONAL
-             =================================================
+        RESUMO OPERACIONAL
+        =================================================
 
-             Os números abaixo são preenchidos pelo admin.js usando:
-             /api/admin/resumo
-             ================================================= -->
+        Os números abaixo são preenchidos pelo admin.js usando:
+        /api/admin/resumo
+        ================================================= -->
         <section class="summaryGrid" aria-label="Resumo operacional do painel">
             <article class="summaryCard summaryCardPrimary">
                 <span class="summaryIcon" aria-hidden="true"><i class="fa-solid fa-photo-film"></i></span>
@@ -172,18 +172,18 @@
         </section>
 
         <!-- =================================================
-             CARD: UPLOAD DE MÍDIA
-             =================================================
+        CARD: UPLOAD DE MÍDIA
+        =================================================
 
-             Permite enviar novos vídeos ou imagens para a pasta midia.
+        Permite enviar novos vídeos ou imagens para a pasta midia.
 
-             Importante:
-             O backend atual usa multer com upload.single("arquivo"),
-             então o envio fica limitado a 1 arquivo por vez.
+        Importante:
+        O backend atual usa multer com upload.single("arquivo"),
+        então o envio fica limitado a 1 arquivo por vez.
 
-             A interface continua aceitando clique e arraste, mas somente
-             o primeiro arquivo selecionado/arrastado será enviado.
-             ================================================= -->
+        A interface continua aceitando clique e arraste, mas somente
+        o primeiro arquivo selecionado/arrastado será enviado.
+        ================================================= -->
         <section class="operationsGrid" aria-label="Ações rápidas do painel">
             <section class="card uploadCard" aria-labelledby="uploadTitle">
                 <div class="cardHeader">
@@ -263,13 +263,13 @@
         </div>
 
         <!-- =================================================
-             CARD: LISTA DE MÍDIAS
-             =================================================
+        CARD: LISTA DE MÍDIAS
+        =================================================
 
-             A lista em si é renderizada dinamicamente pelo admin.js.
-             O HTML abaixo mantém apenas o container, filtros e botões
-             usados pelo JavaScript.
-             ================================================= -->
+        A lista em si é renderizada dinamicamente pelo admin.js.
+        O HTML abaixo mantém apenas o container, filtros e botões
+        usados pelo JavaScript.
+        ================================================= -->
         <section class="card mediaCard" aria-labelledby="mediaTitle">
             <div class="cardHeader">
                 <div>
@@ -441,11 +441,11 @@
         </section>
 
         <!-- =====================================================
-     GERENCIAMENTO DE USUÁRIOS
-     =====================================================
-     Área administrativa para criar, editar, ativar/desativar
-     e resetar senha dos usuários do painel.
-     ===================================================== -->
+        GERENCIAMENTO DE USUÁRIOS
+        =====================================================
+        Área administrativa para criar, editar, ativar/desativar
+        e resetar senha dos usuários do painel.
+        ===================================================== -->
         <section id="usersCard" class="card usersCard">
             <div class="cardHeader">
                 <div>
@@ -472,11 +472,11 @@
             <div id="usersMessage" class="uploadMessage hidden"></div>
 
             <!-- =====================================================
-     DROPDOWN - LISTA DE USUÁRIOS
-     =====================================================
-     Começa fechado por padrão, seguindo o padrão adotado
-     para listas grandes do painel.
-     ===================================================== -->
+            DROPDOWN - LISTA DE USUÁRIOS
+            =====================================================
+            Começa fechado por padrão, seguindo o padrão adotado
+            para listas grandes do painel.
+            ===================================================== -->
             <details id="usersDropdown" class="usersDropdown">
                 <summary class="usersDropdownSummary">
                     <div>
@@ -491,6 +491,53 @@
 
                 <div id="usersList" class="usersList">
                     <div class="message">Carregando usuários...</div>
+                </div>
+            </details>
+        </section>
+
+        <!-- =====================================================
+        BACKUPS DO SISTEMA
+        =====================================================
+        Permite consultar backups automáticos e criar backup
+        manual do banco SQLite.
+        ===================================================== -->
+        <section id="backupsCard" class="card backupsCard">
+            <div class="cardHeader">
+                <div>
+                    <span class="sectionKicker">Backups</span>
+                    <h2>Backups do sistema</h2>
+                    <p>
+                        Consulte os backups automáticos e gere uma cópia segura do banco SQLite.
+                    </p>
+                </div>
+
+                <div class="usersActions">
+                    <button id="btnCreateDatabaseBackup" class="successAction" type="button">
+                        <i class="fa-solid fa-database" aria-hidden="true"></i>
+                        Backup do banco
+                    </button>
+
+                    <button id="btnReloadBackups" class="secondaryAction" type="button">
+                        <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+                        Atualizar backups
+                    </button>
+                </div>
+            </div>
+
+            <details id="backupsDropdown" class="usersDropdown">
+                <summary class="usersDropdownSummary">
+                    <div>
+                        <strong>Arquivos de backup disponíveis</strong>
+                        <span id="backupsDropdownCount">Carregando backups...</span>
+                    </div>
+
+                    <span class="dropdownToggleIcon" aria-hidden="true">
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </span>
+                </summary>
+
+                <div id="backupsList" class="usersList backupsList">
+                    <div class="message">Carregando backups...</div>
                 </div>
             </details>
         </section>
@@ -1027,11 +1074,11 @@
             </div>
 
             <!-- =====================================================
-     MINI MODAL - HORÁRIO DO PERÍODO
-     =====================================================
-     Seletor premium de horário usado dentro do modal
-     de período de exibição.
-     ===================================================== -->
+            MINI MODAL - HORÁRIO DO PERÍODO
+            =====================================================
+            Seletor premium de horário usado dentro do modal
+            de período de exibição.
+            ===================================================== -->
             <div id="periodTimeMiniModal" class="periodTimeMiniModal hidden" role="dialog" aria-modal="false"
                 aria-labelledby="periodTimeMiniModalTitle">
                 <div class="periodTimeMiniModalCard">
