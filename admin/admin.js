@@ -9851,8 +9851,21 @@ function renderizarDiagnostico(dados) {
         diagnosticSummaryTitle.textContent = formatarStatusDiagnostico(status);
     }
 
+    /*
+    Texto principal do resumo do diagnóstico.
+
+    Se houver problema crítico ou aviso, mostramos o primeiro item
+    diretamente no cabeçalho do dropdown. Assim o operador não fica
+    vendo apenas "Sistema com avisos" sem saber qual é o aviso.
+    */
     if (diagnosticSummaryText) {
-        diagnosticSummaryText.textContent = dados.mensagem || "Diagnóstico carregado.";
+        if (problemasCriticos.length) {
+            diagnosticSummaryText.textContent = problemasCriticos[0];
+        } else if (avisos.length) {
+            diagnosticSummaryText.textContent = avisos[0];
+        } else {
+            diagnosticSummaryText.textContent = dados.mensagem || "Diagnóstico carregado.";
+        }
     }
 
     const bancoOk = dados.banco && dados.banco.ok;
@@ -9927,6 +9940,23 @@ function renderizarDiagnostico(dados) {
                 : "critico"
         })
     ];
+
+    /*
+    Exibe os avisos retornados pelo backend.
+
+    Quando houver apenas um aviso, mostramos o texto exato.
+    Quando houver vários, juntamos em uma linha para manter o card compacto.
+    */
+    if (avisos.length) {
+        itens.push(criarItemDiagnostico({
+            icone: "fa-circle-exclamation",
+            titulo: "Avisos",
+            texto: avisos.length === 1
+                ? avisos[0]
+                : `${formatarNumero(avisos.length)} ponto(s) de atenção: ${avisos.join(" • ")}`,
+            status: "aviso"
+        }));
+    }
 
     if (problemasCriticos.length) {
         itens.push(criarItemDiagnostico({
