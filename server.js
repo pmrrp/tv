@@ -900,10 +900,28 @@ function criarBackupArquivo(caminhoArquivo, prefixo) {
 
         fs.copyFileSync(caminhoArquivo, caminhoBackup);
 
-        return caminhoBackup;
+        const stats = fs.statSync(caminhoBackup);
+
+        return {
+            criado: true,
+            prefixo,
+            nome: nomeBackup,
+            caminho: caminhoBackup,
+            origem: caminhoArquivo,
+            tamanhoBytes: stats.size,
+            tamanhoFormatado: formatarBytes(stats.size),
+            criadoEm: stats.birthtime.toISOString(),
+            modificadoEm: stats.mtime.toISOString()
+        };
     } catch (erro) {
         console.error("Erro ao criar backup:", erro);
-        return null;
+
+        return {
+            criado: false,
+            prefixo,
+            origem: caminhoArquivo,
+            erro: erro.message || String(erro)
+        };
     }
 }
 
@@ -915,8 +933,16 @@ function criarBackupArquivo(caminhoArquivo, prefixo) {
  * playlist_2026-...
  */
 function limparBackupsAntigos(prefixo, limite = MAX_BACKUPS_POR_TIPO) {
+    const resultado = {
+        prefixo,
+        limite,
+        totalExistente: 0,
+        totalRemovido: 0,
+        removidos: []
+    };
+
     try {
-        if (!fs.existsSync(backupFolder)) return;
+        if (!fs.existsSync(backupFolder)) return resultado;
 
         const arquivos = fs.readdirSync(backupFolder)
             .filter((arquivo) => arquivo.startsWith(`${prefixo}_`))
@@ -927,18 +953,37 @@ function limparBackupsAntigos(prefixo, limite = MAX_BACKUPS_POR_TIPO) {
                 return {
                     arquivo,
                     caminho,
-                    modificadoEm: stats.mtimeMs
+                    tamanhoBytes: stats.size,
+                    tamanhoFormatado: formatarBytes(stats.size),
+                    modificadoEm: stats.mtimeMs,
+                    modificadoEmIso: stats.mtime.toISOString()
                 };
             })
             .sort((a, b) => b.modificadoEm - a.modificadoEm);
+
+        resultado.totalExistente = arquivos.length;
 
         const arquivosParaRemover = arquivos.slice(limite);
 
         arquivosParaRemover.forEach((item) => {
             fs.unlinkSync(item.caminho);
+
+            resultado.totalRemovido++;
+
+            resultado.removidos.push({
+                nome: item.arquivo,
+                tamanhoBytes: item.tamanhoBytes,
+                tamanhoFormatado: item.tamanhoFormatado,
+                modificadoEm: item.modificadoEmIso
+            });
         });
+
+        return resultado;
     } catch (erro) {
         console.error("Erro ao limpar backups antigos:", erro);
+
+        resultado.erro = erro.message || String(erro);
+        return resultado;
     }
 }
 
@@ -960,7 +1005,7 @@ function salvarJsonComBackup(caminhoArquivo, dados, prefixoBackup) {
         };
     }
 
-    criarBackupArquivo(caminhoArquivo, prefixoBackup);
+    const backupCriado = criarBackupArquivo(caminhoArquivo, prefixoBackup);
 
     fs.writeFileSync(
         caminhoArquivo,
@@ -968,12 +1013,27 @@ function salvarJsonComBackup(caminhoArquivo, dados, prefixoBackup) {
         "utf8"
     );
 
-    limparBackupsAntigos(prefixoBackup);
+    const limpezaBackups = limparBackupsAntigos(prefixoBackup);
 
-    return {
+    const resultado = {
         salvo: true,
-        motivo: "Arquivo atualizado"
+        motivo: "Arquivo atualizado",
+        arquivoAtualizado: path.basename(caminhoArquivo),
+        caminhoArquivo,
+        prefixoBackup,
+        backupCriado,
+        limpezaBackups
     };
+
+    registrarAuditoriaSistema("sistema.backup.json", {
+        tipo: prefixoBackup,
+        arquivoAtualizado: path.basename(caminhoArquivo),
+        caminhoArquivo,
+        backupCriado,
+        limpezaBackups
+    });
+
+    return resultado;
 }
 
 

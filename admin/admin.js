@@ -921,6 +921,7 @@ function formatarAcaoAuditoria(acao) {
         "backup.criar": "Backup criado",
         "backup.restaurar": "Backup restaurado",
 
+        "sistema.backup.json": "Backup automático de arquivo JSON",
         "sistema.chunks.limpeza": "Limpeza automática de uploads temporários"
     };
 
@@ -941,7 +942,7 @@ function obterClasseAcaoAuditoria(acao) {
         return "auditActionDanger";
     }
 
-    if (valor.includes("limpeza") || valor.includes("sistema.") || valor.includes("chunks")) {
+    if (valor.includes("limpeza") || valor.includes("sistema.") || valor.includes("chunks") || valor.includes("backup")) {
         return "auditActionSystem";
     }
 
@@ -1196,6 +1197,18 @@ function resumirDetalhesAuditoria(details, acao = "") {
 
     if (details.arquivo) {
         return `Arquivo: ${details.arquivo}.`;
+    }
+
+    if (acaoNormalizada === "sistema.backup.json") {
+        if (details && details.backupCriado && details.backupCriado.nome) {
+            return `Backup automático criado: ${details.backupCriado.nome}.`;
+        }
+
+        if (details && details.arquivoAtualizado) {
+            return `Backup automático executado para ${details.arquivoAtualizado}.`;
+        }
+
+        return "Backup automático de arquivo JSON executado.";
     }
 
     return "Detalhes técnicos disponíveis.";
