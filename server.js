@@ -72,6 +72,23 @@ const dataFolder = path.join(projectRoot, "data");
 const backupFolder = path.join(projectRoot, "backups");
 
 /*
+  Arquivo físico do banco SQLite.
+
+  Observação:
+  A conexão real fica em database/db.js, mas mantemos aqui o caminho
+  do arquivo para rotinas de backup, listagem e documentação operacional.
+*/
+const databaseFile = path.join(dataFolder, "painel-tv.db");
+
+/*
+  Prefixo usado nos backups do banco SQLite.
+
+  Exemplo gerado:
+  database_2026-05-26_14-30-00.db
+*/
+const DATABASE_BACKUP_PREFIX = "database";
+
+/*
   Configurações de manutenção dos uploads em partes.
 
   Quando um upload grande é interrompido, a pasta temporária pode
@@ -1034,6 +1051,108 @@ function salvarJsonComBackup(caminhoArquivo, dados, prefixoBackup) {
     });
 
     return resultado;
+}
+
+/**
+ * Cria um backup seguro do banco SQLite.
+ *
+ * Por que não usamos apenas fs.copyFileSync?
+ * ---------------------------------------------------------
+ * O SQLite pode estar com escrita ativa e usando WAL
+ * (Write-Ahead Logging). Copiar o arquivo .db diretamente,
+ * enquanto o banco está em uso, pode gerar um backup inconsistente.
+ *
+ * O better-sqlite3 possui o método db.backup(), que usa a API
+ * própria do SQLite para criar uma cópia segura do banco aberto.
+ *
+ * Resultado:
+ * - cria um arquivo .db dentro da pasta backups/;
+ * - retorna metadados do arquivo criado;
+ * - aplica rotação dos backups antigos;
+ * - registra auditoria do sistema.
+ */
+async function criarBackupBancoSqlite() {
+    const timestamp = gerarTimestampSeguro();
+    const nomeBackup = `${DATABASE_BACKUP_PREFIX}_${timestamp}.db`;
+    const caminhoBackup = path.join(backupFolder, nomeBackup);
+
+    try {
+        if (!fs.existsSync(databaseFile)) {
+            return {
+                sucesso: false,
+                mensagem: "Arquivo do banco SQLite não encontrado.",
+                databaseFile,
+                backupCriado: null
+            };
+        }
+
+        /*
+          Garante que a pasta de backups exista.
+          Mesmo que ela já seja criada no início do servidor,
+          manter esta proteção aqui deixa a função mais segura.
+        */
+        if (!fs.existsSync(backupFolder)) {
+            fs.mkdirSync(backupFolder, { recursive: true });
+        }
+
+        /*
+          Cria o backup usando a API do SQLite via better-sqlite3.
+          Essa é a forma mais segura com o banco em uso.
+        */
+        await db.backup(caminhoBackup);
+
+        const stats = fs.statSync(caminhoBackup);
+
+        const backupCriado = {
+            nome: nomeBackup,
+            caminho: caminhoBackup,
+            origem: databaseFile,
+            tipo: "database",
+            tamanhoBytes: stats.size,
+            tamanhoFormatado: formatarBytes(stats.size),
+            criadoEm: stats.birthtime.toISOString(),
+            modificadoEm: stats.mtime.toISOString()
+        };
+
+        /*
+          Reaproveitamos a rotação já existente.
+          Ela mantém somente os últimos MAX_BACKUPS_POR_TIPO
+          arquivos com prefixo database_.
+        */
+        const limpezaBackups = limparBackupsAntigos(DATABASE_BACKUP_PREFIX);
+
+        registrarAuditoriaSistema("sistema.backup.database", {
+            tipo: "database",
+            arquivoAtualizado: path.basename(databaseFile),
+            databaseFile,
+            backupCriado,
+            limpezaBackups
+        });
+
+        return {
+            sucesso: true,
+            mensagem: "Backup do banco SQLite criado com sucesso.",
+            backupCriado,
+            limpezaBackups
+        };
+    } catch (erro) {
+        console.error("Erro ao criar backup do banco SQLite:", erro);
+
+        registrarAuditoriaSistema("sistema.backup.database.falha", {
+            tipo: "database",
+            arquivoAtualizado: path.basename(databaseFile),
+            databaseFile,
+            caminhoBackup,
+            erro: erro.message || String(erro)
+        });
+
+        return {
+            sucesso: false,
+            mensagem: "Erro ao criar backup do banco SQLite.",
+            erro: erro.message || String(erro),
+            backupCriado: null
+        };
+    }
 }
 
 
@@ -2310,7 +2429,9 @@ app.get("/api/admin/backups", exigirLogin, (req, res) => {
         }
 
         const backups = fs.readdirSync(backupFolder)
-            .filter((arquivo) => arquivo.endsWith(".json"))
+            .filter((arquivo) => {
+                return arquivo.endsWith(".json") || arquivo.endsWith(".db");
+            })
             .map((arquivo) => {
                 const caminho = path.join(backupFolder, arquivo);
                 const stats = fs.statSync(caminho);
@@ -2325,10 +2446,15 @@ app.get("/api/admin/backups", exigirLogin, (req, res) => {
                     tipo = "midia-config";
                 }
 
+                if (arquivo.startsWith("database_")) {
+                    tipo = "database";
+                }
+
                 return {
                     nome: arquivo,
                     tipo,
                     tamanho: stats.size,
+                    tamanhoFormatado: formatarBytes(stats.size),
                     criadoEm: stats.birthtime.toISOString(),
                     modificadoEm: stats.mtime.toISOString()
                 };
@@ -2348,6 +2474,45 @@ app.get("/api/admin/backups", exigirLogin, (req, res) => {
         res.status(500).json({
             erro: true,
             mensagem: "Erro ao listar backups."
+        });
+    }
+});
+
+/* =========================================================
+   API ADMIN: CRIAR BACKUP DO BANCO SQLITE
+   =========================================================
+   Cria manualmente um backup seguro do arquivo painel-tv.db.
+
+   Segurança:
+   - exige login;
+   - exige perfil superadmin;
+   - usa db.backup() para evitar cópia inconsistente;
+   - registra auditoria do sistema.
+   ========================================================= */
+app.post("/api/admin/backups/database", exigirLogin, exigirRole("superadmin"), async (req, res) => {
+    try {
+        const resultado = await criarBackupBancoSqlite();
+
+        if (!resultado.sucesso) {
+            return res.status(500).json({
+                erro: true,
+                mensagem: resultado.mensagem,
+                detalhe: resultado.erro || null
+            });
+        }
+
+        res.json({
+            sucesso: true,
+            mensagem: resultado.mensagem,
+            backup: resultado.backupCriado,
+            limpezaBackups: resultado.limpezaBackups
+        });
+    } catch (erro) {
+        console.error("Erro na rota de backup do banco:", erro);
+
+        res.status(500).json({
+            erro: true,
+            mensagem: "Erro ao criar backup do banco SQLite."
         });
     }
 });

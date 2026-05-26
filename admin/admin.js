@@ -922,6 +922,8 @@ function formatarAcaoAuditoria(acao) {
         "backup.restaurar": "Backup restaurado",
 
         "sistema.backup.json": "Backup automático de arquivo JSON",
+        "sistema.backup.database": "Backup do banco SQLite",
+        "sistema.backup.database.falha": "Falha no backup do banco SQLite",
         "sistema.chunks.limpeza": "Limpeza automática de uploads temporários"
     };
 
@@ -1209,6 +1211,22 @@ function resumirDetalhesAuditoria(details, acao = "") {
         }
 
         return "Backup automático de arquivo JSON executado.";
+    }
+
+    if (acaoNormalizada === "sistema.backup.database") {
+        if (details && details.backupCriado && details.backupCriado.nome) {
+            return `Backup do banco SQLite criado: ${details.backupCriado.nome}.`;
+        }
+
+        return "Backup do banco SQLite criado com sucesso.";
+    }
+
+    if (acaoNormalizada === "sistema.backup.database.falha") {
+        if (details && details.erro) {
+            return `Falha ao criar backup do banco SQLite: ${details.erro}`;
+        }
+
+        return "Falha ao criar backup do banco SQLite.";
     }
 
     return "Detalhes técnicos disponíveis.";
