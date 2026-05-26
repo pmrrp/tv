@@ -10225,3 +10225,295 @@ body.modalAberto {
 .summaryStorageBar span[style*="width: 0%"] {
     min-width: 0;
 }
+
+/* =========================================================
+   FASE 3 - AUDITORIA PREMIUM / DETALHES TÉCNICOS
+   ========================================================= */
+
+.auditLogsList {
+    display: grid;
+    gap: 12px;
+}
+
+.auditLogItem {
+    position: relative;
+
+    padding: 14px;
+    border: 1px solid rgba(220, 229, 238, 0.88);
+    border-radius: 18px;
+
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 252, 255, 0.92));
+
+    box-shadow: 0 12px 30px rgba(17, 32, 51, 0.055);
+    overflow: hidden;
+}
+
+.auditLogItem::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--blue-700);
+}
+
+.auditLogMain {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.auditLogTitle {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+}
+
+.auditLogTitle strong {
+    display: block;
+    color: var(--blue-950);
+    font-size: 14px;
+    line-height: 1.2;
+}
+
+.auditLogTitle span:not(.auditLogIcon) {
+    display: block;
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 11.5px;
+    font-weight: 700;
+}
+
+.auditLogIcon {
+    width: 34px;
+    height: 34px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    border-radius: 999px;
+    background: var(--blue-100);
+    color: var(--blue-800);
+}
+
+.auditLogActionRaw {
+    max-width: 220px;
+
+    padding: 5px 9px;
+    border-radius: 999px;
+
+    background: rgba(10, 111, 181, 0.08);
+    color: var(--blue-800);
+
+    font-size: 10.5px;
+    font-weight: 900;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.auditLogMeta {
+    margin-top: 10px;
+
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.auditLogMeta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    padding: 6px 9px;
+    border-radius: 999px;
+
+    background: rgba(241, 246, 251, 0.92);
+    color: var(--muted);
+
+    font-size: 11.5px;
+    font-weight: 800;
+}
+
+.auditLogSummary {
+    margin-top: 10px;
+
+    color: var(--ink);
+    font-size: 12.5px;
+    line-height: 1.45;
+}
+
+.auditLogDetails {
+    margin-top: 10px;
+}
+
+.auditLogDetails summary {
+    list-style: none;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+
+    padding: 9px 10px;
+    border-radius: 13px;
+
+    background: rgba(247, 250, 252, 0.92);
+    color: var(--blue-800);
+
+    cursor: pointer;
+
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.auditLogDetails summary::-webkit-details-marker {
+    display: none;
+}
+
+.auditLogDetails summary span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.auditLogDetails[open] summary>i {
+    transform: rotate(180deg);
+}
+
+.auditLogDetails summary>i {
+    transition: transform 0.2s ease;
+}
+
+.auditLogDetailsContent {
+    margin-top: 9px;
+    padding: 10px;
+
+    border-radius: 14px;
+    background: rgba(6, 43, 73, 0.045);
+}
+
+.auditLogDetailsGrid {
+    display: grid;
+    gap: 8px;
+}
+
+.auditLogDetailRow {
+    display: grid;
+    grid-template-columns: minmax(110px, 180px) 1fr;
+    gap: 8px;
+
+    padding: 8px;
+    border-radius: 12px;
+
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.auditLogDetailRow dt {
+    color: var(--blue-900);
+    font-size: 11px;
+    font-weight: 950;
+    overflow-wrap: anywhere;
+}
+
+.auditLogDetailRow dd {
+    min-width: 0;
+    color: var(--ink);
+    font-size: 11px;
+}
+
+.auditLogDetailRow pre {
+    margin: 0;
+
+    max-height: 260px;
+    overflow: auto;
+
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.auditLogDetailsEmpty {
+    padding: 10px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+/* Estados visuais por tipo de ação */
+
+.auditLogItem.auditActionSuccess::before {
+    background: var(--green-600);
+}
+
+.auditLogItem.auditActionSuccess .auditLogIcon {
+    background: var(--green-100);
+    color: var(--green-700);
+}
+
+.auditLogItem.auditActionWarning::before {
+    background: var(--yellow-600);
+}
+
+.auditLogItem.auditActionWarning .auditLogIcon {
+    background: var(--yellow-100);
+    color: #8a6800;
+}
+
+.auditLogItem.auditActionDanger::before {
+    background: var(--red-700);
+}
+
+.auditLogItem.auditActionDanger .auditLogIcon {
+    background: var(--red-100);
+    color: var(--red-700);
+}
+
+.auditLogItem.auditActionSystem::before {
+    background: var(--blue-900);
+}
+
+.auditLogItem.auditActionSystem .auditLogIcon {
+    background: rgba(6, 43, 73, 0.08);
+    color: var(--blue-950);
+}
+
+@media (max-width: 760px) {
+    .auditLogMain {
+        flex-direction: column;
+    }
+
+    .auditLogActionRaw {
+        max-width: 100%;
+    }
+
+    .auditLogDetailRow {
+        grid-template-columns: 1fr;
+    }
+}
+
+.auditLogItem.auditActionInfo::before {
+    background: var(--blue-700);
+}
+
+.auditLogItem.auditActionInfo .auditLogIcon {
+    background: var(--blue-100);
+    color: var(--blue-800);
+}
+
+.auditLogItem.auditActionUser::before {
+    background: var(--blue-900);
+}
+
+.auditLogItem.auditActionUser .auditLogIcon {
+    background: rgba(6, 43, 73, 0.08);
+    color: var(--blue-950);
+}

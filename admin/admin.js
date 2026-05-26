@@ -899,20 +899,373 @@ function formatarAcaoAuditoria(acao) {
     const mapa = {
         "login.realizado": "Login realizado",
         "login.logout": "Logout",
+
         "midia.upload": "Upload de mídia",
+        "midia.upload.bloqueado": "Upload bloqueado",
         "midia.excluir": "Exclusão de mídia",
         "midia.excluir_lote": "Exclusão em lote",
         "midia.editar": "Edição de mídia",
         "midia.editar_lote": "Edição em lote",
         "midia.mover": "Reordenação de mídia",
+
         "usuario.criar": "Criação de usuário",
         "usuario.editar": "Edição de usuário",
-        "usuario.alterar_status": "Alteração de status",
+        "usuario.alterar_status": "Alteração de status de usuário",
         "usuario.resetar_senha": "Reset de senha",
-        "usuario.excluir": "Exclusão de usuário"
+        "usuario.excluir": "Exclusão de usuário",
+
+        "playlist.gerar": "Geração de playlist",
+        "playlist.publicar": "Publicação de playlist",
+        "playlist.sincronizar": "Sincronização de playlist",
+
+        "backup.criar": "Backup criado",
+        "backup.restaurar": "Backup restaurado",
+
+        "sistema.chunks.limpeza": "Limpeza automática de uploads temporários"
     };
 
     return mapa[acao] || acao;
+}
+
+/**
+ * Retorna uma classe visual conforme a ação auditada.
+ */
+function obterClasseAcaoAuditoria(acao) {
+    const valor = String(acao || "").toLowerCase();
+
+    if (valor.includes("bloqueado") || valor.includes("erro") || valor.includes("falha")) {
+        return "auditActionWarning";
+    }
+
+    if (valor.includes("excluir") || valor.includes("delete") || valor.includes("remover")) {
+        return "auditActionDanger";
+    }
+
+    if (valor.includes("limpeza") || valor.includes("sistema.") || valor.includes("chunks")) {
+        return "auditActionSystem";
+    }
+
+    if (valor.includes("upload") || valor.includes("playlist") || valor.includes("salvar")) {
+        return "auditActionSuccess";
+    }
+
+    if (valor.includes("editar") || valor.includes("alterar") || valor.includes("mover")) {
+        return "auditActionInfo";
+    }
+
+    if (valor.includes("usuario") || valor.includes("login") || valor.includes("logout")) {
+        return "auditActionUser";
+    }
+
+    return "auditActionDefault";
+}
+
+/**
+ * Retorna ícone visual conforme a ação auditada.
+ */
+function obterIconeAcaoAuditoria(acao) {
+    const valor = String(acao || "").toLowerCase();
+
+    if (valor.includes("bloqueado")) return "fa-triangle-exclamation";
+    if (valor.includes("limpeza") || valor.includes("chunks")) return "fa-screwdriver-wrench";
+    if (valor.includes("upload")) return "fa-upload";
+    if (valor.includes("playlist")) return "fa-list-check";
+    if (valor.includes("login")) return "fa-right-to-bracket";
+    if (valor.includes("logout")) return "fa-right-from-bracket";
+    if (valor.includes("excluir") || valor.includes("delete") || valor.includes("remover")) return "fa-trash-can";
+    if (valor.includes("editar")) return "fa-pen-to-square";
+    if (valor.includes("mover")) return "fa-arrow-up-wide-short";
+    if (valor.includes("alterar_status")) return "fa-toggle-on";
+    if (valor.includes("resetar_senha")) return "fa-key";
+    if (valor.includes("usuario") || valor.includes("user")) return "fa-user-gear";
+    if (valor.includes("backup")) return "fa-database";
+
+    return "fa-circle-info";
+}
+
+/**
+ * Cria uma descrição curta e humana para os detalhes do log.
+ */
+function resumirDetalhesAuditoria(details, acao = "") {
+    const acaoNormalizada = String(acao || "").toLowerCase();
+
+    if (acaoNormalizada === "login.realizado") {
+        return "Usuário acessou o painel administrativo.";
+    }
+
+    if (acaoNormalizada === "login.logout") {
+        return "Usuário saiu do painel administrativo.";
+    }
+
+    if (acaoNormalizada === "sistema.chunks.limpeza") {
+        if (details && details.totalRemovido !== undefined) {
+            return `${formatarNumero(details.totalRemovido)} upload(s) temporário(s) removido(s).`;
+        }
+
+        return "Rotina automática de limpeza executada.";
+    }
+
+    if (acaoNormalizada === "midia.upload.bloqueado") {
+        if (details && details.mensagem) {
+            return String(details.mensagem);
+        }
+
+        return "Upload bloqueado por regra de armazenamento.";
+    }
+
+    if (acaoNormalizada === "midia.upload") {
+        if (details && details.total !== undefined) {
+            return `${formatarNumero(details.total)} arquivo(s) enviado(s) para a biblioteca.`;
+        }
+
+        if (details && details.nomeOriginal) {
+            return `Arquivo enviado: ${details.nomeOriginal}.`;
+        }
+
+        if (details && Array.isArray(details.arquivos) && details.arquivos.length) {
+            return `${formatarNumero(details.arquivos.length)} arquivo(s) enviado(s) para a biblioteca.`;
+        }
+
+        return "Nova mídia enviada para o painel.";
+    }
+
+    if (acaoNormalizada === "midia.excluir") {
+        if (details && details.nomeOriginal) {
+            return `Mídia excluída: ${details.nomeOriginal}.`;
+        }
+
+        if (details && details.nomeSalvo) {
+            return `Mídia excluída: ${details.nomeSalvo}.`;
+        }
+
+        if (details && details.arquivo) {
+            return `Mídia excluída: ${details.arquivo}.`;
+        }
+
+        return "Uma mídia foi removida da biblioteca.";
+    }
+
+    if (acaoNormalizada === "midia.excluir_lote") {
+        if (details && details.total !== undefined) {
+            return `${formatarNumero(details.total)} mídia(s) excluída(s) em lote.`;
+        }
+
+        if (details && Array.isArray(details.arquivos)) {
+            return `${formatarNumero(details.arquivos.length)} mídia(s) excluída(s) em lote.`;
+        }
+
+        return "Exclusão em lote realizada na biblioteca.";
+    }
+
+    if (acaoNormalizada === "midia.editar") {
+        if (details && details.nomeOriginal) {
+            return `Configurações da mídia atualizadas: ${details.nomeOriginal}.`;
+        }
+
+        if (details && details.nomeSalvo) {
+            return `Configurações da mídia atualizadas: ${details.nomeSalvo}.`;
+        }
+
+        if (details && details.arquivo) {
+            return `Configurações da mídia atualizadas: ${details.arquivo}.`;
+        }
+
+        return "Configurações de uma mídia foram atualizadas.";
+    }
+
+    if (acaoNormalizada === "midia.editar_lote") {
+        if (details && details.total !== undefined) {
+            return `${formatarNumero(details.total)} mídia(s) atualizada(s) em lote.`;
+        }
+
+        if (details && Array.isArray(details.arquivos)) {
+            return `${formatarNumero(details.arquivos.length)} mídia(s) atualizada(s) em lote.`;
+        }
+
+        return "Edição em lote realizada na biblioteca.";
+    }
+
+    if (acaoNormalizada === "midia.mover") {
+        if (details && details.nomeOriginal) {
+            return `Mídia reposicionada na playlist: ${details.nomeOriginal}.`;
+        }
+
+        if (details && details.nomeSalvo) {
+            return `Mídia reposicionada na playlist: ${details.nomeSalvo}.`;
+        }
+
+        if (details && details.arquivo) {
+            return `Mídia reposicionada na playlist: ${details.arquivo}.`;
+        }
+
+        return "Ordem de uma mídia foi alterada na playlist.";
+    }
+
+    if (acaoNormalizada === "usuario.criar") {
+        const nome = details && (details.nome || details.userName || details.email);
+
+        return nome
+            ? `Usuário criado: ${nome}.`
+            : "Novo usuário criado no sistema.";
+    }
+
+    if (acaoNormalizada === "usuario.editar") {
+        const nome = details && (details.nome || details.userName || details.email);
+
+        return nome
+            ? `Dados do usuário atualizados: ${nome}.`
+            : "Dados de um usuário foram atualizados.";
+    }
+
+    if (acaoNormalizada === "usuario.alterar_status") {
+        const nome = details && (details.nome || details.userName || details.email);
+        const status = details && (details.ativo !== undefined
+            ? (details.ativo ? "ativado" : "inativado")
+            : details.status);
+
+        if (nome && status) {
+            return `Usuário ${nome} foi ${status}.`;
+        }
+
+        return "Status de usuário alterado.";
+    }
+
+    if (acaoNormalizada === "usuario.resetar_senha") {
+        const nome = details && (details.nome || details.userName || details.email);
+
+        return nome
+            ? `Senha redefinida para o usuário: ${nome}.`
+            : "Senha de usuário redefinida.";
+    }
+
+    if (acaoNormalizada === "usuario.excluir") {
+        const nome = details && (details.nome || details.userName || details.email);
+
+        return nome
+            ? `Usuário excluído: ${nome}.`
+            : "Usuário removido do sistema.";
+    }
+
+    if (
+        acaoNormalizada.includes("playlist.gerar") ||
+        acaoNormalizada.includes("playlist.publicar") ||
+        acaoNormalizada.includes("playlist.sincronizar")
+    ) {
+        if (details && details.totalItens !== undefined) {
+            return `Playlist atualizada com ${formatarNumero(details.totalItens)} item(ns).`;
+        }
+
+        if (details && details.itensPublicados !== undefined) {
+            return `Playlist publicada com ${formatarNumero(details.itensPublicados)} item(ns).`;
+        }
+
+        return "Playlist atualizada/publicada.";
+    }
+
+    if (acaoNormalizada.includes("backup")) {
+        if (details && details.arquivo) {
+            return `Backup processado: ${details.arquivo}.`;
+        }
+
+        return "Operação de backup registrada.";
+    }
+
+    if (!details || typeof details !== "object") {
+        return "Sem detalhes adicionais.";
+    }
+
+    if (details.mensagem) {
+        return String(details.mensagem);
+    }
+
+    if (details.totalRemovido !== undefined) {
+        return `${formatarNumero(details.totalRemovido)} upload(s) temporário(s) removido(s).`;
+    }
+
+    if (details.total !== undefined && Array.isArray(details.arquivos)) {
+        return `${formatarNumero(details.total)} arquivo(s) processado(s).`;
+    }
+
+    if (details.nomeOriginal) {
+        return `Arquivo: ${details.nomeOriginal}.`;
+    }
+
+    if (details.nomeSalvo) {
+        return `Arquivo salvo: ${details.nomeSalvo}.`;
+    }
+
+    if (details.arquivo) {
+        return `Arquivo: ${details.arquivo}.`;
+    }
+
+    return "Detalhes técnicos disponíveis.";
+}
+
+/**
+ * Formata valores técnicos dos detalhes para leitura melhor.
+ */
+function formatarValorDetalheAuditoria(valor) {
+    if (valor === null || valor === undefined || valor === "") {
+        return "--";
+    }
+
+    if (Array.isArray(valor)) {
+        if (!valor.length) return "Nenhum item";
+
+        return valor.map((item) => {
+            if (item && typeof item === "object") {
+                return JSON.stringify(item, null, 2);
+            }
+
+            return String(item);
+        }).join("\n\n");
+    }
+
+    if (typeof valor === "object") {
+        return JSON.stringify(valor, null, 2);
+    }
+
+    if (typeof valor === "boolean") {
+        return valor ? "Sim" : "Não";
+    }
+
+    return String(valor);
+}
+
+/**
+ * Renderiza detalhes técnicos do log de forma expansível.
+ */
+function renderizarDetalhesAuditoria(details) {
+    if (!details || typeof details !== "object") {
+        return `
+            <div class="auditLogDetailsEmpty">
+                Sem detalhes técnicos.
+            </div>
+        `;
+    }
+
+    const entradas = Object.entries(details);
+
+    if (!entradas.length) {
+        return `
+            <div class="auditLogDetailsEmpty">
+                Sem detalhes técnicos.
+            </div>
+        `;
+    }
+
+    return `
+        <dl class="auditLogDetailsGrid">
+            ${entradas.map(([chave, valor]) => `
+                <div class="auditLogDetailRow">
+                    <dt>${escaparHtml(chave)}</dt>
+                    <dd>
+                        <pre>${escaparHtml(formatarValorDetalheAuditoria(valor))}</pre>
+                    </dd>
+                </div>
+            `).join("")}
+        </dl>
+    `;
 }
 
 function renderizarLogsAuditoria(logs) {
@@ -927,24 +1280,58 @@ function renderizarLogsAuditoria(logs) {
         const data = log.createdAt || "--";
         const usuario = log.userName || "Sistema";
         const email = log.userEmail || "";
-        const acao = formatarAcaoAuditoria(log.action);
-        const detalhes = log.details
-            ? JSON.stringify(log.details).slice(0, 220)
-            : "Sem detalhes";
+        const acaoOriginal = log.action || "";
+        const acao = formatarAcaoAuditoria(acaoOriginal);
+        const detalhesResumo = resumirDetalhesAuditoria(log.details, acaoOriginal);
+        const classeAcao = obterClasseAcaoAuditoria(acaoOriginal);
+        const iconeAcao = obterIconeAcaoAuditoria(acaoOriginal);
 
         return `
-            <article class="auditLogItem">
+            <article class="auditLogItem ${classeAcao}">
                 <div class="auditLogMain">
-                    <strong>${acao}</strong>
-                    <span>${data}</span>
+                    <div class="auditLogTitle">
+                        <span class="auditLogIcon" aria-hidden="true">
+                            <i class="fa-solid ${iconeAcao}"></i>
+                        </span>
+
+                        <div>
+                            <strong>${escaparHtml(acao)}</strong>
+                            <span>${escaparHtml(data)}</span>
+                        </div>
+                    </div>
+
+                    <span class="auditLogActionRaw">${escaparHtml(acaoOriginal || "ação")}</span>
                 </div>
 
                 <div class="auditLogMeta">
-                    <span><i class="fa-solid fa-user"></i> ${usuario}${email ? ` (${email})` : ""}</span>
-                    <span><i class="fa-solid fa-location-dot"></i> ${log.ip || "--"}</span>
+                    <span>
+                        <i class="fa-solid fa-user"></i>
+                        ${escaparHtml(usuario)}${email ? ` (${escaparHtml(email)})` : ""}
+                    </span>
+
+                    <span>
+                        <i class="fa-solid fa-location-dot"></i>
+                        ${escaparHtml(log.ip || "--")}
+                    </span>
                 </div>
 
-                <code>${detalhes}</code>
+                <p class="auditLogSummary">
+                    ${escaparHtml(detalhesResumo)}
+                </p>
+
+                <details class="auditLogDetails">
+                    <summary>
+                        <span>
+                            <i class="fa-solid fa-code"></i>
+                            Ver detalhes técnicos
+                        </span>
+                        <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                    </summary>
+
+                    <div class="auditLogDetailsContent">
+                        ${renderizarDetalhesAuditoria(log.details)}
+                    </div>
+                </details>
             </article>
         `;
     }).join("");
