@@ -543,6 +543,47 @@
         </section>
 
         <!-- =====================================================
+        DIAGNÓSTICO OPERACIONAL
+        =====================================================
+        Exibe uma visão rápida da saúde operacional do sistema.
+        ===================================================== -->
+        <section id="diagnosticCard" class="card diagnosticCard">
+            <div class="cardHeader">
+                <div>
+                    <span class="sectionKicker">Diagnóstico</span>
+                    <h2>Diagnóstico operacional</h2>
+                    <p>
+                        Verifique a saúde do sistema, incluindo banco, armazenamento, backups e arquivos essenciais.
+                    </p>
+                </div>
+
+                <div class="usersActions">
+                    <button id="btnReloadDiagnostic" class="secondaryAction" type="button">
+                        <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+                        Atualizar diagnóstico
+                    </button>
+                </div>
+            </div>
+
+            <details id="diagnosticDropdown" class="usersDropdown">
+                <summary class="usersDropdownSummary">
+                    <div>
+                        <strong id="diagnosticSummaryTitle">Carregando diagnóstico...</strong>
+                        <span id="diagnosticSummaryText">Aguarde enquanto o sistema verifica os principais itens.</span>
+                    </div>
+
+                    <span class="dropdownToggleIcon" aria-hidden="true">
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </span>
+                </summary>
+
+                <div id="diagnosticList" class="usersList diagnosticList">
+                    <div class="message">Carregando diagnóstico...</div>
+                </div>
+            </details>
+        </section>
+
+        <!-- =====================================================
         AUDITORIA DO SISTEMA
         =====================================================
         Exibe as últimas ações realizadas no painel.

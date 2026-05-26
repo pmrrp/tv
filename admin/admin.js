@@ -122,6 +122,16 @@ const auditDropdownCount = document.getElementById("auditDropdownCount");
 const btnReloadAuditLogs = document.getElementById("btnReloadAuditLogs");
 
 /* =========================================================
+   ELEMENTOS - DIAGNÓSTICO OPERACIONAL
+   ========================================================= */
+
+const diagnosticCard = document.getElementById("diagnosticCard");
+const diagnosticSummaryTitle = document.getElementById("diagnosticSummaryTitle");
+const diagnosticSummaryText = document.getElementById("diagnosticSummaryText");
+const diagnosticList = document.getElementById("diagnosticList");
+const btnReloadDiagnostic = document.getElementById("btnReloadDiagnostic");
+
+/* =========================================================
    ELEMENTOS - RESET DE SENHA
    ========================================================= */
 
@@ -8061,6 +8071,14 @@ async function aplicarPeriodoModalNoCard() {
    ========================================================= */
 
 /* =========================================================
+EVENTOS - DIAGNÓSTICO OPERACIONAL
+========================================================= */
+
+if (btnReloadDiagnostic) {
+    btnReloadDiagnostic.addEventListener("click", carregarDiagnosticoOperacional);
+}
+
+/* =========================================================
    EVENTOS - BACKUPS DO SISTEMA
    ========================================================= */
 
@@ -9756,6 +9774,220 @@ document.addEventListener("click", (event) => {
 });
 
 /* =========================================================
+   DIAGNÓSTICO OPERACIONAL
+   =========================================================
+   Exibe no admin uma leitura rápida do endpoint:
+   /api/admin/diagnostico
+   ========================================================= */
+
+/**
+ * Retorna texto amigável para o status do diagnóstico.
+ */
+function formatarStatusDiagnostico(status) {
+    const valor = String(status || "").toLowerCase();
+
+    if (valor === "ok") return "Sistema OK";
+    if (valor === "aviso") return "Sistema com avisos";
+    if (valor === "critico") return "Sistema em estado crítico";
+
+    return "Status indisponível";
+}
+
+/**
+ * Retorna classe visual simples para o status.
+ */
+function obterClasseStatusDiagnostico(status) {
+    const valor = String(status || "").toLowerCase();
+
+    if (valor === "ok") return "diagnosticOk";
+    if (valor === "aviso") return "diagnosticWarning";
+    if (valor === "critico") return "diagnosticCritical";
+
+    return "diagnosticUnavailable";
+}
+
+/**
+ * Cria um item visual simples do diagnóstico.
+ */
+function criarItemDiagnostico({ icone, titulo, texto, status }) {
+    return `
+        <article class="diagnosticItem ${obterClasseStatusDiagnostico(status)}">
+            <span class="diagnosticItemIcon" aria-hidden="true">
+                <i class="fa-solid ${icone}"></i>
+            </span>
+
+            <div>
+                <strong>${escaparHtml(titulo)}</strong>
+                <span>${escaparHtml(texto)}</span>
+            </div>
+        </article>
+    `;
+}
+
+/**
+ * Renderiza os dados retornados pelo diagnóstico operacional.
+ */
+function renderizarDiagnostico(dados) {
+    if (!diagnosticList) return;
+
+    const status = dados.status || "indisponivel";
+    const avisos = Array.isArray(dados.avisos) ? dados.avisos : [];
+    const problemasCriticos = Array.isArray(dados.problemasCriticos)
+        ? dados.problemasCriticos
+        : [];
+
+    if (diagnosticCard) {
+        diagnosticCard.classList.remove(
+            "diagnosticOk",
+            "diagnosticWarning",
+            "diagnosticCritical",
+            "diagnosticUnavailable"
+        );
+
+        diagnosticCard.classList.add(obterClasseStatusDiagnostico(status));
+    }
+
+    if (diagnosticSummaryTitle) {
+        diagnosticSummaryTitle.textContent = formatarStatusDiagnostico(status);
+    }
+
+    if (diagnosticSummaryText) {
+        diagnosticSummaryText.textContent = dados.mensagem || "Diagnóstico carregado.";
+    }
+
+    const bancoOk = dados.banco && dados.banco.ok;
+    const armazenamento = dados.armazenamento || {};
+    const backups = dados.backups || {};
+    const arquivos = dados.arquivos || {};
+    const midias = dados.midias || {};
+
+    /*
+      Status visual do armazenamento de mídias.
+    
+      Aqui usamos a mesma lógica do card de armazenamento da dashboard:
+      - considera a pasta midia/ em relação ao limite configurado;
+      - não pinta o item de amarelo/vermelho só porque o disco local
+        da máquina está com pouco espaço;
+      - a proteção real por espaço livre continua sendo feita no backend.
+    */
+    const usoMidiasPercentual = Number(armazenamento.midiasUsoPercentual || 0);
+    const midiasDentroDoLimite = armazenamento.midiasDentroDoLimite !== false;
+
+    let statusVisualMidias = "ok";
+
+    if (!armazenamento.limiteMidiasBytes) {
+        statusVisualMidias = "indisponivel";
+    } else if (!midiasDentroDoLimite || usoMidiasPercentual >= 100) {
+        statusVisualMidias = "critico";
+    } else if (usoMidiasPercentual >= 85) {
+        statusVisualMidias = "aviso";
+    }
+
+    const itens = [
+        criarItemDiagnostico({
+            icone: bancoOk ? "fa-database" : "fa-triangle-exclamation",
+            titulo: "Banco SQLite",
+            texto: bancoOk
+                ? `${formatarNumero(dados.banco.usuarios || 0)} usuário(s) • ${formatarNumero(dados.banco.logsAuditoria || 0)} log(s)`
+                : "Banco indisponível ou com erro.",
+            status: bancoOk ? "ok" : "critico"
+        }),
+
+        criarItemDiagnostico({
+            icone: "fa-hard-drive",
+            titulo: "Armazenamento de mídias",
+            texto: armazenamento.midiasFormatado
+                ? `${armazenamento.midiasFormatado} usados • limite ${armazenamento.limiteMidiasFormatado}`
+                : "Resumo de armazenamento indisponível.",
+            status: statusVisualMidias
+        }),
+
+        criarItemDiagnostico({
+            icone: "fa-box-archive",
+            titulo: "Backups",
+            texto: `${formatarNumero(backups.total || 0)} backup(s) • ${formatarNumero(backups.porTipo?.database || 0)} banco(s)`,
+            status: backups.ultimos && backups.ultimos.database ? "ok" : "aviso"
+        }),
+
+        criarItemDiagnostico({
+            icone: "fa-photo-film",
+            titulo: "Mídias",
+            texto: `${formatarNumero(midias.total || 0)} mídia(s) • ${formatarNumero(midias.ativas || 0)} ativa(s)`,
+            status: "ok"
+        }),
+
+        criarItemDiagnostico({
+            icone: "fa-file-circle-check",
+            titulo: "Arquivos essenciais",
+            texto: arquivos.midiaConfigFile?.existe && arquivos.databaseFile?.existe
+                ? "Configuração e banco encontrados."
+                : "Algum arquivo essencial não foi encontrado.",
+            status: arquivos.midiaConfigFile?.existe && arquivos.databaseFile?.existe
+                ? "ok"
+                : "critico"
+        })
+    ];
+
+    if (problemasCriticos.length) {
+        itens.push(criarItemDiagnostico({
+            icone: "fa-triangle-exclamation",
+            titulo: "Problemas críticos",
+            texto: problemasCriticos.length === 1
+                ? problemasCriticos[0]
+                : `${formatarNumero(problemasCriticos.length)} problema(s) crítico(s): ${problemasCriticos.join(" • ")}`,
+            status: "critico"
+        }));
+    }
+
+    diagnosticList.innerHTML = itens.join("");
+}
+
+/**
+ * Carrega o diagnóstico operacional protegido.
+ */
+async function carregarDiagnosticoOperacional() {
+    if (!diagnosticList) return;
+
+    diagnosticList.innerHTML = `<div class="message">Carregando diagnóstico...</div>`;
+
+    if (diagnosticSummaryTitle) {
+        diagnosticSummaryTitle.textContent = "Carregando diagnóstico...";
+    }
+
+    if (diagnosticSummaryText) {
+        diagnosticSummaryText.textContent = "Verificando saúde operacional do sistema.";
+    }
+
+    try {
+        const resposta = await fetchComSessao("/api/admin/diagnostico");
+        const dados = await resposta.json();
+
+        if (!resposta.ok || dados.erro) {
+            throw new Error(dados.mensagem || "Não foi possível carregar o diagnóstico.");
+        }
+
+        renderizarDiagnostico(dados);
+    } catch (erro) {
+        diagnosticList.innerHTML = `<div class="message error">Erro ao carregar diagnóstico.</div>`;
+
+        if (diagnosticSummaryTitle) {
+            diagnosticSummaryTitle.textContent = "Diagnóstico indisponível";
+        }
+
+        if (diagnosticSummaryText) {
+            diagnosticSummaryText.textContent = "Não foi possível carregar as informações operacionais.";
+        }
+
+        if (diagnosticCard) {
+            diagnosticCard.classList.remove("diagnosticOk", "diagnosticWarning", "diagnosticCritical");
+            diagnosticCard.classList.add("diagnosticUnavailable");
+        }
+
+        console.error(erro);
+    }
+}
+
+/* =========================================================
    START DO ADMIN
    ========================================================= */
 
@@ -9776,6 +10008,7 @@ async function iniciarAdmin() {
     function aplicarVisibilidadeAreasRestritas() {
         const auditCard = document.getElementById("auditCard");
         const backupsCard = document.getElementById("backupsCard");
+        const diagnosticCard = document.getElementById("diagnosticCard");
 
         const ehSuperadmin = usuarioLogado && usuarioLogado.role === "superadmin";
 
@@ -9786,6 +10019,10 @@ async function iniciarAdmin() {
         if (backupsCard) {
             backupsCard.classList.toggle("hidden", !ehSuperadmin);
         }
+
+        if (diagnosticCard) {
+            diagnosticCard.classList.toggle("hidden", !ehSuperadmin);
+        }
     }
 
     await carregarResumoAdmin();
@@ -9795,6 +10032,7 @@ async function iniciarAdmin() {
     aplicarVisibilidadeAreasRestritas();
 
     if (usuarioLogado && usuarioLogado.role === "superadmin") {
+        await carregarDiagnosticoOperacional();
         await carregarBackups();
         await carregarLogsAuditoria();
     }

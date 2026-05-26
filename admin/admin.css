@@ -10936,3 +10936,135 @@ body.modalAberto {
 #btnReloadBackups {
     border-radius: 999px !important;
 }
+
+/* =========================================================
+   FASE 3 - DIAGNÓSTICO OPERACIONAL
+   ========================================================= */
+
+.diagnosticCard {
+    margin-top: 25px;
+}
+
+.backupsCard+.diagnosticCard {
+    margin-top: 25px;
+}
+
+.diagnosticCard::before {
+    content: "";
+    display: block;
+    width: 100%;
+    height: 1px;
+    margin-bottom: 20px;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(15, 112, 196, 0.22),
+            rgba(31, 163, 68, 0.18),
+            transparent);
+}
+
+.diagnosticCard>.cardHeader {
+    padding: 0 !important;
+    margin-bottom: 22px !important;
+    align-items: flex-start;
+}
+
+.diagnosticCard .cardHeader h2 {
+    margin: 0;
+    color: #082f4f;
+    font-size: 22px !important;
+    font-weight: 500 !important;
+    line-height: 1.12 !important;
+    letter-spacing: -0.02em;
+}
+
+.diagnosticCard .cardHeader p {
+    margin-top: 10px;
+    max-width: 1080px;
+    color: #64748b;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.45;
+}
+
+.diagnosticCard .sectionKicker {
+    display: block;
+    margin-bottom: 8px;
+    color: #0f70c4;
+    font-size: 11px;
+    font-weight: 950;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.diagnosticList {
+    display: grid;
+    gap: 10px;
+}
+
+.diagnosticItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding: 12px;
+    border: 1px solid rgba(220, 229, 238, 0.88);
+    border-radius: 16px;
+
+    background: rgba(255, 255, 255, 0.78);
+}
+
+.diagnosticItemIcon {
+    width: 36px;
+    height: 36px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+    border-radius: 999px;
+
+    background: var(--blue-100);
+    color: var(--blue-800);
+}
+
+.diagnosticItem strong {
+    display: block;
+    color: var(--blue-950);
+    font-size: 13.5px;
+    line-height: 1.2;
+}
+
+.diagnosticItem span:not(.diagnosticItemIcon) {
+    display: block;
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1.35;
+}
+
+.diagnosticItem.diagnosticOk .diagnosticItemIcon {
+    background: var(--green-100);
+    color: var(--green-700);
+}
+
+.diagnosticItem.diagnosticWarning .diagnosticItemIcon {
+    background: var(--yellow-100);
+    color: #8a6800;
+}
+
+.diagnosticItem.diagnosticCritical .diagnosticItemIcon {
+    background: var(--red-100);
+    color: var(--red-700);
+}
+
+.diagnosticItem.diagnosticUnavailable .diagnosticItemIcon {
+    background: rgba(139, 152, 170, 0.12);
+    color: var(--muted);
+}
+
+.diagnosticCard .secondaryAction {
+    border-radius: 999px !important;
+}
