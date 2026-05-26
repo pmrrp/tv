@@ -10015,3 +10015,198 @@ body.modalAberto {
         width: 100%;
     }
 }
+
+/* =========================================================
+   FASE 3 - CARD DE ARMAZENAMENTO
+   =========================================================
+   Exibe o uso operacional da pasta de mídias e o status
+   de armazenamento retornado por /api/admin/resumo.
+   ========================================================= */
+
+.summaryCard:nth-child(5) {
+    animation-delay: 0.26s;
+}
+
+.summaryCard:nth-child(5)::before {
+    background: var(--blue-700);
+}
+
+.summaryCard:nth-child(5) .summaryIcon {
+    background: rgba(10, 111, 181, 0.08);
+    color: var(--blue-800);
+}
+
+.summaryStorageCard {
+    position: relative;
+    overflow: hidden;
+}
+
+.summaryStorageCard strong {
+    max-width: calc(100% - 42px);
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    font-size: 24px;
+    letter-spacing: -0.02em;
+}
+
+.summaryStorageCard small {
+    max-width: 100%;
+    font-size: 11.5px;
+    line-height: 1.35;
+}
+
+.summaryStorageBar {
+    width: 100%;
+    height: 7px;
+    margin-top: 11px;
+    overflow: hidden;
+
+    border-radius: 999px;
+    background: rgba(23, 32, 51, 0.10);
+    box-shadow: inset 0 1px 2px rgba(17, 32, 51, 0.08);
+}
+
+.summaryStorageBar span {
+    display: block;
+    width: 0%;
+    height: 100%;
+
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--blue-700), var(--green-600));
+
+    transition:
+        width 0.35s ease,
+        background 0.25s ease;
+}
+
+/* Estado OK */
+.summaryStorageCard.summaryStorageOk::before {
+    background: var(--green-600);
+}
+
+.summaryStorageCard.summaryStorageOk .summaryIcon {
+    background: var(--green-100);
+    color: var(--green-700);
+}
+
+.summaryStorageCard.summaryStorageOk .summaryStorageBar span {
+    background: linear-gradient(90deg, var(--blue-700), var(--green-600));
+}
+
+/* Estado de aviso */
+.summaryStorageCard.summaryStorageWarning::before {
+    background: var(--yellow-600);
+}
+
+.summaryStorageCard.summaryStorageWarning .summaryIcon {
+    background: var(--yellow-100);
+    color: #8a6800;
+}
+
+.summaryStorageCard.summaryStorageWarning .summaryStorageBar span {
+    background: linear-gradient(90deg, var(--yellow-600), var(--orange-700));
+}
+
+/* Estado crítico */
+.summaryStorageCard.summaryStorageCritical::before {
+    background: var(--red-700);
+}
+
+.summaryStorageCard.summaryStorageCritical .summaryIcon {
+    background: var(--red-100);
+    color: var(--red-700);
+}
+
+.summaryStorageCard.summaryStorageCritical .summaryStorageBar span {
+    background: linear-gradient(90deg, #ef4444, var(--red-700));
+}
+
+/* Estado indisponível */
+.summaryStorageCard.summaryStorageUnavailable {
+    opacity: 0.86;
+}
+
+.summaryStorageCard.summaryStorageUnavailable::before {
+    background: var(--muted-soft);
+}
+
+.summaryStorageCard.summaryStorageUnavailable .summaryIcon {
+    background: rgba(139, 152, 170, 0.12);
+    color: var(--muted);
+}
+
+.summaryStorageCard.summaryStorageUnavailable .summaryStorageBar span {
+    background: var(--muted-soft);
+}
+
+/* =========================================================
+   FASE 3 - RESUMO OPERACIONAL EM 5 COLUNAS
+   =========================================================
+   Com o novo card de armazenamento, o resumo passa a ter
+   5 cards. Em telas largas, mantemos todos na mesma linha
+   para evitar um card isolado na segunda fileira.
+   ========================================================= */
+
+@media (min-width: 1200px) {
+    #summaryPlaylistUpdated {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .summaryStorageCard small {
+        font-size: 11px;
+    }
+
+    .summaryStorageCard strong {
+        font-size: 24px;
+    }
+
+    .summaryGrid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .summaryCard {
+        min-height: 112px;
+        padding: 16px 14px;
+    }
+
+    .summaryCard strong {
+        font-size: 27px;
+    }
+
+    .summaryCard small {
+        font-size: 12px;
+    }
+
+    .summaryIcon {
+        width: 32px;
+        height: 32px;
+        top: 13px;
+        right: 13px;
+        font-size: 13px;
+    }
+
+    .summaryStorageCard strong {
+        font-size: 24px;
+        max-width: calc(100% - 38px);
+    }
+
+    .summaryStorageBar {
+        height: 6px;
+        margin-top: 8px;
+    }
+}
+
+.summaryStorageCard small {
+    max-width: 100%;
+    font-size: 11.5px;
+    line-height: 1.3;
+}
+
+.summaryStorageCard strong {
+    letter-spacing: -0.02em;
+}

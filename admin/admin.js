@@ -56,6 +56,10 @@ const summaryPriorityMedia = document.getElementById("summaryPriorityMedia");
 const summaryRepeatMedia = document.getElementById("summaryRepeatMedia");
 const summaryPlaylistItems = document.getElementById("summaryPlaylistItems");
 const summaryPlaylistUpdated = document.getElementById("summaryPlaylistUpdated");
+const summaryStorageCard = document.getElementById("summaryStorageCard");
+const summaryStorageMedia = document.getElementById("summaryStorageMedia");
+const summaryStorageStatus = document.getElementById("summaryStorageStatus");
+const summaryStorageBarFill = document.getElementById("summaryStorageBarFill");
 
 const mediaSearch = document.getElementById("mediaSearch");
 const mediaStatusFilter = document.getElementById("mediaStatusFilter");
@@ -2347,6 +2351,85 @@ async function confirmarAlteracaoStatusUsuario() {
    ========================================================= */
 
 /**
+* Atualiza o card de armazenamento da dashboard.
+*/
+function atualizarResumoArmazenamento(armazenamento) {
+    if (!summaryStorageMedia || !summaryStorageStatus) return;
+
+    const dados = armazenamento || {};
+    const status = String(dados.status || "indisponivel").toLowerCase();
+
+    const midiasFormatado = dados.midiasFormatado || "--";
+    const limiteMidiasFormatado = dados.limiteMidiasFormatado || "limite indisponível";
+    const midiasUsoPercentual = Number(dados.midiasUsoPercentual || 0);
+
+    const midiasBytes = Number(dados.midiasBytes || 0);
+    const limiteMidiasBytes = Number(dados.limiteMidiasBytes || 0);
+    const midiasLivresBytes = Math.max(limiteMidiasBytes - midiasBytes, 0);
+    const midiasLivresFormatado = formatarTamanho(midiasLivresBytes);
+
+    summaryStorageMedia.textContent = midiasFormatado;
+
+    summaryStorageStatus.textContent = status === "ok"
+        ? `Livre: ${midiasLivresFormatado} de ${limiteMidiasFormatado}`
+        : dados.mensagem || "Verificar armazenamento";
+
+    if (summaryStorageCard) {
+        summaryStorageCard.classList.remove(
+            "summaryStorageOk",
+            "summaryStorageWarning",
+            "summaryStorageCritical",
+            "summaryStorageUnavailable"
+        );
+
+        if (status === "ok") {
+            summaryStorageCard.classList.add("summaryStorageOk");
+        } else if (status === "aviso") {
+            summaryStorageCard.classList.add("summaryStorageWarning");
+        } else if (status === "critico") {
+            summaryStorageCard.classList.add("summaryStorageCritical");
+        } else {
+            summaryStorageCard.classList.add("summaryStorageUnavailable");
+        }
+    }
+
+    if (summaryStorageBarFill) {
+        const percentualSeguro = Math.max(0, Math.min(midiasUsoPercentual, 100));
+        summaryStorageBarFill.style.width = `${percentualSeguro}%`;
+        summaryStorageBarFill.title = `${percentualSeguro.toLocaleString("pt-BR", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+        })}% do limite de mídias`;
+    }
+}
+
+/**
+ * Coloca o card de armazenamento em estado indisponível.
+ */
+function marcarResumoArmazenamentoIndisponivel() {
+    if (summaryStorageMedia) {
+        summaryStorageMedia.textContent = "--";
+    }
+
+    if (summaryStorageStatus) {
+        summaryStorageStatus.textContent = "Armazenamento indisponível";
+    }
+
+    if (summaryStorageBarFill) {
+        summaryStorageBarFill.style.width = "0%";
+    }
+
+    if (summaryStorageCard) {
+        summaryStorageCard.classList.remove(
+            "summaryStorageOk",
+            "summaryStorageWarning",
+            "summaryStorageCritical"
+        );
+        summaryStorageCard.classList.add("summaryStorageUnavailable");
+    }
+}
+
+/**
  * Carrega os dados consolidados da API de resumo do admin.
  */
 async function carregarResumoAdmin() {
@@ -2367,6 +2450,7 @@ async function carregarResumoAdmin() {
 
         const midias = dados.midias || {};
         const playlist = dados.playlist || {};
+        const armazenamento = dados.armazenamento || {};
 
         summaryTotalMedia.textContent = formatarNumero(midias.total);
         summaryActiveMedia.textContent = [
@@ -2390,7 +2474,9 @@ async function carregarResumoAdmin() {
 
         summaryPlaylistItems.textContent = formatarQuantidadeItens(playlist.itensPublicados);
         summaryPlaylistUpdated.textContent =
-            `Última atualização: ${formatarDataResumo(playlist.ultimaAtualizacao)}`;
+            `Atualizado: ${formatarDataResumo(playlist.ultimaAtualizacao)}`;
+
+        atualizarResumoArmazenamento(armazenamento);
 
         if (libraryDropdownMeta) {
             libraryDropdownMeta.textContent = [
@@ -2407,6 +2493,7 @@ async function carregarResumoAdmin() {
         summaryRepeatMedia.textContent = "Dados não carregados";
         summaryPlaylistItems.textContent = "--";
         summaryPlaylistUpdated.textContent = "Última atualização: indisponível";
+        marcarResumoArmazenamentoIndisponivel();
 
         if (libraryDropdownMeta) {
             libraryDropdownMeta.textContent = "Resumo da biblioteca indisponível";
