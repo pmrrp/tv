@@ -184,6 +184,175 @@ function iniciarRotinaLimpezaChunks() {
         limparChunksAntigos();
     }, INTERVALO_LIMPEZA_CHUNKS_MS);
 }
+
+/**
+ * Calcula o tamanho total de uma pasta em bytes.
+ *
+ * Percorre arquivos e subpastas recursivamente.
+ * Se algum arquivo não puder ser lido, ele é ignorado para
+ * não quebrar o resumo administrativo inteiro.
+ */
+function calcularTamanhoPastaBytes(pasta) {
+    if (!fs.existsSync(pasta)) return 0;
+
+    let total = 0;
+
+    try {
+        const itens = fs.readdirSync(pasta, { withFileTypes: true });
+
+        itens.forEach((item) => {
+            const caminhoItem = path.join(pasta, item.name);
+
+            try {
+                const statusItem = fs.statSync(caminhoItem);
+
+                if (item.isDirectory()) {
+                    total += calcularTamanhoPastaBytes(caminhoItem);
+                    return;
+                }
+
+                if (item.isFile()) {
+                    total += statusItem.size;
+                }
+            } catch (erroItem) {
+                /*
+                  Ignoramos arquivos inacessíveis para manter o resumo funcionando.
+                  Isso evita que um arquivo temporário bloqueado derrube a API.
+                */
+            }
+        });
+    } catch (erro) {
+        console.error(`Erro ao calcular tamanho da pasta "${pasta}":`, erro);
+    }
+
+    return total;
+}
+
+/**
+ * Obtém informações básicas do disco onde o projeto está rodando.
+ *
+ * Usa fs.statfsSync quando disponível.
+ * Em versões antigas do Node.js, ou em caso de falha no Windows,
+ * retorna null sem quebrar o sistema.
+ */
+function obterInformacoesDisco() {
+    if (typeof fs.statfsSync !== "function") {
+        return null;
+    }
+
+    try {
+        const stats = fs.statfsSync(projectRoot);
+
+        const tamanhoBloco = Number(stats.bsize || 0);
+        const blocosTotais = Number(stats.blocks || 0);
+        const blocosLivres = Number(stats.bavail || stats.bfree || 0);
+
+        if (!tamanhoBloco || !blocosTotais) {
+            return null;
+        }
+
+        const discoTotalBytes = blocosTotais * tamanhoBloco;
+        const discoLivreBytes = blocosLivres * tamanhoBloco;
+        const discoUsadoBytes = Math.max(discoTotalBytes - discoLivreBytes, 0);
+        const discoUsadoPercentual = discoTotalBytes > 0
+            ? Number(((discoUsadoBytes / discoTotalBytes) * 100).toFixed(2))
+            : null;
+
+        return {
+            discoTotalBytes,
+            discoLivreBytes,
+            discoUsadoBytes,
+            discoUsadoPercentual
+        };
+    } catch (erro) {
+        console.error("Erro ao obter informações de disco:", erro);
+        return null;
+    }
+}
+
+/**
+ * Monta o resumo de armazenamento usado pelo sistema.
+ *
+ * Inclui:
+ * - valores em bytes, úteis para cálculos;
+ * - valores formatados, úteis para exibição;
+ * - informações do disco, quando disponíveis.
+ */
+function obterResumoArmazenamento() {
+    const midiasBytes = calcularTamanhoPastaBytes(mediaFolder);
+    const chunksBytes = calcularTamanhoPastaBytes(chunksFolder);
+    const backupsBytes = calcularTamanhoPastaBytes(backupFolder);
+    const dataBytes = calcularTamanhoPastaBytes(dataFolder);
+
+    /*
+      Total operacional focado nos principais pontos de crescimento:
+      - mídias enviadas;
+      - chunks temporários;
+      - backups.
+
+      O dataBytes fica separado porque inclui banco SQLite e arquivos
+      operacionais que merecem visualização própria.
+    */
+    const totalOperacionalBytes = midiasBytes + chunksBytes + backupsBytes;
+
+    const disco = obterInformacoesDisco();
+
+    return {
+        midiasBytes,
+        midiasFormatado: formatarBytes(midiasBytes),
+
+        chunksBytes,
+        chunksFormatado: formatarBytes(chunksBytes),
+
+        backupsBytes,
+        backupsFormatado: formatarBytes(backupsBytes),
+
+        dataBytes,
+        dataFormatado: formatarBytes(dataBytes),
+
+        totalOperacionalBytes,
+        totalOperacionalFormatado: formatarBytes(totalOperacionalBytes),
+
+        discoLivreBytes: disco ? disco.discoLivreBytes : null,
+        discoLivreFormatado: disco ? formatarBytes(disco.discoLivreBytes) : "Indisponível",
+
+        discoTotalBytes: disco ? disco.discoTotalBytes : null,
+        discoTotalFormatado: disco ? formatarBytes(disco.discoTotalBytes) : "Indisponível",
+
+        discoUsadoBytes: disco ? disco.discoUsadoBytes : null,
+        discoUsadoFormatado: disco ? formatarBytes(disco.discoUsadoBytes) : "Indisponível",
+
+        discoUsadoPercentual: disco ? disco.discoUsadoPercentual : null
+    };
+}
+
+/**
+ * Formata bytes em texto amigável para exibição.
+ *
+ * Mantemos os valores originais em bytes para cálculos,
+ * mas também retornamos uma versão formatada para a dashboard.
+ */
+function formatarBytes(bytes) {
+    const valor = Number(bytes);
+
+    if (!Number.isFinite(valor) || valor <= 0) {
+        return "0 B";
+    }
+
+    const unidades = ["B", "KB", "MB", "GB", "TB"];
+    const indice = Math.min(
+        Math.floor(Math.log(valor) / Math.log(1024)),
+        unidades.length - 1
+    );
+
+    const valorFormatado = valor / Math.pow(1024, indice);
+
+    return `${valorFormatado.toLocaleString("pt-BR", {
+        minimumFractionDigits: indice === 0 ? 0 : 2,
+        maximumFractionDigits: indice === 0 ? 0 : 2
+    })} ${unidades[indice]}`;
+}
+
 /*
   Arquivo principal de configurações das mídias.
 
@@ -1681,6 +1850,7 @@ app.get("/api/admin/resumo", exigirLogin, (req, res) => {
         const midias = listarMidiasDaPasta();
 
         const playlistFile = path.join(projectRoot, "playlist.json");
+        const armazenamento = obterResumoArmazenamento();
 
         let totalItensPlaylist = 0;
         let ultimaAtualizacaoPlaylist = null;
@@ -1736,6 +1906,8 @@ app.get("/api/admin/resumo", exigirLogin, (req, res) => {
                 itensPublicados: totalItensPlaylist,
                 ultimaAtualizacao: ultimaAtualizacaoPlaylist
             },
+
+            armazenamento,
 
             servidor: {
                 dataHoraUtc: agora.toISOString(),
