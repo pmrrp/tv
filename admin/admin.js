@@ -2351,28 +2351,44 @@ async function confirmarAlteracaoStatusUsuario() {
    ========================================================= */
 
 /**
-* Atualiza o card de armazenamento da dashboard.
-*/
+ * Atualiza o card de armazenamento da dashboard.
+ *
+ * Importante:
+ * - O card visual acompanha o uso da pasta midia/ em relação ao limite configurado.
+ * - A reserva mínima do disco continua sendo validada pelo backend para bloquear uploads,
+ *   mas não deve dominar o visual do card, pois é uma informação mais técnica.
+ */
 function atualizarResumoArmazenamento(armazenamento) {
     if (!summaryStorageMedia || !summaryStorageStatus) return;
 
     const dados = armazenamento || {};
-    const status = String(dados.status || "indisponivel").toLowerCase();
 
     const midiasFormatado = dados.midiasFormatado || "--";
     const limiteMidiasFormatado = dados.limiteMidiasFormatado || "limite indisponível";
-    const midiasUsoPercentual = Number(dados.midiasUsoPercentual || 0);
 
     const midiasBytes = Number(dados.midiasBytes || 0);
     const limiteMidiasBytes = Number(dados.limiteMidiasBytes || 0);
     const midiasLivresBytes = Math.max(limiteMidiasBytes - midiasBytes, 0);
     const midiasLivresFormatado = formatarTamanho(midiasLivresBytes);
 
+    const midiasUsoPercentual = Number(dados.midiasUsoPercentual || 0);
+    const midiasDentroDoLimite = dados.midiasDentroDoLimite !== false;
+
     summaryStorageMedia.textContent = midiasFormatado;
 
-    summaryStorageStatus.textContent = status === "ok"
+    summaryStorageStatus.textContent = limiteMidiasBytes > 0
         ? `Livre: ${midiasLivresFormatado} de ${limiteMidiasFormatado}`
-        : dados.mensagem || "Verificar armazenamento";
+        : "Limite de mídias indisponível";
+
+    let statusVisual = "ok";
+
+    if (!limiteMidiasBytes) {
+        statusVisual = "indisponivel";
+    } else if (!midiasDentroDoLimite || midiasUsoPercentual >= 100) {
+        statusVisual = "critico";
+    } else if (midiasUsoPercentual >= 85) {
+        statusVisual = "aviso";
+    }
 
     if (summaryStorageCard) {
         summaryStorageCard.classList.remove(
@@ -2382,19 +2398,33 @@ function atualizarResumoArmazenamento(armazenamento) {
             "summaryStorageUnavailable"
         );
 
-        if (status === "ok") {
+        if (statusVisual === "ok") {
             summaryStorageCard.classList.add("summaryStorageOk");
-        } else if (status === "aviso") {
+        } else if (statusVisual === "aviso") {
             summaryStorageCard.classList.add("summaryStorageWarning");
-        } else if (status === "critico") {
+        } else if (statusVisual === "critico") {
             summaryStorageCard.classList.add("summaryStorageCritical");
         } else {
             summaryStorageCard.classList.add("summaryStorageUnavailable");
         }
+
+        summaryStorageCard.title = [
+            `Mídias: ${midiasFormatado}`,
+            `Limite: ${limiteMidiasFormatado}`,
+            `Livre para mídias: ${midiasLivresFormatado}`,
+            `Uso do limite: ${midiasUsoPercentual.toLocaleString("pt-BR", {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            })}%`,
+            dados.discoLivreFormatado
+                ? `Disco livre real: ${dados.discoLivreFormatado}`
+                : ""
+        ].filter(Boolean).join("\n");
     }
 
     if (summaryStorageBarFill) {
         const percentualSeguro = Math.max(0, Math.min(midiasUsoPercentual, 100));
+
         summaryStorageBarFill.style.width = `${percentualSeguro}%`;
         summaryStorageBarFill.title = `${percentualSeguro.toLocaleString("pt-BR", {
             minimumFractionDigits: 0,
@@ -4771,6 +4801,93 @@ async function finalizarUploadEmChunks({ uploadId, nomeOriginal, totalChunks }) 
 }
 
 /**
+ * Busca o resumo administrativo atual para validar armazenamento
+ * antes de iniciar um upload grande.
+ */
+async function obterResumoAdminParaUpload() {
+    const resposta = await fetchComSessao("/api/admin/resumo");
+
+    if (!resposta.ok) {
+        throw new Error(`Erro HTTP: ${resposta.status}`);
+    }
+
+    const dados = await resposta.json();
+
+    if (dados.erro) {
+        throw new Error(dados.mensagem || "Erro ao carregar resumo do sistema.");
+    }
+
+    return dados;
+}
+
+/**
+ * Valida, no frontend, se o arquivo selecionado cabe dentro dos
+ * limites operacionais informados pelo backend.
+ *
+ * Essa validação melhora a experiência do usuário, evitando enviar
+ * um arquivo que provavelmente será bloqueado apenas na finalização.
+ *
+ * Observação:
+ * a validação definitiva continua sendo feita no backend.
+ */
+async function validarArmazenamentoAntesDoUpload(arquivo) {
+    if (!arquivo) {
+        return {
+            permitido: false,
+            mensagem: "Selecione uma mídia para enviar."
+        };
+    }
+
+    const dados = await obterResumoAdminParaUpload();
+    const armazenamento = dados.armazenamento || {};
+
+    const midiasBytes = Number(armazenamento.midiasBytes || 0);
+    const limiteMidiasBytes = Number(armazenamento.limiteMidiasBytes || 0);
+    const discoLivreBytes = Number(armazenamento.discoLivreBytes || 0);
+    const minimoDiscoLivreBytes = Number(armazenamento.minimoDiscoLivreBytes || 0);
+
+    const tamanhoArquivo = Number(arquivo.size || 0);
+
+    if (!tamanhoArquivo) {
+        return {
+            permitido: false,
+            mensagem: "Não foi possível identificar o tamanho do arquivo selecionado."
+        };
+    }
+
+    if (limiteMidiasBytes > 0 && midiasBytes + tamanhoArquivo > limiteMidiasBytes) {
+        const limiteFormatado = armazenamento.limiteMidiasFormatado || "limite configurado";
+        const usoAtualFormatado = armazenamento.midiasFormatado || formatarTamanho(midiasBytes);
+        const arquivoFormatado = formatarTamanho(tamanhoArquivo);
+
+        return {
+            permitido: false,
+            mensagem: `Upload bloqueado: o arquivo ultrapassaria o limite da pasta de mídias. Uso atual: ${usoAtualFormatado}. Limite: ${limiteFormatado}. Arquivo: ${arquivoFormatado}.`
+        };
+    }
+
+    if (
+        discoLivreBytes > 0 &&
+        minimoDiscoLivreBytes > 0 &&
+        discoLivreBytes - tamanhoArquivo < minimoDiscoLivreBytes
+    ) {
+        const livreFormatado = armazenamento.discoLivreFormatado || formatarTamanho(discoLivreBytes);
+        const minimoFormatado = armazenamento.minimoDiscoLivreFormatado || formatarTamanho(minimoDiscoLivreBytes);
+        const arquivoFormatado = formatarTamanho(tamanhoArquivo);
+
+        return {
+            permitido: false,
+            mensagem: `Upload bloqueado: o servidor ficaria abaixo da reserva mínima de espaço livre. Livre agora: ${livreFormatado}. Reserva mínima: ${minimoFormatado}. Arquivo: ${arquivoFormatado}.`
+        };
+    }
+
+    return {
+        permitido: true,
+        mensagem: "Arquivo dentro dos limites de armazenamento."
+    };
+}
+
+/**
  * Envia o arquivo selecionado para a API.
  *
  * Para arquivos maiores, usa upload em partes para evitar
@@ -4798,6 +4915,26 @@ async function enviarArquivo(event) {
     if (arquivo.size > limiteMaximoBytes) {
         mostrarMensagemUpload(
             `Arquivo muito grande. O limite máximo permitido é ${limiteMaximoGb} GB.`,
+            "erro"
+        );
+        return;
+    }
+
+    try {
+        mostrarMensagemUpload("Verificando espaço disponível...", "info");
+
+        const validacaoArmazenamento = await validarArmazenamentoAntesDoUpload(arquivo);
+
+        if (!validacaoArmazenamento.permitido) {
+            mostrarMensagemUpload(validacaoArmazenamento.mensagem, "erro");
+            await carregarResumoAdmin();
+            return;
+        }
+    } catch (erroValidacao) {
+        console.error("Erro ao validar armazenamento antes do upload:", erroValidacao);
+
+        mostrarMensagemUpload(
+            "Não foi possível validar o espaço disponível no servidor. Tente novamente.",
             "erro"
         );
         return;
@@ -4870,17 +5007,6 @@ async function enviarArquivo(event) {
             "sucesso"
         );
 
-        const limiteMaximoGb = 1.5;
-        const limiteMaximoBytes = limiteMaximoGb * 1024 * 1024 * 1024;
-
-        if (arquivo.size > limiteMaximoBytes) {
-            mostrarMensagemUpload(
-                `Arquivo muito grande. O limite máximo permitido é ${limiteMaximoGb} GB.`,
-                "erro"
-            );
-            return;
-        }
-
         uploadForm.reset();
         selectedFileName.textContent = "Nenhum arquivo selecionado";
         uploadForm.classList.remove("uploadFormHasFile");
@@ -4904,6 +5030,15 @@ async function enviarArquivo(event) {
             mensagemNormalizada.includes("conexão foi interrompida")
         ) {
             mensagemErro = "Não foi possível concluir o envio. A conexão foi interrompida ou instável.";
+        }
+
+        if (
+            mensagemNormalizada.includes("limite operacional") ||
+            mensagemNormalizada.includes("reserva mínima") ||
+            mensagemNormalizada.includes("armazenamento") ||
+            mensagemNormalizada.includes("espaço livre")
+        ) {
+            await carregarResumoAdmin();
         }
 
         mostrarMensagemUpload(mensagemErro, "erro");

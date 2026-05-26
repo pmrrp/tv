@@ -10210,3 +10210,18 @@ body.modalAberto {
 .summaryStorageCard strong {
     letter-spacing: -0.02em;
 }
+
+/* =========================================================
+   FASE 3 - REFINO DA BARRA DE ARMAZENAMENTO
+   =========================================================
+   Garante que a barra apareça mesmo quando o uso for muito baixo,
+   sem deixar de representar o percentual real via largura.
+   ========================================================= */
+
+.summaryStorageBar span {
+    min-width: 4px;
+}
+
+.summaryStorageBar span[style*="width: 0%"] {
+    min-width: 0;
+}
