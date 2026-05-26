@@ -523,6 +523,13 @@ function validarEspacoAntesDoUploadSimples(req, res, next) {
     const validacao = validarEspacoParaNovoArquivo(contentLength);
 
     if (!validacao.permitido) {
+        registrarAuditoriaUploadBloqueado(req, {
+            tipoUpload: "simples-preventivo",
+            motivo: "validacao_previa_content_length",
+            mensagem: validacao.mensagem,
+            tamanhoAvaliadoBytes: contentLength
+        });
+
         return res.status(validacao.statusHttp).json({
             erro: true,
             mensagem: validacao.mensagem
@@ -1524,6 +1531,60 @@ function registrarAuditoria(req, acao, detalhes = {}) {
 }
 
 /**
+ * Registra em auditoria quando um upload é bloqueado por limite
+ * operacional de armazenamento.
+ *
+ * Essa auditoria ajuda a entender:
+ * - quem tentou enviar;
+ * - qual era o tamanho do arquivo/requisição;
+ * - qual limite foi atingido;
+ * - qual era o estado do armazenamento no momento.
+ */
+function registrarAuditoriaUploadBloqueado(req, detalhes = {}) {
+    try {
+        const resumo = obterResumoArmazenamento();
+        const tamanhoAvaliadoBytes = Number(detalhes.tamanhoAvaliadoBytes || 0);
+
+        registrarAuditoria(req, "midia.upload.bloqueado", {
+            motivo: detalhes.motivo || "armazenamento",
+            tipoUpload: detalhes.tipoUpload || "indefinido",
+            mensagem: detalhes.mensagem || "Upload bloqueado por limite de armazenamento.",
+
+            nomeOriginal: detalhes.nomeOriginal || null,
+            uploadId: detalhes.uploadId || null,
+            totalChunks: detalhes.totalChunks || null,
+
+            tamanhoAvaliadoBytes,
+            tamanhoAvaliadoFormatado: formatarBytes(tamanhoAvaliadoBytes),
+
+            arquivos: Array.isArray(detalhes.arquivos)
+                ? detalhes.arquivos
+                : [],
+
+            armazenamento: {
+                midiasBytes: resumo.midiasBytes,
+                midiasFormatado: resumo.midiasFormatado,
+
+                limiteMidiasBytes: resumo.limiteMidiasBytes,
+                limiteMidiasFormatado: resumo.limiteMidiasFormatado,
+                midiasUsoPercentual: resumo.midiasUsoPercentual,
+
+                discoLivreBytes: resumo.discoLivreBytes,
+                discoLivreFormatado: resumo.discoLivreFormatado,
+
+                minimoDiscoLivreBytes: resumo.minimoDiscoLivreBytes,
+                minimoDiscoLivreFormatado: resumo.minimoDiscoLivreFormatado,
+
+                status: resumo.status,
+                podeReceberUpload: resumo.podeReceberUpload
+            }
+        });
+    } catch (erro) {
+        console.error("Erro ao registrar auditoria de upload bloqueado:", erro);
+    }
+}
+
+/**
  * Verifica se o usuário logado possui uma das roles permitidas.
  *
  * Uso:
@@ -2313,6 +2374,33 @@ function registrarMidiaEnviada(nomeSalvo, nomeOriginal, tamanho) {
     };
 }
 
+app.post("/api/upload/bloqueio-preventivo", exigirLogin, exigirEditor, (req, res) => {
+    try {
+        const nomeOriginal = String(req.body.nomeOriginal || "");
+        const tamanhoArquivoBytes = Number(req.body.tamanhoArquivoBytes || 0);
+        const mensagem = String(req.body.mensagem || "Upload bloqueado preventivamente pelo painel administrativo.");
+
+        registrarAuditoriaUploadBloqueado(req, {
+            tipoUpload: "frontend-preventivo",
+            motivo: "validacao_previa_dashboard",
+            mensagem,
+            nomeOriginal,
+            tamanhoAvaliadoBytes: tamanhoArquivoBytes
+        });
+
+        res.json({
+            sucesso: true
+        });
+    } catch (erro) {
+        console.error("Erro ao registrar bloqueio preventivo de upload:", erro);
+
+        res.status(500).json({
+            erro: true,
+            mensagem: "Erro ao registrar bloqueio preventivo de upload."
+        });
+    }
+});
+
 app.post("/api/upload/chunk", exigirLogin, exigirEditor, uploadChunk.single("chunk"), (req, res) => {
     try {
         if (!req.file) {
@@ -2369,6 +2457,16 @@ app.post("/api/upload/finalizar", exigirLogin, exigirEditor, (req, res) => {
         const validacaoArmazenamento = validarEspacoParaNovoArquivo(tamanhoUploadTemporario);
 
         if (!validacaoArmazenamento.permitido) {
+            registrarAuditoriaUploadBloqueado(req, {
+                tipoUpload: "chunks-finalizacao",
+                motivo: "validacao_finalizacao_chunks",
+                mensagem: validacaoArmazenamento.mensagem,
+                nomeOriginal,
+                uploadId,
+                totalChunks,
+                tamanhoAvaliadoBytes: tamanhoUploadTemporario
+            });
+
             /*
               Se o arquivo não pode ser finalizado por limite de armazenamento,
               removemos os chunks temporários para não deixar lixo acumulado.
@@ -2475,6 +2573,19 @@ app.post("/api/upload", exigirLogin, exigirEditor, validarEspacoAntesDoUploadSim
         const validacaoArmazenamento = validarEspacoParaNovoArquivo(tamanhoTotalArquivos);
 
         if (!validacaoArmazenamento.permitido) {
+            registrarAuditoriaUploadBloqueado(req, {
+                tipoUpload: "simples-pos-recebimento",
+                motivo: "validacao_pos_upload",
+                mensagem: validacaoArmazenamento.mensagem,
+                tamanhoAvaliadoBytes: tamanhoTotalArquivos,
+                arquivos: arquivos.map((arquivo) => ({
+                    nomeOriginal: corrigirEncodingTextoUpload(arquivo.originalname),
+                    nomeSalvo: arquivo.filename,
+                    tamanho: arquivo.size,
+                    tamanhoFormatado: formatarBytes(arquivo.size)
+                }))
+            });
+
             removerArquivosEnviadosComFalha(arquivos);
 
             return res.status(validacaoArmazenamento.statusHttp).json({

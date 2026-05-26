@@ -4639,6 +4639,34 @@ let uploadProgressBox = null;
 let uploadProgressBar = null;
 let uploadProgressText = null;
 
+/**
+ * Registra no backend quando o frontend bloqueia um upload antes
+ * de iniciar o envio por causa dos limites de armazenamento.
+ */
+async function registrarBloqueioPreventivoUpload(arquivo, mensagem) {
+    if (!arquivo) return;
+
+    try {
+        await fetchComSessao("/api/upload/bloqueio-preventivo", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                nomeOriginal: arquivo.name,
+                tamanhoArquivoBytes: arquivo.size,
+                mensagem
+            })
+        });
+    } catch (erro) {
+        /*
+          Auditoria não deve travar a experiência do usuário.
+          Se falhar, apenas registramos no console.
+        */
+        console.error("Erro ao registrar bloqueio preventivo de upload:", erro);
+    }
+}
+
 function obterElementosProgressoUpload() {
     const existente = document.querySelector(".uploadProgress");
 
@@ -4927,6 +4955,12 @@ async function enviarArquivo(event) {
 
         if (!validacaoArmazenamento.permitido) {
             mostrarMensagemUpload(validacaoArmazenamento.mensagem, "erro");
+
+            await registrarBloqueioPreventivoUpload(
+                arquivo,
+                validacaoArmazenamento.mensagem
+            );
+
             await carregarResumoAdmin();
             return;
         }
