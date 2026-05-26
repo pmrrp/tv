@@ -276,7 +276,8 @@ function obterInformacoesDisco() {
  * Inclui:
  * - valores em bytes, úteis para cálculos;
  * - valores formatados, úteis para exibição;
- * - informações do disco, quando disponíveis.
+ * - limites operacionais definidos por ambiente;
+ * - status geral para orientar dashboard e bloqueios futuros.
  */
 function obterResumoArmazenamento() {
     const midiasBytes = calcularTamanhoPastaBytes(mediaFolder);
@@ -297,6 +298,49 @@ function obterResumoArmazenamento() {
 
     const disco = obterInformacoesDisco();
 
+    /*
+      Limites operacionais.
+
+      Mesmo que o disco da VM tenha bastante espaço, a pasta midia/
+      não deve poder crescer sem controle, pois o disco também precisa
+      manter espaço para Windows, logs, banco SQLite, backups e serviços.
+    */
+    const limiteMidiasGb = obterNumeroEnv("MEDIA_MAX_STORAGE_GB", 180);
+    const minimoDiscoLivreGb = obterNumeroEnv("DISK_MIN_FREE_GB", 50);
+
+    const limiteMidiasBytes = gbParaBytes(limiteMidiasGb);
+    const minimoDiscoLivreBytes = gbParaBytes(minimoDiscoLivreGb);
+
+    const midiasUsoPercentual = limiteMidiasBytes > 0
+        ? Number(((midiasBytes / limiteMidiasBytes) * 100).toFixed(2))
+        : null;
+
+    const discoLivreSeguro = disco
+        ? disco.discoLivreBytes >= minimoDiscoLivreBytes
+        : true;
+
+    const midiasDentroDoLimite = midiasBytes <= limiteMidiasBytes;
+
+    let status = "ok";
+    let mensagem = "Armazenamento dentro dos limites operacionais.";
+
+    if (!midiasDentroDoLimite || !discoLivreSeguro) {
+        status = "critico";
+        mensagem = "Armazenamento em estado crítico. Recomenda-se liberar espaço antes de novos uploads.";
+    } else if (
+        midiasUsoPercentual !== null &&
+        midiasUsoPercentual >= 85
+    ) {
+        status = "aviso";
+        mensagem = "A pasta de mídias está próxima do limite configurado.";
+    } else if (
+        disco &&
+        disco.discoLivreBytes < minimoDiscoLivreBytes * 1.5
+    ) {
+        status = "aviso";
+        mensagem = "O disco está se aproximando da reserva mínima de segurança.";
+    }
+
     return {
         midiasBytes,
         midiasFormatado: formatarBytes(midiasBytes),
@@ -313,6 +357,16 @@ function obterResumoArmazenamento() {
         totalOperacionalBytes,
         totalOperacionalFormatado: formatarBytes(totalOperacionalBytes),
 
+        limiteMidiasGb,
+        limiteMidiasBytes,
+        limiteMidiasFormatado: formatarBytes(limiteMidiasBytes),
+        midiasUsoPercentual,
+        midiasDentroDoLimite,
+
+        minimoDiscoLivreGb,
+        minimoDiscoLivreBytes,
+        minimoDiscoLivreFormatado: formatarBytes(minimoDiscoLivreBytes),
+
         discoLivreBytes: disco ? disco.discoLivreBytes : null,
         discoLivreFormatado: disco ? formatarBytes(disco.discoLivreBytes) : "Indisponível",
 
@@ -322,7 +376,12 @@ function obterResumoArmazenamento() {
         discoUsadoBytes: disco ? disco.discoUsadoBytes : null,
         discoUsadoFormatado: disco ? formatarBytes(disco.discoUsadoBytes) : "Indisponível",
 
-        discoUsadoPercentual: disco ? disco.discoUsadoPercentual : null
+        discoUsadoPercentual: disco ? disco.discoUsadoPercentual : null,
+        discoLivreSeguro,
+
+        status,
+        mensagem,
+        podeReceberUpload: status !== "critico"
     };
 }
 
@@ -351,6 +410,29 @@ function formatarBytes(bytes) {
         minimumFractionDigits: indice === 0 ? 0 : 2,
         maximumFractionDigits: indice === 0 ? 0 : 2
     })} ${unidades[indice]}`;
+}
+
+/**
+ * Lê uma variável numérica do ambiente.
+ *
+ * Se a variável não existir, estiver vazia ou inválida,
+ * usa o valor padrão informado.
+ */
+function obterNumeroEnv(nome, valorPadrao) {
+    const valor = Number(process.env[nome]);
+
+    if (!Number.isFinite(valor) || valor <= 0) {
+        return valorPadrao;
+    }
+
+    return valor;
+}
+
+/**
+ * Converte gigabytes para bytes.
+ */
+function gbParaBytes(gb) {
+    return Number(gb) * 1024 * 1024 * 1024;
 }
 
 /*
