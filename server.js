@@ -71,12 +71,119 @@ const adminFolder = path.join(projectRoot, "admin");
 const dataFolder = path.join(projectRoot, "data");
 const backupFolder = path.join(projectRoot, "backups");
 
+/*
+  Configurações de manutenção dos uploads em partes.
+
+  Quando um upload grande é interrompido, a pasta temporária pode
+  permanecer em data/upload-chunks/. Para evitar acúmulo indefinido,
+  removemos apenas uploads temporários antigos.
+
+  Mantemos uma margem conservadora de 24 horas para não apagar um upload
+  legítimo que ainda possa estar em andamento em uma conexão ruim.
+*/
+const TEMPO_MAXIMO_CHUNK_MS = 24 * 60 * 60 * 1000;
+const INTERVALO_LIMPEZA_CHUNKS_MS = 6 * 60 * 60 * 1000;
+
 [mediaFolder, dataFolder, backupFolder, chunksFolder].forEach((pasta) => {
     if (!fs.existsSync(pasta)) {
         fs.mkdirSync(pasta, { recursive: true });
     }
 });
 
+/**
+ * Calcula a data mais recente de modificação dentro de uma pasta.
+ *
+ * Usamos a maior data entre:
+ * - a própria pasta;
+ * - os arquivos/pastas internos imediatos.
+ *
+ * Motivo:
+ * Em uploads em partes, cada chunk recebido atualiza o conteúdo da pasta.
+ * Assim evitamos apagar uma pasta que ainda recebeu partes recentemente.
+ */
+function obterUltimaAlteracaoDaPasta(pasta) {
+    let ultimaAlteracao = fs.statSync(pasta).mtimeMs;
+
+    const itens = fs.readdirSync(pasta, { withFileTypes: true });
+
+    itens.forEach((item) => {
+        const caminhoItem = path.join(pasta, item.name);
+
+        try {
+            const statusItem = fs.statSync(caminhoItem);
+            ultimaAlteracao = Math.max(ultimaAlteracao, statusItem.mtimeMs);
+        } catch (erro) {
+            /*
+              Se algum arquivo sumir durante a leitura, ignoramos.
+              Isso pode acontecer em cenários raros de concorrência.
+            */
+        }
+    });
+
+    return ultimaAlteracao;
+}
+
+/**
+ * Remove uploads em partes antigos que ficaram abandonados.
+ *
+ * Segurança adotada:
+ * - só olha dentro de data/upload-chunks;
+ * - só remove diretórios;
+ * - ignora arquivos soltos;
+ * - só remove pastas com última alteração acima do limite configurado;
+ * - usa recursive + force para limpar a pasta temporária inteira.
+ */
+function limparChunksAntigos() {
+    if (!fs.existsSync(chunksFolder)) return;
+
+    const agora = Date.now();
+    let totalRemovido = 0;
+
+    try {
+        const entradas = fs.readdirSync(chunksFolder, { withFileTypes: true });
+
+        entradas.forEach((entrada) => {
+            if (!entrada.isDirectory()) return;
+
+            const caminhoUpload = path.join(chunksFolder, entrada.name);
+
+            try {
+                const ultimaAlteracao = obterUltimaAlteracaoDaPasta(caminhoUpload);
+                const idade = agora - ultimaAlteracao;
+
+                if (idade < TEMPO_MAXIMO_CHUNK_MS) return;
+
+                fs.rmSync(caminhoUpload, {
+                    recursive: true,
+                    force: true
+                });
+
+                totalRemovido++;
+            } catch (erroPasta) {
+                console.error(`Erro ao limpar chunk antigo "${entrada.name}":`, erroPasta);
+            }
+        });
+
+        if (totalRemovido > 0) {
+            console.log(`[manutencao] ${totalRemovido} upload(s) temporário(s) antigo(s) removido(s).`);
+        }
+    } catch (erro) {
+        console.error("Erro ao executar limpeza de chunks antigos:", erro);
+    }
+}
+
+/**
+ * Agenda limpeza periódica dos chunks antigos.
+ *
+ * Também executa uma primeira limpeza na inicialização do servidor.
+ */
+function iniciarRotinaLimpezaChunks() {
+    limparChunksAntigos();
+
+    setInterval(() => {
+        limparChunksAntigos();
+    }, INTERVALO_LIMPEZA_CHUNKS_MS);
+}
 /*
   Arquivo principal de configurações das mídias.
 
@@ -3518,6 +3625,12 @@ app.post("/api/admin/users/:id/reset-password", exigirLogin, exigirAdmin, (req, 
 /* =========================================================
    START DO SERVIDOR
    ========================================================= */
+
+/*
+  Inicia manutenção automática de uploads temporários antigos.
+  Isso evita acúmulo de restos de uploads interrompidos.
+*/
+iniciarRotinaLimpezaChunks();
 
 app.listen(PORT, () => {
     console.log("==============================================");
