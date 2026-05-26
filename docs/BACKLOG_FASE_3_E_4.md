@@ -941,9 +941,41 @@ A meta inicial deve ser criar um produto:
 
 Antes de transformar uma ideia em desenvolvimento, classificar:
 
-```txt
+
 1. É essencial para estabilidade?
 2. É importante para uso real?
 3. É importante para venda?
 4. É apenas melhoria visual?
 5. É ideia futura?
+
+---
+
+## Fase 3 — Itens concluídos nesta etapa
+
+- [x] Implementar limpeza automática de uploads em partes/chunks antigos.
+- [x] Registrar auditoria da limpeza automática de chunks.
+- [x] Adicionar resumo de armazenamento no backend.
+- [x] Configurar limite operacional da pasta `midia/` via `.env`.
+- [x] Configurar reserva mínima de disco livre via `.env`.
+- [x] Bloquear uploads quando ultrapassarem limite operacional de armazenamento.
+- [x] Bloquear finalização de uploads em chunks quando houver risco de armazenamento.
+- [x] Registrar auditoria de uploads bloqueados por armazenamento.
+- [x] Criar card visual de armazenamento na dashboard.
+- [x] Refinar visualização dos logs de auditoria no admin.
+- [x] Auditar backups automáticos JSON.
+- [x] Implementar backup seguro/auditado do banco SQLite.
+- [x] Incluir backups `.db` na listagem administrativa de backups.
+- [x] Criar painel visual de Backups no admin.
+- [x] Criar rota protegida de diagnóstico operacional.
+- [x] Criar painel visual de Diagnóstico no admin.
+
+## Pendências mantidas para próximas etapas
+
+- [ ] Refatorar `admin.css` em blocos organizados.
+- [ ] Melhorar responsividade mobile dos novos cards de Backups e Diagnóstico.
+- [ ] Criar filtros por tipo na listagem de backups.
+- [ ] Avaliar download seguro de backups pela interface.
+- [ ] Avaliar restauração controlada de backups.
+- [ ] Criar modal detalhado para diagnóstico operacional completo.
+- [ ] Atualizar documentação executiva da Fase 3.
+- [ ] Validar deploy em produção/VM após merge.

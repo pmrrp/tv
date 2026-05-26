@@ -397,3 +397,26 @@ Ele deve ser atualizado sempre que:
 - uma melhoria for implementada;
 - uma decisão técnica mudar;
 - o sistema evoluir para novos usos.
+
+### Fase 3 — Robustez operacional
+
+Status: em andamento, com primeiro bloco operacional concluído.
+
+Entregas já concluídas:
+
+- controle de armazenamento;
+- bloqueio preventivo de uploads;
+- auditoria técnica;
+- limpeza automática de chunks;
+- backups JSON e SQLite;
+- painel administrativo de backups;
+- diagnóstico operacional protegido;
+- painel visual de diagnóstico.
+
+Próximos focos:
+
+- refatoração controlada do CSS administrativo;
+- melhorias mobile dos novos painéis;
+- filtros/download/restauração de backups, se necessário;
+- documentação executiva da Fase 3;
+- validação e deploy na VM.

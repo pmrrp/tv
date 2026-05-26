@@ -542,3 +542,39 @@ Próximas entradas deste changelog deverão registrar:
 - refatoração futura;
 - merge da documentação na branch funcional;
 - fechamento oficial da Fase 2.
+
+## Fase 3 — Robustez operacional
+
+### Adicionado
+
+- Implementada limpeza automática de uploads temporários antigos em `data/upload-chunks/`.
+- Adicionada auditoria da limpeza automática de chunks com a ação `sistema.chunks.limpeza`.
+- Adicionado resumo operacional de armazenamento no backend.
+- Adicionadas configurações de limite operacional via `.env`:
+  - `MEDIA_MAX_STORAGE_GB`
+  - `DISK_MIN_FREE_GB`
+- Implementado bloqueio preventivo de uploads quando o arquivo ultrapassa o limite da pasta `midia/` ou ameaça a reserva mínima de disco.
+- Adicionada auditoria de uploads bloqueados com a ação `midia.upload.bloqueado`.
+- Adicionado card visual de armazenamento na dashboard administrativa.
+- Refinada a seção de logs/auditoria no admin com cards, ícones, estados visuais e detalhes técnicos expansíveis.
+- Adicionada auditoria de backups automáticos JSON com a ação `sistema.backup.json`.
+- Implementado backup seguro e auditado do banco SQLite usando `db.backup()`.
+- Adicionado painel visual de Backups no admin, visível apenas para superadmin.
+- Adicionada rota protegida `/api/admin/diagnostico` para diagnóstico operacional completo.
+- Adicionado painel visual de Diagnóstico no admin, visível apenas para superadmin.
+
+### Alterado
+
+- A rota `/api/admin/resumo` passou a retornar informações de armazenamento.
+- A listagem `/api/admin/backups` passou a incluir backups `.db` do banco SQLite.
+- O nome dos backups passou a usar horário local no timestamp.
+- O painel de backups passou a exibir resumo por tipo de backup.
+- O diagnóstico visual passou a exibir avisos detalhados em vez de apenas informar que há pontos de atenção.
+- A visualização de auditoria passou a exibir títulos e resumos amigáveis para eventos técnicos.
+
+### Segurança operacional
+
+- O backend passou a proteger o servidor contra crescimento descontrolado da pasta de mídias.
+- O sistema passou a preservar reserva mínima de disco configurável.
+- Backups JSON e SQLite passaram a ter rastreabilidade por auditoria.
+- A manutenção automática de chunks passou a ser auditável.
