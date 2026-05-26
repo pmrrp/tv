@@ -321,6 +321,270 @@ function obterInformacoesDisco() {
 }
 
 /**
+ * Retorna metadados seguros de um arquivo ou pasta.
+ *
+ * Essa função é usada pelo diagnóstico operacional para verificar
+ * se arquivos/pastas importantes existem e quando foram alterados.
+ *
+ * Importante:
+ * - não lê o conteúdo dos arquivos;
+ * - não expõe dados sensíveis;
+ * - retorna apenas informações operacionais.
+ */
+function obterInfoCaminho(caminho) {
+    try {
+        if (!fs.existsSync(caminho)) {
+            return {
+                existe: false,
+                tipo: null,
+                tamanhoBytes: 0,
+                tamanhoFormatado: "0 B",
+                modificadoEm: null
+            };
+        }
+
+        const stats = fs.statSync(caminho);
+
+        return {
+            existe: true,
+            tipo: stats.isDirectory() ? "pasta" : "arquivo",
+            tamanhoBytes: stats.isDirectory()
+                ? calcularTamanhoPastaBytes(caminho)
+                : stats.size,
+            tamanhoFormatado: stats.isDirectory()
+                ? formatarBytes(calcularTamanhoPastaBytes(caminho))
+                : formatarBytes(stats.size),
+            modificadoEm: stats.mtime.toISOString()
+        };
+    } catch (erro) {
+        return {
+            existe: false,
+            tipo: null,
+            tamanhoBytes: 0,
+            tamanhoFormatado: "0 B",
+            modificadoEm: null,
+            erro: erro.message || String(erro)
+        };
+    }
+}
+
+/**
+ * Verifica rapidamente se o banco SQLite está respondendo.
+ *
+ * Usamos consultas simples e leves para validar:
+ * - conexão ativa;
+ * - tabela de usuários;
+ * - tabela de auditoria.
+ */
+function obterDiagnosticoBanco() {
+    try {
+        const teste = db.prepare("SELECT 1 AS ok").get();
+
+        const totalUsuarios = db.prepare(`
+            SELECT COUNT(*) AS total
+            FROM users
+        `).get();
+
+        const totalLogs = db.prepare(`
+            SELECT COUNT(*) AS total
+            FROM audit_logs
+        `).get();
+
+        return {
+            ok: Boolean(teste && teste.ok === 1),
+            arquivo: databaseFile,
+            arquivoExiste: fs.existsSync(databaseFile),
+            usuarios: Number(totalUsuarios ? totalUsuarios.total : 0),
+            logsAuditoria: Number(totalLogs ? totalLogs.total : 0)
+        };
+    } catch (erro) {
+        return {
+            ok: false,
+            arquivo: databaseFile,
+            arquivoExiste: fs.existsSync(databaseFile),
+            usuarios: null,
+            logsAuditoria: null,
+            erro: erro.message || String(erro)
+        };
+    }
+}
+
+/**
+ * Monta um resumo dos backups disponíveis.
+ *
+ * O diagnóstico não lista todos os backups em detalhe.
+ * Ele apenas resume quantos existem por tipo e identifica os últimos.
+ */
+function obterDiagnosticoBackups() {
+    const resultado = {
+        total: 0,
+        porTipo: {
+            playlist: 0,
+            midiaConfig: 0,
+            database: 0,
+            outros: 0
+        },
+        ultimos: {
+            playlist: null,
+            midiaConfig: null,
+            database: null
+        }
+    };
+
+    try {
+        if (!fs.existsSync(backupFolder)) {
+            return resultado;
+        }
+
+        const backups = fs.readdirSync(backupFolder)
+            .filter((arquivo) => arquivo.endsWith(".json") || arquivo.endsWith(".db"))
+            .map((arquivo) => {
+                const caminho = path.join(backupFolder, arquivo);
+                const stats = fs.statSync(caminho);
+
+                let tipo = "outros";
+
+                if (arquivo.startsWith("playlist_")) {
+                    tipo = "playlist";
+                }
+
+                if (arquivo.startsWith("midia-config_")) {
+                    tipo = "midiaConfig";
+                }
+
+                if (arquivo.startsWith("database_")) {
+                    tipo = "database";
+                }
+
+                return {
+                    nome: arquivo,
+                    tipo,
+                    tamanhoBytes: stats.size,
+                    tamanhoFormatado: formatarBytes(stats.size),
+                    modificadoEm: stats.mtime.toISOString(),
+                    modificadoEmMs: stats.mtimeMs
+                };
+            })
+            .sort((a, b) => b.modificadoEmMs - a.modificadoEmMs);
+
+        resultado.total = backups.length;
+
+        backups.forEach((backup) => {
+            if (backup.tipo === "playlist") {
+                resultado.porTipo.playlist++;
+            } else if (backup.tipo === "midiaConfig") {
+                resultado.porTipo.midiaConfig++;
+            } else if (backup.tipo === "database") {
+                resultado.porTipo.database++;
+            } else {
+                resultado.porTipo.outros++;
+            }
+
+            if (backup.tipo === "playlist" && !resultado.ultimos.playlist) {
+                resultado.ultimos.playlist = backup;
+            }
+
+            if (backup.tipo === "midiaConfig" && !resultado.ultimos.midiaConfig) {
+                resultado.ultimos.midiaConfig = backup;
+            }
+
+            if (backup.tipo === "database" && !resultado.ultimos.database) {
+                resultado.ultimos.database = backup;
+            }
+        });
+
+        return resultado;
+    } catch (erro) {
+        return {
+            ...resultado,
+            erro: erro.message || String(erro)
+        };
+    }
+}
+
+/**
+ * Define o status geral do diagnóstico operacional.
+ *
+ * Regras:
+ * - critico: algo essencial não está disponível;
+ * - aviso: sistema funciona, mas há pontos que merecem atenção;
+ * - ok: tudo essencial está em ordem.
+ */
+function calcularStatusDiagnostico({ arquivos, banco, armazenamento, backups }) {
+    const problemasCriticos = [];
+    const avisos = [];
+
+    if (!arquivos.mediaFolder.existe) {
+        problemasCriticos.push("Pasta de mídias não encontrada.");
+    }
+
+    if (!arquivos.dataFolder.existe) {
+        problemasCriticos.push("Pasta de dados não encontrada.");
+    }
+
+    if (!arquivos.backupFolder.existe) {
+        problemasCriticos.push("Pasta de backups não encontrada.");
+    }
+
+    if (!arquivos.midiaConfigFile.existe) {
+        problemasCriticos.push("Arquivo de configuração de mídias não encontrado.");
+    }
+
+    if (!banco.ok || !banco.arquivoExiste) {
+        problemasCriticos.push("Banco SQLite não está disponível.");
+    }
+
+    if (armazenamento.status === "critico") {
+        problemasCriticos.push("Armazenamento em estado crítico.");
+    }
+
+    if (!arquivos.playlistFile.existe) {
+        avisos.push("Arquivo playlist.json ainda não existe.");
+    }
+
+    if (armazenamento.status === "aviso") {
+        avisos.push(armazenamento.mensagem || "Armazenamento exige atenção.");
+    }
+
+    if (!backups.ultimos.database) {
+        avisos.push("Nenhum backup do banco SQLite encontrado.");
+    }
+
+    if (!backups.ultimos.playlist) {
+        avisos.push("Nenhum backup de playlist encontrado.");
+    }
+
+    if (!backups.ultimos.midiaConfig) {
+        avisos.push("Nenhum backup de configuração de mídia encontrado.");
+    }
+
+    if (problemasCriticos.length > 0) {
+        return {
+            status: "critico",
+            mensagem: "Foram encontrados problemas críticos no sistema.",
+            problemasCriticos,
+            avisos
+        };
+    }
+
+    if (avisos.length > 0) {
+        return {
+            status: "aviso",
+            mensagem: "Sistema operacional, mas com pontos de atenção.",
+            problemasCriticos,
+            avisos
+        };
+    }
+
+    return {
+        status: "ok",
+        mensagem: "Sistema operacional dentro dos parâmetros esperados.",
+        problemasCriticos,
+        avisos
+    };
+}
+
+/**
  * Monta o resumo de armazenamento usado pelo sistema.
  *
  * Inclui:
@@ -2272,6 +2536,92 @@ app.get("/api/status", (req, res) => {
         }),
         timezoneReferencia: "America/Campo_Grande / UTC-04:00"
     });
+});
+
+/* =========================================================
+   API ADMIN: DIAGNÓSTICO OPERACIONAL
+   =========================================================
+   Retorna uma visão protegida da saúde operacional do sistema.
+
+   Diferença para /api/health:
+   - /api/health é simples e público;
+   - /api/admin/diagnostico é protegido e mais completo.
+
+   Verifica:
+   - pastas principais;
+   - arquivos essenciais;
+   - banco SQLite;
+   - armazenamento;
+   - backups;
+   - playlist/configurações.
+   ========================================================= */
+app.get("/api/admin/diagnostico", exigirLogin, exigirRole("superadmin"), (req, res) => {
+    try {
+        const agora = new Date();
+        const playlistFile = path.join(projectRoot, "playlist.json");
+
+        const arquivos = {
+            mediaFolder: obterInfoCaminho(mediaFolder),
+            dataFolder: obterInfoCaminho(dataFolder),
+            backupFolder: obterInfoCaminho(backupFolder),
+            chunksFolder: obterInfoCaminho(chunksFolder),
+            midiaConfigFile: obterInfoCaminho(mediaConfigFile),
+            playlistFile: obterInfoCaminho(playlistFile),
+            databaseFile: obterInfoCaminho(databaseFile)
+        };
+
+        const banco = obterDiagnosticoBanco();
+        const armazenamento = obterResumoArmazenamento();
+        const backups = obterDiagnosticoBackups();
+
+        const midias = listarMidiasDaPasta();
+
+        const diagnosticoStatus = calcularStatusDiagnostico({
+            arquivos,
+            banco,
+            armazenamento,
+            backups
+        });
+
+        res.json({
+            sucesso: true,
+            status: diagnosticoStatus.status,
+            mensagem: diagnosticoStatus.mensagem,
+            problemasCriticos: diagnosticoStatus.problemasCriticos,
+            avisos: diagnosticoStatus.avisos,
+
+            sistema: {
+                nome: "Painel TV Prefeitura",
+                ambiente: process.env.NODE_ENV || "development",
+                uptimeSegundos: Math.floor(process.uptime()),
+                dataHoraUtc: agora.toISOString(),
+                dataHoraCampoGrande: agora.toLocaleString("pt-BR", {
+                    timeZone: "America/Campo_Grande",
+                    hour12: false
+                })
+            },
+
+            arquivos,
+            banco,
+            armazenamento,
+            backups,
+
+            midias: {
+                total: midias.length,
+                ativas: midias.filter((midia) => midia.ativo).length,
+                inativas: midias.filter((midia) => !midia.ativo).length
+            }
+        });
+    } catch (erro) {
+        console.error("Erro ao gerar diagnóstico operacional:", erro);
+
+        res.status(500).json({
+            erro: true,
+            status: "critico",
+            mensagem: "Erro ao gerar diagnóstico operacional.",
+            detalhe: erro.message || String(erro)
+        });
+    }
 });
 
 app.get("/api/health", (req, res) => {
