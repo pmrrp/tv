@@ -435,6 +435,103 @@ function gbParaBytes(gb) {
     return Number(gb) * 1024 * 1024 * 1024;
 }
 
+/**
+ * Valida se o sistema pode receber um novo arquivo sem ultrapassar
+ * os limites operacionais de armazenamento.
+ *
+ * Verifica:
+ * - limite máximo da pasta midia/;
+ * - reserva mínima de espaço livre no disco.
+ */
+function validarEspacoParaNovoArquivo(tamanhoNovoArquivoBytes) {
+    const tamanhoArquivo = Number(tamanhoNovoArquivoBytes);
+
+    if (!Number.isFinite(tamanhoArquivo) || tamanhoArquivo <= 0) {
+        return {
+            permitido: false,
+            statusHttp: 400,
+            mensagem: "Não foi possível identificar o tamanho do arquivo enviado."
+        };
+    }
+
+    const resumo = obterResumoArmazenamento();
+
+    const midiasDepoisDoUpload = resumo.midiasBytes + tamanhoArquivo;
+
+    if (midiasDepoisDoUpload > resumo.limiteMidiasBytes) {
+        return {
+            permitido: false,
+            statusHttp: 507,
+            mensagem: `Não foi possível enviar o arquivo. O limite operacional da pasta de mídias seria ultrapassado. Limite configurado: ${resumo.limiteMidiasFormatado}. Uso atual: ${resumo.midiasFormatado}. Arquivo enviado: ${formatarBytes(tamanhoArquivo)}.`
+        };
+    }
+
+    if (resumo.discoLivreBytes !== null) {
+        const discoLivreDepoisDoUpload = resumo.discoLivreBytes - tamanhoArquivo;
+
+        if (discoLivreDepoisDoUpload < resumo.minimoDiscoLivreBytes) {
+            return {
+                permitido: false,
+                statusHttp: 507,
+                mensagem: `Não foi possível enviar o arquivo. O servidor ficaria abaixo da reserva mínima de espaço livre. Reserva configurada: ${resumo.minimoDiscoLivreFormatado}. Espaço livre atual: ${resumo.discoLivreFormatado}. Arquivo enviado: ${formatarBytes(tamanhoArquivo)}.`
+            };
+        }
+    }
+
+    return {
+        permitido: true,
+        statusHttp: 200,
+        mensagem: "Espaço disponível para upload."
+    };
+}
+
+/**
+ * Remove arquivos que já foram recebidos pelo Multer quando,
+ * após o upload, a validação de armazenamento reprova a operação.
+ */
+function removerArquivosEnviadosComFalha(arquivos) {
+    const listaArquivos = Array.isArray(arquivos) ? arquivos : [];
+
+    listaArquivos.forEach((arquivo) => {
+        if (!arquivo || !arquivo.path) return;
+
+        try {
+            if (fs.existsSync(arquivo.path)) {
+                fs.unlinkSync(arquivo.path);
+            }
+        } catch (erro) {
+            console.error(`Erro ao remover arquivo enviado com falha "${arquivo.filename}":`, erro);
+        }
+    });
+}
+
+/**
+ * Validação preventiva para upload simples.
+ *
+ * Quando o navegador envia Content-Length, conseguimos bloquear antes
+ * de o Multer gravar o arquivo. Como multipart/form-data possui uma
+ * pequena sobrecarga além do tamanho real do arquivo, essa validação é
+ * conservadora. A validação exata ainda acontece depois do upload.
+ */
+function validarEspacoAntesDoUploadSimples(req, res, next) {
+    const contentLength = Number(req.headers["content-length"] || 0);
+
+    if (!Number.isFinite(contentLength) || contentLength <= 0) {
+        return next();
+    }
+
+    const validacao = validarEspacoParaNovoArquivo(contentLength);
+
+    if (!validacao.permitido) {
+        return res.status(validacao.statusHttp).json({
+            erro: true,
+            mensagem: validacao.mensagem
+        });
+    }
+
+    next();
+}
+
 /*
   Arquivo principal de configurações das mídias.
 
@@ -2268,6 +2365,25 @@ app.post("/api/upload/finalizar", exigirLogin, exigirEditor, (req, res) => {
             });
         }
 
+        const tamanhoUploadTemporario = calcularTamanhoPastaBytes(pastaUpload);
+        const validacaoArmazenamento = validarEspacoParaNovoArquivo(tamanhoUploadTemporario);
+
+        if (!validacaoArmazenamento.permitido) {
+            /*
+              Se o arquivo não pode ser finalizado por limite de armazenamento,
+              removemos os chunks temporários para não deixar lixo acumulado.
+            */
+            fs.rmSync(pastaUpload, {
+                recursive: true,
+                force: true
+            });
+
+            return res.status(validacaoArmazenamento.statusHttp).json({
+                erro: true,
+                mensagem: validacaoArmazenamento.mensagem
+            });
+        }
+
         const nomeSeguro = gerarNomeSeguro(nomeOriginal);
         const nomeSalvo = garantirNomeUnico(nomeSeguro);
         const caminhoFinal = path.join(mediaFolder, nomeSalvo);
@@ -2341,7 +2457,7 @@ app.post("/api/upload/finalizar", exigirLogin, exigirEditor, (req, res) => {
     }
 });
 
-app.post("/api/upload", exigirLogin, exigirEditor, upload.array("arquivo", 30), (req, res) => {
+app.post("/api/upload", exigirLogin, exigirEditor, validarEspacoAntesDoUploadSimples, upload.array("arquivo", 30), (req, res) => {
     try {
         const arquivos = Array.isArray(req.files) ? req.files : [];
 
@@ -2349,6 +2465,21 @@ app.post("/api/upload", exigirLogin, exigirEditor, upload.array("arquivo", 30), 
             return res.status(400).json({
                 erro: true,
                 mensagem: "Nenhum arquivo enviado."
+            });
+        }
+
+        const tamanhoTotalArquivos = arquivos.reduce((total, arquivo) => {
+            return total + Number(arquivo.size || 0);
+        }, 0);
+
+        const validacaoArmazenamento = validarEspacoParaNovoArquivo(tamanhoTotalArquivos);
+
+        if (!validacaoArmazenamento.permitido) {
+            removerArquivosEnviadosComFalha(arquivos);
+
+            return res.status(validacaoArmazenamento.statusHttp).json({
+                erro: true,
+                mensagem: validacaoArmazenamento.mensagem
             });
         }
 
@@ -2371,9 +2502,9 @@ app.post("/api/upload", exigirLogin, exigirEditor, upload.array("arquivo", 30), 
         });
 
         /*
-  Salva uma configuração inicial para os arquivos enviados,
-  usando o nome original como título amigável.
-*/
+        Salva uma configuração inicial para os arquivos enviados,
+        usando o nome original como título amigável.
+        */
         const configuracoes = lerConfiguracoesDeMidia();
 
         arquivos.forEach((arquivo) => {
