@@ -6,6 +6,8 @@ Este manual orienta o uso da dashboard administrativa do Painel Ribas.
 
 Ele foi criado para ajudar usuários responsáveis por alimentar, organizar e acompanhar os conteúdos exibidos nas TVs institucionais da Prefeitura.
 
+O manual também registra orientações para superadministradores, incluindo backups, diagnóstico operacional, auditoria e cuidados básicos de manutenção.
+
 ---
 
 ## 2. Acesso ao painel
@@ -40,19 +42,90 @@ Caso ocorra erro, será exibida uma mensagem informando que o usuário ou senha 
 
 Após o login, o usuário verá a tela principal do painel.
 
-Essa tela apresenta:
+Essa tela pode apresentar:
 
 - cabeçalho do sistema;
 - informações do usuário logado;
 - cards de resumo;
 - área de upload;
 - biblioteca de mídias;
-- área de usuários;
-- logs de auditoria, conforme permissão.
+- área de usuários, conforme permissão;
+- logs de auditoria, conforme permissão;
+- seção de backups, conforme permissão;
+- seção de diagnóstico, conforme permissão.
+
+Nem todos os usuários visualizam todas as áreas. O sistema exibe ou oculta recursos conforme o perfil de acesso.
 
 ---
 
-## 5. Cards de resumo
+## 5. Perfis de usuário
+
+O sistema possui diferentes perfis de acesso.
+
+### Superadmin
+
+Perfil com acesso mais completo.
+
+Pode:
+
+- gerenciar usuários;
+- visualizar auditoria;
+- visualizar backups;
+- gerar backup do banco SQLite;
+- acessar diagnóstico operacional;
+- executar ações administrativas sensíveis.
+
+Uso recomendado:
+
+```txt
+Administrador principal do sistema.
+```
+
+---
+
+### Admin
+
+Perfil administrativo comum.
+
+Pode acessar recursos administrativos permitidos, mas não deve executar ações exclusivas de superadmin.
+
+Uso recomendado:
+
+```txt
+Usuários de gestão ou operação avançada.
+```
+
+---
+
+### Editor
+
+Perfil voltado para operação de mídias.
+
+Pode gerenciar conteúdos conforme permissões definidas.
+
+Uso recomendado:
+
+```txt
+Equipe responsável por enviar, organizar e atualizar mídias.
+```
+
+---
+
+### Viewer
+
+Perfil de visualização.
+
+Não deve realizar alterações sensíveis.
+
+Uso recomendado:
+
+```txt
+Usuários que precisam apenas acompanhar informações.
+```
+
+---
+
+## 6. Cards de resumo
 
 Os cards de resumo mostram informações gerais sobre o sistema.
 
@@ -64,14 +137,46 @@ Podem incluir:
 - mídias agendadas;
 - mídias vencidas;
 - mídias com prioridade;
+- mídias com recorrência;
 - itens publicados na playlist;
-- última atualização da playlist.
+- última atualização da playlist;
+- uso de armazenamento das mídias.
 
 Esses cards ajudam a acompanhar rapidamente a situação atual do painel.
 
 ---
 
-## 6. Envio de mídias
+## 7. Card de armazenamento
+
+O card de armazenamento mostra o uso da pasta de mídias em relação ao limite operacional configurado.
+
+Ele pode exibir:
+
+- quanto já foi usado pela pasta `midia/`;
+- limite operacional configurado;
+- espaço livre dentro do limite;
+- barra visual de progresso;
+- estado OK, aviso ou crítico.
+
+### Importante
+
+O card não representa necessariamente o espaço total do disco da máquina.
+
+Ele representa principalmente o limite operacional definido para a pasta de mídias.
+
+Exemplo:
+
+```txt
+Limite operacional de mídias: 180 GB
+Uso atual: 10 GB
+Livre dentro do limite: 170 GB
+```
+
+O sistema também usa uma reserva mínima de disco livre para proteger a VM.
+
+---
+
+## 8. Envio de mídias
 
 A área de upload permite enviar vídeos e imagens para o sistema.
 
@@ -101,19 +206,46 @@ Também é possível arrastar o arquivo para a área de upload, quando disponív
 
 ---
 
-## 7. Upload de arquivos grandes
+## 9. Upload de arquivos grandes
 
 O sistema possui envio em partes para arquivos grandes.
 
 Isso significa que vídeos maiores são divididos em pedaços menores durante o upload e depois montados novamente no servidor.
 
-Durante o envio, aguarde até a conclusão completa do processo.
+Durante o envio:
 
-Evite fechar a página durante o upload.
+- aguarde até a conclusão completa;
+- não feche a página;
+- evite trocar de rede;
+- evite desligar o computador;
+- aguarde a mensagem de sucesso.
+
+Se houver falha no envio, o sistema exibirá uma mensagem de erro.
 
 ---
 
-## 8. Biblioteca de mídias
+## 10. Bloqueio de upload por armazenamento
+
+O sistema pode bloquear um upload quando identificar risco de armazenamento.
+
+Isso pode acontecer quando:
+
+- o arquivo ultrapassaria o limite operacional da pasta `midia/`;
+- o upload deixaria o disco abaixo da reserva mínima de segurança;
+- a finalização de um upload em partes colocaria o servidor em risco.
+
+Quando isso ocorrer:
+
+- o arquivo não será adicionado à biblioteca;
+- o sistema exibirá uma mensagem amigável;
+- o evento será registrado na auditoria;
+- o operador deve liberar espaço ou procurar o administrador.
+
+Essa proteção evita travamentos ou falhas por falta de espaço na VM.
+
+---
+
+## 11. Biblioteca de mídias
 
 A biblioteca mostra todas as mídias cadastradas.
 
@@ -130,9 +262,11 @@ Cada card de mídia pode exibir:
 - detalhes;
 - botões de ação.
 
+A biblioteca pode iniciar recolhida para manter a dashboard mais limpa.
+
 ---
 
-## 9. Título amigável da mídia
+## 12. Título amigável da mídia
 
 O título amigável é o nome usado para identificar a mídia dentro do painel.
 
@@ -156,7 +290,7 @@ Usar títulos claros facilita a organização da biblioteca.
 
 ---
 
-## 10. Ativar ou desativar mídia
+## 13. Ativar ou desativar mídia
 
 Cada mídia pode estar ativa ou inativa.
 
@@ -170,9 +304,44 @@ A mídia permanece cadastrada, mas não aparece no player.
 
 Essa opção é útil para guardar conteúdos que poderão ser usados novamente depois.
 
+### Comportamento do botão Ativo/Inativo
+
+A TAG Ativo/Inativo funciona como um switch.
+
+Ao clicar:
+
+- o status muda imediatamente;
+- o sistema salva automaticamente;
+- não é necessário clicar em “Salvar alterações” apenas por ativar ou inativar.
+
+Se ocorrer erro, o sistema retorna o card ao estado anterior.
+
 ---
 
-## 11. Período de exibição
+## 14. Mídias inativas
+
+Quando uma mídia está inativa, o sistema bloqueia a edição de algumas configurações.
+
+Campos bloqueados:
+
+- nome;
+- duração;
+- período;
+- prioridade;
+- recorrência.
+
+Ações que continuam disponíveis:
+
+- reativar;
+- excluir;
+- visualizar detalhes;
+- selecionar em lote, quando aplicável.
+
+Isso evita alterações confusas em mídias que não estão participando da playlist.
+
+---
+
+## 15. Período de exibição
 
 O período de exibição define quando uma mídia deve aparecer no player.
 
@@ -201,7 +370,27 @@ Mídias fora do período configurado não entram na playlist.
 
 ---
 
-## 12. Prioridade e repetição
+## 16. Modal de período
+
+O período de exibição é configurado por modal.
+
+Esse modal permite:
+
+- selecionar data inicial;
+- selecionar data final;
+- ajustar horário;
+- usar período indeterminado;
+- limpar campos;
+- validar datas;
+- aplicar período.
+
+Ao clicar em “Aplicar período”, o sistema salva a configuração diretamente no backend.
+
+Não é necessário clicar novamente no botão Salvar do card para concluir essa alteração.
+
+---
+
+## 17. Prioridade e repetição
 
 A prioridade define a importância da mídia dentro da programação.
 
@@ -211,11 +400,17 @@ O sistema trabalha com três níveis:
 - Alta;
 - Urgente.
 
+---
+
 ### Normal
 
 A prioridade Normal é usada para conteúdos comuns.
 
-Nesse caso, a mídia entra na playlist apenas na ordem normal e o controle de repetição fica oculto.
+Nesse caso:
+
+- a mídia entra na playlist na ordem normal;
+- o controle de repetição fica oculto;
+- a mídia não recebe recorrência adicional.
 
 Uso recomendado:
 
@@ -241,6 +436,7 @@ Uso recomendado:
 
 ```txt
 campanhas importantes
+avisos institucionais relevantes
 ```
 
 ---
@@ -267,113 +463,76 @@ campanhas prioritárias
 
 ---
 
-### Regras atuais de funcionamento
+## 18. Recorrência inteligente
 
-- Prioridade Normal:
-  - não exibe repetição;
-  - mídia entra apenas uma vez na sequência normal da playlist.
-
-- Prioridade Alta:
-  - libera recorrência;
-  - sugere repetição "A cada 6 mídias".
-
-- Prioridade Urgente:
-  - libera recorrência;
-  - sugere repetição "A cada 3 mídias".
-
-### Observação importante
-
-Quando uma mídia é marcada como Alta ou Urgente, a opção "Não repetir" deixa de existir.
-
-Isso evita inconsistências entre prioridade e recorrência, mantendo o comportamento do sistema mais previsível e coerente para o usuário.
-
-## 13. Recorrência / repetição
-
-A repetição aparece quando uma mídia está marcada como prioridade Alta ou Urgente.
-
-Ela permite definir com que frequência a mídia deve reaparecer na playlist.
-
-Exemplos:
-
-```txt
-A cada 6 mídias
-A cada 3 mídias
-```
-
-A prioridade sugere uma frequência inicial, mas o usuário pode ajustar conforme a necessidade.
-
----
-
-## 13. Recorrência / repetição
-
-A recorrência permite fazer uma mídia reaparecer com maior frequência na playlist.
+A recorrência define de quanto em quanto tempo uma mídia deve aparecer novamente na playlist.
 
 Exemplo:
 
 ```txt
-Repetir a cada 4 mídias
+Repetir a cada 6 mídias
 ```
 
-Isso faz com que o conteúdo seja exibido mais vezes durante o ciclo.
+Significa que a mídia poderá aparecer novamente após um bloco de mídias exibidas.
+
+### Melhoria atual
+
+O sistema agora evita que uma mídia repetida apareça muito próxima dela mesma.
+
+Isso significa que ele tenta impedir situações como:
+
+```txt
+Campanha X
+Campanha X
+```
+
+ou:
+
+```txt
+Campanha X
+Outra mídia
+Campanha X
+```
+
+quando isso ficaria visualmente incômodo.
+
+### Loop da playlist
+
+A playlist roda em ciclo.
+
+Por isso, o sistema também considera a passagem do final da playlist para o início.
+
+Isso evita que a contagem de repetição seja reiniciada de forma estranha quando a playlist volta ao começo.
+
+### Observação importante
+
+Em alguns casos, o sistema pode pular uma repetição para evitar que a mídia fique colada ou próxima demais dela mesma.
+
+Isso é esperado.
+
+A prioridade é manter uma exibição agradável e evitar sensação de bug visual.
 
 ---
 
-## 14. Ordenação das mídias
+## 19. Ordenação da playlist
 
-As mídias podem ser organizadas manualmente.
+A ordem das mídias na biblioteca influencia a ordem de exibição no player.
 
-A ordem influencia a sequência de exibição no player.
+O operador pode reorganizar as mídias usando os controles de ordenação ou arraste, conforme disponível.
 
-Use a alça de arraste ou botões de movimentação, conforme disponível na interface.
+Após alterar a ordem:
 
-Após alterar a ordem, salve as alterações.
-
----
-
-## 15. Salvar alterações
-
-Quando uma mídia é alterada, o sistema habilita a opção de salvar.
-
-Alterações comuns:
-
-- título;
-- status;
-- período;
-- prioridade;
-- recorrência;
-- ordem.
-
-Após salvar, a playlist é atualizada automaticamente.
+- a configuração deve ser salva, quando aplicável;
+- a playlist deve ser atualizada;
+- o player receberá a nova programação após sincronização.
 
 ---
 
-## 16. Excluir mídia
+## 20. Filtros da biblioteca
 
-Uma mídia pode ser excluída individualmente.
+A biblioteca possui filtros para facilitar a localização de mídias.
 
-Antes da exclusão, o sistema exibirá uma confirmação.
-
-A exclusão remove o arquivo da biblioteca e atualiza a playlist.
-
-Use essa opção com cuidado.
-
----
-
-## 17. Exclusão em lote
-
-O sistema permite selecionar múltiplas mídias e excluir em lote.
-
-Essa ação é útil para limpeza de conteúdos antigos ou testes.
-
-Antes de excluir, confira se os arquivos selecionados estão corretos.
-
----
-
-## 18. Filtros da biblioteca
-
-A biblioteca possui filtros para facilitar a busca.
-
-Filtros disponíveis:
+Filtros disponíveis podem incluir:
 
 - busca textual;
 - status;
@@ -382,254 +541,596 @@ Filtros disponíveis:
 - prioridade;
 - recorrência.
 
-### Como aplicar filtros
+### Aplicação dos filtros
 
-1. Clique no botão de filtros.
-2. Escolha os critérios desejados.
-3. Clique em “Aplicar filtros”.
+Os filtros usam comportamento de rascunho.
 
-O sistema exibirá um contador indicando quantos filtros estão ativos.
+Isso significa que alterar um filtro não aplica imediatamente.
 
-### Como limpar filtros
+Para aplicar:
 
-Clique em “Limpar filtros” para voltar à listagem completa.
+```txt
+Clique em “Aplicar filtros”.
+```
 
-Se o usuário abrir o filtro, mudar opções e clicar fora sem aplicar, o sistema descarta o rascunho automaticamente.
+Para cancelar:
 
----
+```txt
+Clique fora sem aplicar ou pressione ESC.
+```
 
-## 19. Geração da playlist
+Para limpar:
 
-A playlist é gerada automaticamente pelo sistema.
+```txt
+Clique em “Limpar filtros”.
+```
 
-Ela é atualizada quando:
-
-- uma mídia é enviada;
-- uma mídia é editada;
-- uma mídia é excluída;
-- a ordem é alterada;
-- o período de exibição muda;
-- a rotina automática verifica mídias vencidas/agendadas.
-
-O player consome essa playlist para exibir os conteúdos.
+Esse comportamento evita filtros acidentais.
 
 ---
 
-## 20. Usuários
+## 21. Detalhes da mídia
 
-Usuários com permissão administrativa podem gerenciar outros usuários.
+O botão Detalhes abre um modal com informações da mídia.
 
-A área de usuários permite:
+O modal pode exibir:
+
+- título;
+- nome real do arquivo;
+- tipo;
+- extensão;
+- caminho;
+- tamanho;
+- ordem;
+- duração;
+- período;
+- início;
+- fim;
+- prioridade;
+- recorrência;
+- status.
+
+Esse recurso ajuda a verificar informações técnicas e operacionais sem abrir arquivos manualmente.
+
+---
+
+## 22. Excluir mídia
+
+Uma mídia pode ser excluída individualmente ou em lote, conforme permissão.
+
+Antes da exclusão, o sistema pode solicitar confirmação.
+
+A exclusão remove o arquivo da biblioteca e impede que ele volte à playlist.
+
+### Atenção
+
+Excluir é diferente de inativar.
+
+- Inativar: mantém a mídia cadastrada, mas fora da playlist.
+- Excluir: remove a mídia do sistema.
+
+Quando houver dúvida, prefira inativar.
+
+---
+
+## 23. Salvar alterações
+
+Algumas alterações exigem salvamento manual, como:
+
+- título amigável;
+- prioridade;
+- recorrência;
+- duração de imagem;
+- algumas configurações do card.
+
+Quando há alteração pendente:
+
+- o card pode ficar marcado;
+- o botão de salvar aparece;
+- o sistema pode alertar antes de sair.
+
+---
+
+## 24. Proteção contra perda de alterações
+
+O sistema protege o usuário contra perda acidental de alterações.
+
+Se houver edições não salvas, o sistema pode alertar ao:
+
+- sair do painel;
+- apertar F5;
+- apertar Ctrl+R;
+- sincronizar a biblioteca;
+- tentar recarregar a página.
+
+Algumas ações do navegador ainda exibem aviso nativo, como fechar a aba ou digitar novo endereço.
+
+---
+
+## 25. Sincronizar playlist/biblioteca
+
+A sincronização atualiza os dados exibidos no painel e/ou publica novamente a playlist.
+
+Se existirem alterações pendentes, o sistema pode bloquear a sincronização e orientar o usuário a salvar antes.
+
+Isso evita que o painel descarte rascunhos sem querer.
+
+---
+
+## 26. Player
+
+O player é a tela exibida nas TVs.
+
+Ele:
+
+- consome `playlist.json`;
+- exibe vídeos e imagens em loop;
+- atualiza a programação automaticamente;
+- mostra visual institucional;
+- roda no navegador do computador conectado à TV.
+
+Endereço principal:
+
+```txt
+https://painelribas.com.br/
+```
+
+---
+
+## 27. Atualização da playlist no player
+
+O player sincroniza a playlist periodicamente.
+
+Atualmente, a atualização é rápida para reduzir atraso em:
+
+- novas mídias;
+- mídias removidas;
+- mídias ativadas/inativadas;
+- campanhas agendadas;
+- conteúdos vencidos.
+
+O backend também revalida a playlist automaticamente em intervalo curto.
+
+---
+
+## 28. Usuários
+
+A seção de usuários permite gerenciar contas do sistema.
+
+Conforme permissão, é possível:
 
 - listar usuários;
 - criar usuário;
 - editar usuário;
-- ativar/desativar;
+- alterar perfil;
+- ativar/desativar usuário;
 - resetar senha;
-- excluir usuário, quando permitido.
+- excluir usuário.
 
 ---
 
-## 21. Perfis de usuário
+## 29. Cuidados ao gerenciar usuários
 
-O sistema possui perfis diferentes.
+O sistema possui proteções para evitar erros graves.
 
-### Superadmin
+Exemplos:
 
-Acesso total ao sistema.
+- usuário não pode desativar a si mesmo;
+- superadmin não pode excluir a própria conta logada;
+- admin comum não pode alterar superadmin;
+- admin comum não pode promover usuário para superadmin.
 
-Pode:
-
-- gerenciar mídias;
-- gerenciar usuários;
-- excluir usuários;
-- visualizar logs.
-
-### Admin
-
-Perfil administrativo.
-
-Pode gerenciar conteúdos e usuários comuns, conforme regras do sistema.
-
-### Editor
-
-Pode gerenciar mídias e conteúdos.
-
-### Viewer
-
-Perfil de visualização.
-
-Não deve realizar alterações sensíveis.
+Essas proteções evitam perda de acesso ou escalada indevida de permissão.
 
 ---
 
-## 22. Criar usuário
+## 30. Auditoria
 
-Para criar um usuário:
+A seção de Auditoria exibe ações importantes realizadas no sistema.
 
-1. Acesse a área de usuários.
-2. Clique em “Novo usuário”.
-3. Informe nome.
-4. Informe e-mail/login.
-5. Informe senha inicial.
-6. Escolha o perfil.
-7. Salve.
-
-Após criado, o usuário poderá acessar o painel conforme o perfil definido.
-
----
-
-## 23. Editar usuário
-
-Para editar:
-
-1. Localize o usuário na lista.
-2. Clique em “Editar”.
-3. Ajuste os dados permitidos.
-4. Salve.
-
-O sistema possui proteções para evitar alterações perigosas em usuários superadmin.
-
----
-
-## 24. Resetar senha
-
-Para redefinir a senha de um usuário:
-
-1. Localize o usuário.
-2. Clique em “Resetar senha”.
-3. Informe a nova senha.
-4. Confirme.
-
-A senha será salva de forma protegida no sistema.
-
----
-
-## 25. Ativar ou desativar usuário
-
-Usuários podem ser ativados ou desativados.
-
-Usuário desativado não consegue acessar o painel.
-
-O sistema impede que um usuário desative a própria conta logada.
-
----
-
-## 26. Excluir usuário
-
-A exclusão de usuário é permitida apenas para perfil superadmin.
-
-O sistema impede que o superadmin exclua a própria conta logada.
-
-Toda exclusão é registrada nos logs de auditoria.
-
----
-
-## 27. Logs de auditoria
-
-Os logs mostram ações importantes realizadas no sistema.
-
-Podem ser registrados:
+Ela pode registrar:
 
 - login;
 - logout;
 - upload;
-- edição;
-- exclusão;
+- upload bloqueado;
+- edição de mídia;
+- exclusão de mídia;
+- exclusão em lote;
 - criação de usuário;
+- edição de usuário;
 - alteração de status;
 - reset de senha;
-- exclusão de usuário.
+- exclusão de usuário;
+- backup automático JSON;
+- backup do banco SQLite;
+- limpeza automática de chunks.
 
-Os logs ajudam na rastreabilidade e segurança administrativa.
-
----
-
-## 28. Boas práticas para uso
-
-Recomendações:
-
-- usar nomes claros nas mídias;
-- evitar enviar arquivos duplicados;
-- conferir período de exibição;
-- usar prioridade urgente apenas quando necessário;
-- limpar mídias antigas periodicamente;
-- revisar a playlist após alterações grandes;
-- não compartilhar senha;
-- criar usuários individuais para cada operador;
-- evitar usar contas genéricas;
-- conferir filtros antes de concluir que uma mídia sumiu.
+A auditoria ajuda a entender o que aconteceu no sistema e quando aconteceu.
 
 ---
 
-## 29. Cuidados com arquivos grandes
+## 31. Logs com detalhes técnicos
 
-Ao enviar vídeos grandes:
+Alguns logs possuem detalhes técnicos expansíveis.
 
-- mantenha a aba aberta;
-- aguarde o término do upload;
-- evite atualizar a página;
-- confira se a mídia apareceu na biblioteca;
-- teste se a playlist foi atualizada.
+Esses detalhes podem incluir:
+
+- nome do arquivo;
+- tamanho;
+- usuário;
+- tipo de ação;
+- motivo do bloqueio;
+- estado do armazenamento;
+- informações de backup;
+- dados úteis para suporte.
+
+O operador comum geralmente não precisa analisar esses detalhes.
+
+Eles são mais úteis para suporte técnico e manutenção.
 
 ---
 
-## 30. Problemas comuns
+## 32. Backups
+
+A seção Backups fica disponível para superadmin.
+
+Ela mostra os backups existentes no sistema.
+
+Tipos principais:
+
+- backup de configurações de mídias;
+- backup de playlist;
+- backup do banco SQLite.
+
+---
+
+## 33. Backup automático JSON
+
+O sistema cria backup automático de arquivos importantes quando há alteração.
+
+Arquivos protegidos:
+
+```txt
+data/midia-config.json
+playlist.json
+```
+
+Esses backups ajudam a recuperar configurações em caso de erro ou alteração indesejada.
+
+---
+
+## 34. Backup do banco SQLite
+
+O banco SQLite armazena informações como:
+
+- usuários;
+- permissões;
+- logs de auditoria.
+
+O superadmin pode gerar backup manual do banco pela seção Backups.
+
+Ao gerar backup:
+
+- um arquivo `.db` é criado na pasta `backups/`;
+- o evento é registrado na auditoria;
+- a listagem de backups é atualizada;
+- o diagnóstico passa a reconhecer esse backup.
+
+---
+
+## 35. Primeiro backup do banco na VM
+
+Após a instalação da funcionalidade de backup SQLite, é normal que o diagnóstico avise que ainda não existe backup do banco.
+
+Para resolver:
+
+1. Entre no painel como superadmin.
+2. Abra a seção Backups.
+3. Clique em Backup do banco.
+4. Confirme.
+5. Atualize o Diagnóstico.
+
+Após isso, o aviso deve desaparecer.
+
+---
+
+## 36. Diagnóstico operacional
+
+A seção Diagnóstico fica disponível para superadmin.
+
+Ela verifica a saúde operacional do sistema.
+
+Pode mostrar:
+
+- status geral;
+- banco SQLite;
+- armazenamento;
+- backups;
+- mídias;
+- arquivos essenciais;
+- avisos;
+- problemas críticos.
+
+---
+
+## 37. Como interpretar o diagnóstico
+
+### Sistema OK
+
+Indica que não há problemas relevantes detectados.
+
+---
+
+### Sistema com avisos
+
+Indica que o sistema está funcionando, mas existe algum ponto de atenção.
+
+Exemplos:
+
+- disco se aproximando da reserva mínima;
+- ausência de backup do banco;
+- algum item que merece conferência.
+
+O aviso deve ser lido e avaliado.
+
+Nem todo aviso significa erro.
+
+---
+
+### Sistema crítico
+
+Indica problema mais sério.
+
+Nesse caso:
+
+- verificar mensagem exibida;
+- evitar novos uploads;
+- conferir armazenamento;
+- consultar logs;
+- procurar suporte técnico.
+
+---
+
+## 38. Health público
+
+O sistema possui uma rota pública de health check:
+
+```txt
+/api/health
+```
+
+Ela verifica se o servidor está respondendo.
+
+Essa rota não substitui o diagnóstico operacional.
+
+Diferença:
+
+- `/api/health`: indica se o servidor está vivo.
+- `/api/admin/diagnostico`: verifica a saúde operacional do sistema.
+
+---
+
+## 39. Boas práticas para mídias
+
+Para melhor funcionamento:
+
+- usar vídeos em MP4;
+- preferir codec H.264;
+- preferir áudio AAC;
+- usar resolução 1920x1080 quando possível;
+- evitar vídeos desnecessariamente pesados;
+- usar nomes/títulos claros;
+- revisar campanhas vencidas;
+- inativar conteúdos que não devem mais aparecer;
+- evitar muitas mídias urgentes ao mesmo tempo.
+
+---
+
+## 40. Boas práticas para recorrência
+
+Use recorrência apenas para conteúdos que precisam aparecer com mais frequência.
+
+Evite marcar muitas mídias como Alta ou Urgente ao mesmo tempo.
+
+Se muitas mídias tiverem recorrência, a playlist pode ficar menos previsível.
+
+Recomendação:
+
+- Normal: conteúdos comuns;
+- Alta: campanhas importantes;
+- Urgente: avisos realmente prioritários.
+
+---
+
+## 41. Boas práticas para armazenamento
+
+Para manter o sistema saudável:
+
+- excluir mídias antigas que não serão mais usadas;
+- evitar vídeos muito grandes;
+- acompanhar o card de armazenamento;
+- respeitar mensagens de bloqueio;
+- manter reserva de espaço livre na VM;
+- gerar backups antes de grandes alterações.
+
+---
+
+## 42. Boas práticas para operação na TV
+
+Nos computadores conectados às TVs:
+
+- manter o navegador aberto no player;
+- evitar abrir outras abas;
+- manter energia configurada para não suspender;
+- usar modo quiosque quando configurado;
+- verificar saída de áudio HDMI;
+- preferir rede cabeada quando possível;
+- evitar depender de Wi-Fi instável para vídeos pesados.
+
+---
+
+## 43. Problemas comuns
 
 ### A mídia não aparece no player
 
 Verificar:
 
-- se está ativa;
-- se está dentro do período de exibição;
-- se a playlist foi atualizada;
-- se há filtros ocultando a mídia na biblioteca;
-- se o arquivo foi enviado corretamente.
+- a mídia está ativa?
+- está dentro do período de exibição?
+- está vencida?
+- está agendada para o futuro?
+- a playlist foi atualizada?
+- o player já sincronizou?
+- o arquivo ainda existe na pasta `midia/`?
 
 ---
 
-### Não consigo salvar alterações
+### O upload foi bloqueado
+
+Possíveis causas:
+
+- arquivo muito grande;
+- limite da pasta de mídias seria ultrapassado;
+- disco ficaria abaixo da reserva mínima;
+- formato não permitido.
+
+Ação recomendada:
+
+- verificar mensagem exibida;
+- liberar espaço;
+- tentar arquivo menor;
+- otimizar vídeo;
+- procurar superadmin.
+
+---
+
+### O diagnóstico mostra aviso
+
+Ler o texto do aviso.
+
+Exemplos comuns:
+
+- backup do banco ainda não foi criado;
+- disco está se aproximando da reserva mínima.
+
+Ação recomendada:
+
+- seguir a orientação do próprio aviso;
+- verificar seção Backups;
+- verificar armazenamento;
+- procurar suporte técnico se necessário.
+
+---
+
+### O player trava
+
+Possíveis causas:
+
+- internet instável;
+- Wi-Fi fraco;
+- vídeo muito pesado;
+- computador com baixo desempenho;
+- navegador travado;
+- problema temporário no servidor.
+
+Ação recomendada:
+
+- testar internet local;
+- testar com 4G/5G se possível;
+- reiniciar navegador;
+- verificar se outros serviços também estão lentos;
+- conferir se o player funciona em outro ponto.
+
+---
+
+### A TV está sem som
 
 Verificar:
 
-- se o usuário tem permissão;
-- se houve alteração real no card;
-- se a sessão não expirou.
+- volume da TV;
+- volume do Windows;
+- saída de áudio HDMI;
+- navegador em modo mudo;
+- vídeo possui áudio;
+- cabo HDMI;
+- dispositivo de saída padrão do Windows.
 
 ---
 
-### O filtro parece não funcionar
+## 44. O que evitar
 
-Verificar:
+Evite:
 
-- se clicou em “Aplicar filtros”;
-- se há filtros anteriores ativos;
-- se o botão mostra contador;
-- se é necessário clicar em “Limpar filtros”.
-
----
-
-### O upload não conclui
-
-Verificar:
-
-- tamanho do arquivo;
-- conexão;
-- se a página foi fechada;
-- se o servidor está online.
+- fechar a aba durante upload;
+- desligar computador durante upload;
+- excluir mídia sem necessidade;
+- marcar muitas mídias como urgente;
+- usar vídeos gigantes sem necessidade;
+- deixar a VM sem espaço;
+- alterar arquivos manualmente na VM sem registrar;
+- mexer no `.env` sem reiniciar o PM2;
+- compartilhar senha de superadmin.
 
 ---
 
-## 31. Encerramento de sessão
+## 45. Quando procurar suporte técnico
 
-Ao terminar de usar o sistema, recomenda-se clicar em “Sair”.
+Procure suporte técnico quando:
 
-Isso evita que outra pessoa utilize o painel com a conta aberta.
+- o sistema não abre;
+- o login não funciona;
+- o player não carrega;
+- uploads falham repetidamente;
+- diagnóstico mostrar estado crítico;
+- backups não forem gerados;
+- a VM estiver sem espaço;
+- houver erro vermelho no console;
+- houver erro no terminal/PM2.
 
 ---
 
-## 32. Observação final
+## 46. Resumo rápido de uso
 
-O Painel Ribas foi criado para facilitar a comunicação institucional da Prefeitura.
+Fluxo comum para adicionar uma mídia:
 
-O uso correto da dashboard garante que os conteúdos sejam exibidos nas TVs públicas de forma organizada, segura e atualizada.
+1. Entrar no painel.
+2. Enviar a mídia.
+3. Conferir na biblioteca.
+4. Ajustar título amigável.
+5. Definir prioridade, se necessário.
+6. Definir período, se necessário.
+7. Salvar alterações, quando aplicável.
+8. Conferir playlist/player.
+
+---
+
+## 47. Resumo rápido para superadmin
+
+Rotina recomendada:
+
+- acompanhar card de armazenamento;
+- conferir logs de auditoria;
+- conferir seção Backups;
+- gerar backup do banco antes de grandes alterações;
+- conferir Diagnóstico após deploys;
+- manter usuários atualizados;
+- remover ou inativar conteúdos antigos;
+- validar player após alterações relevantes.
+
+---
+
+## 48. Observação final
+
+O Painel Ribas foi desenvolvido para facilitar a comunicação institucional da Prefeitura.
+
+O uso correto do painel depende de:
+
+- organização das mídias;
+- cuidado com vídeos muito pesados;
+- atenção aos períodos de exibição;
+- uso responsável de prioridade/recorrência;
+- acompanhamento de armazenamento;
+- backups e diagnóstico por superadmin.
+
+A ferramenta foi criada para ser simples no uso diário, mas possui recursos administrativos importantes para manter a operação segura e estável.

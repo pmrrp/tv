@@ -17,7 +17,7 @@ Ele serve para:
 
 ## 2. Estado atual do sistema
 
-O Painel Ribas encontra-se com a Fase 2 funcionalmente consolidada.
+O Painel Ribas encontra-se com a Fase 2 funcionalmente consolidada e com o primeiro bloco da Fase 3 já implementado em produção/VM.
 
 O sistema já possui:
 
@@ -31,10 +31,19 @@ O sistema já possui:
 - agendamento por período;
 - prioridade e recorrência;
 - geração automática da playlist;
+- lógica aprimorada de recorrência para evitar mídias repetidas muito próximas;
 - gerenciamento de usuários;
 - perfis de acesso;
 - logs de auditoria;
-- backups automáticos;
+- visualização refinada dos logs;
+- backups automáticos JSON;
+- backup manual/auditado do banco SQLite;
+- painel visual de backups;
+- diagnóstico operacional protegido;
+- painel visual de diagnóstico;
+- controle de armazenamento;
+- bloqueio preventivo de uploads por limite operacional;
+- limpeza automática de chunks antigos;
 - deploy em VM;
 - acesso via domínio;
 - player com visual premium;
@@ -45,9 +54,9 @@ O sistema já possui:
 
 ## 3. Direção geral das próximas fases
 
-## Fase 3 — Robustez, operação real e manutenção
+### Fase 3 — Robustez, operação real e manutenção
 
-A Fase 3 deve priorizar a estabilidade do sistema em uso real.
+A Fase 3 prioriza a estabilidade do sistema em uso real.
 
 O foco principal é garantir que o Painel Ribas funcione de forma previsível, fácil de manter, fácil de diagnosticar e seguro para operação contínua.
 
@@ -64,11 +73,12 @@ Temas principais:
 - segurança;
 - melhorias de upload;
 - responsividade;
+- usabilidade do operador;
 - documentação operacional.
 
 ---
 
-## Fase 4 — Produto comercial / whitelabel
+### Fase 4 — Produto comercial / whitelabel
 
 A Fase 4 deve preparar o sistema para uma possível versão comercial ou personalizada para outros clientes.
 
@@ -91,7 +101,41 @@ Temas principais:
 
 # FASE 3 — OPERAÇÃO REAL, ROBUSTEZ E MANUTENÇÃO
 
-## 4. Implantação assistida dos pontos de exibição
+## 4. Bloco de robustez operacional — concluído
+
+### Objetivo
+
+Fortalecer a base operacional do sistema para uso contínuo em produção.
+
+### Itens concluídos
+
+- [x] Implementar limpeza automática de uploads em partes/chunks antigos.
+- [x] Registrar auditoria da limpeza automática de chunks.
+- [x] Adicionar resumo de armazenamento no backend.
+- [x] Configurar limite operacional da pasta `midia/` via `.env`.
+- [x] Configurar reserva mínima de disco livre via `.env`.
+- [x] Bloquear uploads quando ultrapassarem limite operacional de armazenamento.
+- [x] Bloquear finalização de uploads em chunks quando houver risco de armazenamento.
+- [x] Registrar auditoria de uploads bloqueados por armazenamento.
+- [x] Criar card visual de armazenamento na dashboard.
+- [x] Refinar visualização dos logs de auditoria no admin.
+- [x] Auditar backups automáticos JSON.
+- [x] Implementar backup seguro/auditado do banco SQLite.
+- [x] Incluir backups `.db` na listagem administrativa de backups.
+- [x] Criar painel visual de Backups no admin.
+- [x] Criar rota protegida de diagnóstico operacional.
+- [x] Criar painel visual de Diagnóstico no admin.
+- [x] Validar deploy em produção/VM após merge.
+- [x] Gerar primeiro backup SQLite no ambiente real da VM.
+- [x] Revalidar diagnóstico operacional em produção.
+
+### Observação
+
+Este bloco já foi implementado, testado localmente, integrado na branch `fix-admin-funcionalidades`, publicado na VM e validado em produção.
+
+---
+
+## 5. Implantação assistida dos pontos de exibição
 
 ### Objetivo
 
@@ -99,16 +143,16 @@ Padronizar o processo de instalação e configuração dos computadores conectad
 
 ### Itens
 
+- [x] Documentar configuração inicial do mini PC.
+- [x] Documentar criação de conta local do Windows.
+- [x] Documentar login automático.
+- [x] Documentar atalho do Chrome em modo quiosque.
+- [x] Documentar configuração de áudio automático.
+- [x] Documentar configuração do AnyDesk.
+- [x] Documentar acesso remoto não supervisionado.
+- [x] Documentar configurações de energia.
+- [x] Documentar BIOS para ligar após queda de energia.
 - [ ] Criar checklist oficial de implantação por ponto.
-- [ ] Documentar configuração inicial do mini PC.
-- [ ] Documentar criação de conta local do Windows.
-- [ ] Documentar login automático.
-- [ ] Documentar atalho do Chrome em modo quiosque.
-- [ ] Documentar configuração de áudio automático.
-- [ ] Documentar configuração do AnyDesk.
-- [ ] Documentar acesso remoto não supervisionado.
-- [ ] Documentar configurações de energia.
-- [ ] Documentar BIOS para ligar após queda de energia.
 - [ ] Documentar teste de resolução e escala da TV.
 - [ ] Documentar teste de saída de áudio HDMI.
 - [ ] Criar ficha técnica por ponto instalado.
@@ -119,7 +163,7 @@ Alta.
 
 ---
 
-## 5. Diagnóstico de rede e travamentos
+## 6. Diagnóstico de rede e travamentos
 
 ### Objetivo
 
@@ -127,7 +171,9 @@ Evitar que problemas de rede local sejam confundidos com falha do sistema.
 
 ### Contexto
 
-Durante testes reais, foi observado que a qualidade da internet influencia diretamente a fluidez do player, especialmente em vídeos maiores. Em um teste, o painel rodou corretamente no 4G, enquanto a rede local apresentava lentidão até para baixar arquivos no WhatsApp.
+Durante testes reais, foi observado que a qualidade da internet influencia diretamente a fluidez do player, especialmente em vídeos maiores.
+
+Em um teste real, o player rodou corretamente no 4G, enquanto a rede local apresentou travamentos até em serviços simples, indicando gargalo de conexão.
 
 ### Itens
 
@@ -146,7 +192,7 @@ Alta.
 
 ---
 
-## 6. Otimização de vídeos
+## 7. Otimização de vídeos
 
 ### Objetivo
 
@@ -177,7 +223,7 @@ Alta.
 
 ---
 
-## 7. Melhorias no player
+## 8. Melhorias no player
 
 ### Objetivo
 
@@ -202,7 +248,7 @@ Média/Alta.
 
 ---
 
-## 8. Cache/offline do player
+## 9. Cache/offline do player
 
 ### Objetivo
 
@@ -235,7 +281,7 @@ Média.
 
 ---
 
-## 9. Limpeza de arquivos temporários
+## 10. Limpeza de arquivos temporários
 
 ### Objetivo
 
@@ -243,13 +289,13 @@ Evitar acúmulo de arquivos temporários, especialmente chunks de upload.
 
 ### Itens
 
-- [ ] Revisar funcionamento da pasta `data/upload-chunks/`.
-- [ ] Criar rotina para limpar chunks antigos.
-- [ ] Definir tempo máximo de retenção de chunks incompletos.
-- [ ] Registrar limpeza em log.
-- [ ] Criar função administrativa de limpeza segura.
-- [ ] Evitar remoção de arquivos ainda em upload.
-- [ ] Documentar política de limpeza.
+- [x] Revisar funcionamento da pasta `data/upload-chunks/`.
+- [x] Criar rotina para limpar chunks antigos.
+- [x] Definir tempo máximo de retenção de chunks incompletos.
+- [x] Registrar limpeza em log/auditoria.
+- [x] Evitar remoção de arquivos ainda em upload.
+- [x] Documentar política de limpeza.
+- [ ] Criar função administrativa manual de limpeza segura, se necessário.
 
 ### Prioridade
 
@@ -257,7 +303,7 @@ Alta.
 
 ---
 
-## 10. Validação de espaço em disco
+## 11. Validação de espaço em disco
 
 ### Objetivo
 
@@ -265,13 +311,16 @@ Evitar falhas causadas por falta de espaço no servidor/VM.
 
 ### Itens
 
-- [ ] Exibir espaço total usado pela pasta `midia/`.
-- [ ] Exibir espaço disponível no disco.
-- [ ] Exibir tamanho total da biblioteca.
-- [ ] Alertar quando o espaço livre estiver baixo.
-- [ ] Bloquear upload se não houver espaço suficiente.
-- [ ] Registrar falha por espaço insuficiente.
-- [ ] Criar indicador visual na dashboard.
+- [x] Exibir espaço total usado pela pasta `midia/`.
+- [x] Exibir tamanho total da biblioteca.
+- [x] Alertar quando o espaço livre estiver baixo.
+- [x] Bloquear upload se não houver espaço suficiente.
+- [x] Registrar falha por espaço insuficiente.
+- [x] Criar indicador visual na dashboard.
+- [x] Configurar limite operacional da pasta de mídias.
+- [x] Configurar reserva mínima de disco livre.
+- [ ] Refinar mensagens preventivas para o operador, se necessário.
+- [ ] Avaliar alerta visual persistente quando armazenamento estiver em aviso/crítico.
 
 ### Prioridade
 
@@ -279,7 +328,7 @@ Alta.
 
 ---
 
-## 11. Backups
+## 12. Backups
 
 ### Objetivo
 
@@ -287,16 +336,19 @@ Aumentar a segurança operacional dos dados e configurações.
 
 ### Itens
 
-- [ ] Revisar rotina atual de backups.
-- [ ] Garantir backup de `midia-config.json`.
-- [ ] Garantir backup de `playlist.json`.
-- [ ] Garantir backup do banco SQLite.
+- [x] Revisar rotina atual de backups.
+- [x] Garantir backup de `midia-config.json`.
+- [x] Garantir backup de `playlist.json`.
+- [x] Garantir backup do banco SQLite.
+- [x] Criar tela/listagem de backups.
+- [x] Registrar criação de backup em log/auditoria.
+- [x] Definir política de retenção por tipo.
+- [x] Exibir backups JSON e SQLite no painel admin.
+- [x] Criar botão para backup manual do banco SQLite.
 - [ ] Criar opção para baixar backup pela dashboard.
-- [ ] Criar tela/listagem de backups.
 - [ ] Criar restauração manual controlada.
-- [ ] Registrar criação de backup em log.
 - [ ] Registrar restauração de backup em log.
-- [ ] Definir política de retenção.
+- [ ] Criar filtros por tipo na listagem de backups.
 
 ### Prioridade
 
@@ -304,7 +356,7 @@ Alta.
 
 ---
 
-## 12. Logs e auditoria
+## 13. Logs e auditoria
 
 ### Objetivo
 
@@ -312,13 +364,20 @@ Melhorar a rastreabilidade das ações administrativas.
 
 ### Itens
 
-- [ ] Revisar eventos já registrados.
-- [ ] Registrar geração de playlist.
+- [x] Revisar eventos já registrados.
+- [x] Refinar visualização dos logs no admin.
+- [x] Criar títulos amigáveis para eventos técnicos.
+- [x] Criar resumos humanos para logs.
+- [x] Criar detalhes técnicos expansíveis.
+- [x] Registrar falhas relevantes de upload por armazenamento.
+- [x] Registrar backup automático JSON.
+- [x] Registrar backup manual do banco SQLite.
+- [x] Registrar limpeza automática de chunks.
+- [ ] Registrar geração de playlist de forma mais explícita, se necessário.
 - [ ] Registrar alteração de período.
 - [ ] Registrar alteração de prioridade.
 - [ ] Registrar alteração de recorrência.
 - [ ] Registrar ativação/inativação automática.
-- [ ] Registrar falhas relevantes de upload.
 - [ ] Melhorar filtros da tela de logs.
 - [ ] Criar exportação de logs.
 - [ ] Avaliar logs técnicos separados dos logs administrativos.
@@ -329,25 +388,27 @@ Média/Alta.
 
 ---
 
-## 13. Segurança
+## 14. Diagnóstico operacional
 
 ### Objetivo
 
-Reforçar proteções básicas antes de ampliar o uso do sistema.
+Permitir que o superadmin visualize rapidamente a saúde operacional do sistema.
 
 ### Itens
 
-- [ ] Revisar variáveis sensíveis no `.env`.
-- [ ] Garantir que senhas não fiquem hardcoded.
-- [ ] Revisar timeout de sessão.
-- [ ] Avaliar logout automático por inatividade.
-- [ ] Avaliar limite de sessões simultâneas.
-- [ ] Validar extensão dos arquivos enviados.
-- [ ] Validar MIME type dos arquivos enviados.
-- [ ] Limitar tamanho máximo de upload.
-- [ ] Bloquear arquivos potencialmente perigosos.
-- [ ] Revisar permissões por perfil no backend.
-- [ ] Revisar proteções de rotas administrativas.
+- [x] Criar rota protegida `/api/admin/diagnostico`.
+- [x] Verificar pastas principais.
+- [x] Verificar arquivos essenciais.
+- [x] Verificar banco SQLite.
+- [x] Verificar armazenamento.
+- [x] Verificar backups.
+- [x] Verificar resumo de mídias.
+- [x] Criar painel visual de Diagnóstico no admin.
+- [x] Exibir avisos detalhados.
+- [x] Validar diagnóstico na VM.
+- [ ] Criar modal detalhado para diagnóstico operacional completo.
+- [ ] Melhorar responsividade mobile do card de diagnóstico.
+- [ ] Avaliar exportação ou cópia rápida do diagnóstico para suporte.
 
 ### Prioridade
 
@@ -355,7 +416,35 @@ Alta.
 
 ---
 
-## 14. Melhorias no upload
+## 15. Segurança
+
+### Objetivo
+
+Reforçar proteções básicas antes de ampliar o uso do sistema.
+
+### Itens
+
+- [x] Revisar variáveis sensíveis no `.env`.
+- [x] Garantir que senhas não fiquem hardcoded.
+- [x] Revisar permissões por perfil no backend para áreas críticas.
+- [x] Proteger backups e diagnóstico para superadmin.
+- [x] Validar extensão dos arquivos enviados.
+- [x] Limitar tamanho máximo de upload.
+- [x] Bloquear uploads que ameacem armazenamento.
+- [ ] Revisar timeout de sessão.
+- [ ] Avaliar logout automático por inatividade.
+- [ ] Avaliar limite de sessões simultâneas.
+- [ ] Validar MIME type dos arquivos enviados.
+- [ ] Bloquear arquivos potencialmente perigosos.
+- [ ] Revisar proteções de rotas administrativas restantes.
+
+### Prioridade
+
+Alta.
+
+---
+
+## 16. Melhorias no upload
 
 ### Objetivo
 
@@ -363,11 +452,15 @@ Reduzir erro do usuário e melhorar feedback durante envio de arquivos.
 
 ### Itens
 
+- [x] Upload em partes/chunks.
+- [x] Progresso básico do upload.
+- [x] Tratamento de queda de conexão durante upload.
+- [x] Mensagem amigável em bloqueio por armazenamento.
+- [x] Auditoria de upload bloqueado.
 - [ ] Mostrar progresso mais detalhado.
 - [ ] Mostrar tamanho enviado e tamanho total.
 - [ ] Mostrar velocidade estimada de upload.
-- [ ] Tratar queda de conexão durante upload.
-- [ ] Tratar cancelamento de upload.
+- [ ] Tratar cancelamento manual de upload.
 - [ ] Alertar sobre formato não recomendado.
 - [ ] Alertar sobre arquivo muito pesado.
 - [ ] Melhorar mensagem de erro em upload falho.
@@ -380,7 +473,57 @@ Média.
 
 ---
 
-## 15. Responsividade e experiência mobile
+## 17. Melhorias de usabilidade e experiência do operador
+
+### Objetivo
+
+Reduzir dúvidas do usuário e tornar o painel mais autoexplicativo.
+
+### Itens
+
+- [ ] Criar sistema de tooltips/ajuda contextual no admin.
+- [ ] Adicionar textos explicativos para prioridade.
+- [ ] Adicionar textos explicativos para recorrência.
+- [ ] Adicionar textos explicativos para período de exibição.
+- [ ] Adicionar textos explicativos para tempo indeterminado.
+- [ ] Adicionar textos explicativos para ativo/inativo.
+- [ ] Adicionar textos explicativos para armazenamento.
+- [ ] Adicionar textos explicativos para backups.
+- [ ] Adicionar textos explicativos para diagnóstico.
+- [ ] Criar padrão visual de ajuda sem poluir a interface.
+- [ ] Avaliar uso de ícone discreto de informação nos campos principais.
+
+### Prioridade
+
+Média/Alta.
+
+---
+
+## 18. Melhorias na geração da playlist
+
+### Objetivo
+
+Tornar a distribuição das mídias mais agradável e evitar repetições visualmente incômodas.
+
+### Itens
+
+- [x] Melhorar algoritmo de recorrência da playlist para evitar que uma mídia repetida apareça muito próxima da sua posição original.
+- [x] Criar regra de distância mínima entre aparições da mesma mídia.
+- [x] Evitar repetições coladas no início/fim do ciclo da playlist.
+- [x] Considerar o loop da playlist na contagem de recorrência.
+- [x] Testar cenários com poucas mídias e mídias configuradas como alta/urgente.
+- [ ] Avaliar interface para explicar melhor como a recorrência funciona.
+- [ ] Avaliar prévia da playlist gerada no admin.
+- [ ] Avaliar alerta quando muitas mídias tiverem recorrência ativa.
+- [ ] Avaliar pesos mais inteligentes para alta/urgente no futuro.
+
+### Prioridade
+
+Alta.
+
+---
+
+## 19. Responsividade e experiência mobile
 
 ### Objetivo
 
@@ -394,6 +537,7 @@ Melhorar a experiência da dashboard em telas menores.
 - [ ] Revisar popovers restantes próximos às bordas.
 - [ ] Revisar cards de mídia em telas estreitas.
 - [ ] Melhorar filtros em mobile.
+- [ ] Melhorar responsividade dos cards de Backups e Diagnóstico.
 - [ ] Avaliar experiência em tablet.
 - [ ] Avaliar experiência em notebook pequeno.
 
@@ -403,7 +547,7 @@ Média.
 
 ---
 
-## 16. Font Awesome local
+## 20. Font Awesome local
 
 ### Objetivo
 
@@ -426,7 +570,7 @@ Média.
 
 ---
 
-## 17. Detalhes da mídia
+## 21. Detalhes da mídia
 
 ### Objetivo
 
@@ -449,15 +593,13 @@ Baixa/Média.
 
 ---
 
-## 18. Organização técnica do código
+## 22. Organização técnica do código
 
 ### Objetivo
 
 Preparar o sistema para manutenção de longo prazo.
 
-### Itens
-
-#### CSS
+### CSS
 
 - [ ] Refatorar `admin.css`.
 - [ ] Agrupar estilos por componente.
@@ -465,10 +607,11 @@ Preparar o sistema para manutenção de longo prazo.
 - [ ] Reduzir uso de `!important`.
 - [ ] Padronizar espaçamentos.
 - [ ] Padronizar botões.
+- [ ] Padronizar cards.
 - [ ] Padronizar modais.
 - [ ] Separar estilos por área, se necessário.
 
-#### JavaScript do admin
+### JavaScript do admin
 
 - [ ] Modularizar `admin.js`.
 - [ ] Separar lógica de mídias.
@@ -476,10 +619,12 @@ Preparar o sistema para manutenção de longo prazo.
 - [ ] Separar lógica de filtros.
 - [ ] Separar lógica de upload.
 - [ ] Separar lógica de logs.
+- [ ] Separar lógica de backups.
+- [ ] Separar lógica de diagnóstico.
 - [ ] Separar lógica de modais.
 - [ ] Separar helpers/utilitários.
 
-#### Backend
+### Backend
 
 - [ ] Avaliar separação do `server.js`.
 - [ ] Criar pasta `routes/`.
@@ -491,6 +636,7 @@ Preparar o sistema para manutenção de longo prazo.
 - [ ] Separar lógica de playlist.
 - [ ] Separar lógica de auditoria.
 - [ ] Separar lógica de backups.
+- [ ] Separar lógica de diagnóstico.
 
 ### Prioridade
 
@@ -500,7 +646,7 @@ Média.
 
 # FASE 4 — VERSÃO COMERCIAL / WHITELABEL
 
-## 19. Separar versão institucional da versão comercial
+## 23. Separar versão institucional da versão comercial
 
 ### Objetivo
 
@@ -521,7 +667,7 @@ Alta para versão comercial.
 
 ---
 
-## 20. Whitelabel básico
+## 24. Whitelabel básico
 
 ### Objetivo
 
@@ -545,7 +691,7 @@ Altíssima para venda.
 
 ---
 
-## 21. Tela de configuração da marca
+## 25. Tela de configuração da marca
 
 ### Objetivo
 
@@ -570,7 +716,7 @@ Alta.
 
 ---
 
-## 22. Modelos de player
+## 26. Modelos de player
 
 ### Objetivo
 
@@ -592,7 +738,7 @@ Média.
 
 ---
 
-## 23. Templates de conteúdo
+## 27. Templates de conteúdo
 
 ### Objetivo
 
@@ -617,7 +763,7 @@ Média/Alta para versão comercial.
 
 ---
 
-## 24. Pacote de conteúdo opcional
+## 28. Pacote de conteúdo opcional
 
 ### Objetivo
 
@@ -639,7 +785,7 @@ Alta para precificação.
 
 ---
 
-## 25. Multi-cliente / multiempresa
+## 29. Multi-cliente / multiempresa
 
 ### Objetivo
 
@@ -668,7 +814,7 @@ Baixa no começo, alta para escala.
 
 ---
 
-## 26. Status das telas
+## 30. Status das telas
 
 ### Objetivo
 
@@ -691,7 +837,7 @@ Alta para produto comercial maduro.
 
 ---
 
-## 27. Playlists por unidade ou tela
+## 31. Playlists por unidade ou tela
 
 ### Objetivo
 
@@ -714,7 +860,7 @@ Média/Alta.
 
 ---
 
-## 28. Modo comunicado urgente
+## 32. Modo comunicado urgente
 
 ### Objetivo
 
@@ -735,7 +881,7 @@ Média.
 
 ---
 
-## 29. Relatórios
+## 33. Relatórios
 
 ### Objetivo
 
@@ -758,7 +904,7 @@ Média.
 
 ---
 
-## 30. Manual do cliente
+## 34. Manual do cliente
 
 ### Objetivo
 
@@ -772,6 +918,7 @@ Reduzir suporte repetitivo e facilitar adoção.
 - [ ] Como ordenar playlist.
 - [ ] Como agendar período.
 - [ ] Como usar prioridade.
+- [ ] Como usar recorrência.
 - [ ] Como excluir mídia.
 - [ ] Como trocar senha.
 - [ ] Formatos recomendados.
@@ -785,7 +932,7 @@ Alta.
 
 ---
 
-## 31. Proposta comercial
+## 35. Proposta comercial
 
 ### Objetivo
 
@@ -811,18 +958,23 @@ Alta antes da venda.
 
 ---
 
-# 32. Priorização geral
+# 36. Priorização geral
 
 ## Fazer primeiro
 
-- [ ] Checklist de implantação.
-- [ ] Diagnóstico de rede/travamentos.
-- [ ] Limpeza de chunks.
-- [ ] Validação de espaço em disco.
-- [ ] Backups.
-- [ ] Segurança de upload.
-- [ ] Logs complementares.
+- [x] Limpeza de chunks.
+- [x] Validação de espaço em disco.
+- [x] Backup melhorado.
+- [x] Logs complementares.
+- [x] Diagnóstico operacional.
+- [x] Painel de backups.
+- [x] Painel de diagnóstico.
+- [x] Melhoria da recorrência da playlist.
+- [ ] Checklist final de implantação por ponto.
+- [ ] Diagnóstico de rede/travamentos documentado.
+- [ ] Tooltips/ajuda contextual.
 - [ ] Manual de operação.
+- [ ] Segurança de upload complementar.
 - [ ] Whitelabel básico.
 - [ ] Configuração de marca.
 
@@ -846,7 +998,6 @@ Alta antes da venda.
 - [ ] Integração com Instagram.
 - [ ] Templates automáticos de promoção.
 - [ ] Agendamento por calendário visual.
-- [ ] Painel de saúde do sistema.
 - [ ] Alertas automáticos por e-mail/WhatsApp.
 - [ ] Dashboard comercial com métricas.
 - [ ] Tema claro/escuro no admin.
@@ -854,29 +1005,49 @@ Alta antes da venda.
 
 ---
 
-# 33. Sprints sugeridas
+# 37. Sprints sugeridas
 
 ## Sprint 1 — Operação e robustez
 
-- [ ] Limpeza de chunks.
-- [ ] Validação de espaço em disco.
-- [ ] Backup melhorado.
-- [ ] Logs complementares.
+Status: concluída em grande parte.
+
+- [x] Limpeza de chunks.
+- [x] Validação de espaço em disco.
+- [x] Backup melhorado.
+- [x] Logs complementares.
+- [x] Diagnóstico operacional.
+- [x] Painel de backups.
+- [x] Painel de diagnóstico.
+- [x] Recorrência inteligente da playlist.
 - [ ] Diagnóstico de rede documentado.
+- [ ] Checklist final de implantação por ponto.
 
 ---
 
-## Sprint 2 — Segurança e manutenção
+## Sprint 2 — Usabilidade e operação assistida
+
+- [ ] Criar sistema de tooltips/ajuda contextual.
+- [ ] Melhorar textos explicativos da recorrência.
+- [ ] Melhorar orientações de armazenamento.
+- [ ] Melhorar orientações de backups e diagnóstico.
+- [ ] Revisar manual administrativo.
+- [ ] Revisar manual de operação dos pontos instalados.
+
+---
+
+## Sprint 3 — Segurança e manutenção
 
 - [ ] Revisar upload.
 - [ ] Validar extensão e MIME type.
-- [ ] Limitar tamanho máximo.
+- [ ] Limitar tamanho máximo, se necessário.
 - [ ] Melhorar mensagens de erro.
 - [ ] Font Awesome local.
+- [ ] Avaliar timeout de sessão.
+- [ ] Avaliar logout automático por inatividade.
 
 ---
 
-## Sprint 3 — Whitelabel básico
+## Sprint 4 — Whitelabel básico
 
 - [ ] Configurar nome do cliente.
 - [ ] Configurar logo.
@@ -887,7 +1058,7 @@ Alta antes da venda.
 
 ---
 
-## Sprint 4 — Documentação e venda
+## Sprint 5 — Documentação e venda
 
 - [ ] Manual do cliente.
 - [ ] Guia de implantação comercial.
@@ -897,7 +1068,7 @@ Alta antes da venda.
 
 ---
 
-## Sprint 5 — Escala
+## Sprint 6 — Escala
 
 - [ ] Status das telas.
 - [ ] Playlists por tela.
@@ -907,7 +1078,7 @@ Alta antes da venda.
 
 ---
 
-# 34. Observações estratégicas
+# 38. Observações estratégicas
 
 A evolução comercial do sistema deve ocorrer sem comprometer a versão institucional da Prefeitura.
 
@@ -937,10 +1108,9 @@ A meta inicial deve ser criar um produto:
 
 ---
 
-# 35. Regra de ouro
+# 39. Regra de ouro
 
 Antes de transformar uma ideia em desenvolvimento, classificar:
-
 
 1. É essencial para estabilidade?
 2. É importante para uso real?
@@ -948,46 +1118,4 @@ Antes de transformar uma ideia em desenvolvimento, classificar:
 4. É apenas melhoria visual?
 5. É ideia futura?
 
----
-
-## Fase 3 — Itens concluídos nesta etapa
-
-- [x] Implementar limpeza automática de uploads em partes/chunks antigos.
-- [x] Registrar auditoria da limpeza automática de chunks.
-- [x] Adicionar resumo de armazenamento no backend.
-- [x] Configurar limite operacional da pasta `midia/` via `.env`.
-- [x] Configurar reserva mínima de disco livre via `.env`.
-- [x] Bloquear uploads quando ultrapassarem limite operacional de armazenamento.
-- [x] Bloquear finalização de uploads em chunks quando houver risco de armazenamento.
-- [x] Registrar auditoria de uploads bloqueados por armazenamento.
-- [x] Criar card visual de armazenamento na dashboard.
-- [x] Refinar visualização dos logs de auditoria no admin.
-- [x] Auditar backups automáticos JSON.
-- [x] Implementar backup seguro/auditado do banco SQLite.
-- [x] Incluir backups `.db` na listagem administrativa de backups.
-- [x] Criar painel visual de Backups no admin.
-- [x] Criar rota protegida de diagnóstico operacional.
-- [x] Criar painel visual de Diagnóstico no admin.
-
-## Pendências mantidas para próximas etapas
-
-- [ ] Refatorar `admin.css` em blocos organizados.
-- [ ] Melhorar responsividade mobile dos novos cards de Backups e Diagnóstico.
-- [ ] Criar filtros por tipo na listagem de backups.
-- [ ] Avaliar download seguro de backups pela interface.
-- [ ] Avaliar restauração controlada de backups.
-- [ ] Criar modal detalhado para diagnóstico operacional completo.
-- [ ] Atualizar documentação executiva da Fase 3.
-- [ ] Validar deploy em produção/VM após merge.
-
-### Melhorias de usabilidade e experiência do operador
-
-- [ ] Criar sistema de tooltips/ajuda contextual no admin para orientar usuários sobre campos, botões e regras de funcionamento.
-- [ ] Adicionar textos explicativos para prioridade, recorrência, período de exibição, armazenamento, backups e diagnóstico.
-
-### Melhorias na geração da playlist
-
-- [ ] Melhorar algoritmo de recorrência da playlist para evitar que uma mídia repetida apareça muito próxima da sua posição original.
-- [ ] Criar regra de distância mínima entre aparições da mesma mídia.
-- [ ] Evitar repetições coladas no início/fim do ciclo da playlist.
-- [ ] Testar cenários com poucas mídias e mídias configuradas como alta/urgente.
+Essa classificação deve orientar a prioridade real do backlog.

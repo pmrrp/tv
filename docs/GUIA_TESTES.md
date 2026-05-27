@@ -8,28 +8,55 @@ Ele deve ser usado antes de:
 
 - apresentar o sistema;
 - fazer deploy;
-- considerar a Fase 2 finalizada;
-- realizar grandes refatorações.
+- considerar uma fase finalizada;
+- realizar grandes refatorações;
+- subir alterações para a VM;
+- validar correções críticas.
 
 ---
 
-## 2. Ambiente de teste
+## 2. Ambientes de teste
 
 Testar preferencialmente em:
 
 - ambiente local;
-- VM;
+- VM/produção;
 - navegador principal usado na Prefeitura;
-- navegador alternativo.
+- navegador alternativo;
+- mini PC conectado à TV, quando aplicável.
 
-Navegadores recomendados para teste:
+Navegadores recomendados:
 
 - Google Chrome;
 - Microsoft Edge.
 
 ---
 
-## 3. Testes de acesso
+## 3. Checklist rápido antes dos testes
+
+Antes de iniciar:
+
+- [ ] Confirmar branch atual.
+- [ ] Confirmar `git status`.
+- [ ] Confirmar que o servidor local está rodando.
+- [ ] Confirmar que o `.env` local está com valores corretos.
+- [ ] Confirmar ausência de alterações pendentes não intencionais.
+- [ ] Abrir console do navegador.
+- [ ] Fazer hard refresh com `Ctrl + F5`.
+
+Comandos úteis:
+
+```bash
+git branch
+git status
+git --no-pager log --oneline -5
+```
+
+---
+
+# TESTES GERAIS
+
+## 4. Testes de acesso
 
 - [ ] Acessar `/admin`.
 - [ ] Confirmar redirecionamento para login quando não logado.
@@ -39,10 +66,11 @@ Navegadores recomendados para teste:
 - [ ] Fazer logout.
 - [ ] Confirmar encerramento da sessão.
 - [ ] Atualizar página após logout e confirmar proteção.
+- [ ] Confirmar foco automático no campo de login.
 
 ---
 
-## 4. Testes da dashboard
+## 5. Testes da dashboard
 
 - [ ] Confirmar carregamento do cabeçalho.
 - [ ] Confirmar exibição do usuário logado.
@@ -50,10 +78,29 @@ Navegadores recomendados para teste:
 - [ ] Confirmar ausência de erro vermelho no console.
 - [ ] Confirmar botão de abrir player.
 - [ ] Confirmar botão de logout.
+- [ ] Confirmar menu do usuário.
+- [ ] Confirmar que o menu do usuário fecha ao clicar fora.
 
 ---
 
-## 5. Testes de upload
+## 6. Testes dos cards de resumo
+
+- [ ] Confirmar total de mídias cadastradas.
+- [ ] Confirmar mídias ativas/inativas.
+- [ ] Confirmar mídias dentro da validade.
+- [ ] Confirmar mídias agendadas/vencidas.
+- [ ] Confirmar prioridades.
+- [ ] Confirmar recorrências.
+- [ ] Confirmar itens publicados na playlist.
+- [ ] Confirmar última atualização da playlist.
+- [ ] Confirmar card de armazenamento, quando disponível.
+- [ ] Confirmar que os valores são atualizados após upload, exclusão ou alteração.
+
+---
+
+# TESTES DE UPLOAD
+
+## 7. Testes de upload básico
 
 - [ ] Enviar imagem pequena.
 - [ ] Enviar vídeo pequeno.
@@ -63,10 +110,64 @@ Navegadores recomendados para teste:
 - [ ] Confirmar mídia na biblioteca.
 - [ ] Confirmar atualização da playlist.
 - [ ] Confirmar log de upload.
+- [ ] Confirmar que o card de armazenamento atualiza após upload.
 
 ---
 
-## 6. Testes de biblioteca
+## 8. Testes de upload em partes/chunks
+
+- [ ] Enviar vídeo grande.
+- [ ] Confirmar envio sequencial dos chunks.
+- [ ] Confirmar finalização do upload.
+- [ ] Confirmar criação do arquivo final em `midia/`.
+- [ ] Confirmar remoção da pasta temporária em `data/upload-chunks/`.
+- [ ] Confirmar registro da mídia na biblioteca.
+- [ ] Confirmar atualização da playlist.
+- [ ] Confirmar log de auditoria.
+
+---
+
+## 9. Testes de bloqueio preventivo por armazenamento
+
+### Preparação
+
+Temporariamente, em ambiente local, ajustar o `.env`:
+
+```env
+MEDIA_MAX_STORAGE_GB=1
+DISK_MIN_FREE_GB=50
+```
+
+Reiniciar o servidor após alterar o `.env`.
+
+### Testes
+
+- [ ] Tentar enviar arquivo que ultrapasse o limite operacional.
+- [ ] Confirmar mensagem amigável de bloqueio.
+- [ ] Confirmar que o arquivo não entra na biblioteca.
+- [ ] Confirmar que o arquivo não fica salvo indevidamente em `midia/`.
+- [ ] Confirmar log `midia.upload.bloqueado`.
+- [ ] Confirmar que o card de armazenamento indica estado de aviso/crítico quando aplicável.
+- [ ] Testar bloqueio em upload simples, se aplicável.
+- [ ] Testar bloqueio na finalização de chunks.
+- [ ] Confirmar limpeza dos chunks após bloqueio na finalização.
+
+### Restauração
+
+Após o teste, retornar o `.env` para:
+
+```env
+MEDIA_MAX_STORAGE_GB=180
+DISK_MIN_FREE_GB=50
+```
+
+Reiniciar o servidor.
+
+---
+
+# TESTES DA BIBLIOTECA
+
+## 10. Testes de biblioteca
 
 - [ ] Abrir biblioteca.
 - [ ] Confirmar listagem de mídias.
@@ -76,6 +177,7 @@ Navegadores recomendados para teste:
 - [ ] Confirmar status.
 - [ ] Confirmar prioridade.
 - [ ] Confirmar período.
+- [ ] Confirmar recorrência.
 - [ ] Confirmar que o botão Detalhes abre o modal de detalhes da mídia.
 - [ ] Confirmar que o modal de detalhes exibe dados da mídia.
 - [ ] Confirmar que o modal de detalhes fecha pelo X.
@@ -87,7 +189,7 @@ Navegadores recomendados para teste:
 
 ---
 
-## 7. Testes de edição de mídia
+## 11. Testes de edição de mídia
 
 - [ ] Alterar título amigável.
 - [ ] Confirmar que o botão "Salvar alterações" aparece após alterar o título.
@@ -97,12 +199,12 @@ Navegadores recomendados para teste:
 - [ ] Alterar prioridade.
 - [ ] Alterar recorrência.
 - [ ] Alterar período.
-- [ ] Confirmar que alterações de configuração exigem salvamento.
+- [ ] Confirmar que alterações de configuração exigem salvamento, exceto ações que salvam diretamente.
 - [ ] Confirmar log de edição.
 
 ---
 
-## 7.1 Testes de alterações pendentes
+## 12. Testes de alterações pendentes
 
 - [ ] Alterar título amigável de uma mídia sem salvar.
 - [ ] Confirmar que o card fica marcado como alterado.
@@ -126,7 +228,7 @@ Navegadores recomendados para teste:
 
 ---
 
-## 7.1 Testes da TAG Ativo/Inativo
+## 13. Testes da TAG Ativo/Inativo
 
 - [ ] Clicar na TAG "Ativo" de uma mídia.
 - [ ] Confirmar que a TAG muda imediatamente para "Inativo".
@@ -149,19 +251,67 @@ Navegadores recomendados para teste:
 
 ---
 
-## 8. Testes de período de exibição
+# TESTES DE FILTROS
+
+## 14. Testes dos filtros da biblioteca
+
+- [ ] Abrir filtros.
+- [ ] Aplicar filtro por busca textual.
+- [ ] Aplicar filtro por status.
+- [ ] Aplicar filtro por tipo.
+- [ ] Aplicar filtro por período.
+- [ ] Aplicar filtro por prioridade.
+- [ ] Aplicar filtro por recorrência.
+- [ ] Combinar múltiplos filtros.
+- [ ] Confirmar contador de filtros aplicados.
+- [ ] Confirmar que filtros só são aplicados ao clicar em "Aplicar filtros".
+- [ ] Confirmar que "Limpar filtros" remove todos os filtros.
+- [ ] Confirmar que clicar fora sem aplicar descarta rascunho.
+- [ ] Confirmar que ESC sem aplicar descarta rascunho.
+- [ ] Confirmar que selects premium refletem os valores aplicados.
+- [ ] Confirmar que selects premium não quebram layout.
+
+---
+
+# TESTES DE PERÍODO, PRIORIDADE E RECORRÊNCIA
+
+## 15. Testes de período de exibição
 
 - [ ] Definir mídia com início futuro.
 - [ ] Confirmar que ela aparece como agendada.
+- [ ] Confirmar que ela não entra na playlist antes do início.
 - [ ] Definir mídia vencida.
 - [ ] Confirmar que ela sai da playlist.
 - [ ] Definir período indefinido.
 - [ ] Confirmar que permanece ativa.
 - [ ] Confirmar rotina automática de atualização.
+- [ ] Confirmar salvamento direto ao aplicar período no modal.
+- [ ] Confirmar validação impedindo data final anterior à inicial.
 
 ---
 
-## 8.1 Testes de prioridade e repetição
+## 16. Testes do modal premium de período
+
+- [ ] Abrir modal de período.
+- [ ] Confirmar nome da mídia no modal.
+- [ ] Selecionar data inicial.
+- [ ] Aplicar início.
+- [ ] Selecionar data final.
+- [ ] Aplicar fim.
+- [ ] Abrir seletor de horário.
+- [ ] Alterar hora.
+- [ ] Alterar minuto.
+- [ ] Confirmar horário.
+- [ ] Confirmar que ESC fecha primeiro o seletor de horário.
+- [ ] Confirmar que ESC depois fecha o modal principal.
+- [ ] Confirmar feedback interno do modal.
+- [ ] Salvar período.
+- [ ] Confirmar atualização no card.
+- [ ] Confirmar atualização da playlist.
+
+---
+
+## 17. Testes de prioridade e repetição
 
 - [ ] Selecionar prioridade Normal em uma imagem.
 - [ ] Confirmar que o campo de repetição fica oculto.
@@ -181,319 +331,456 @@ Navegadores recomendados para teste:
 
 ---
 
-## 8.2 Testes do select premium de repetição
+## 18. Testes do select premium de repetição
 
 - [ ] Alterar prioridade de uma mídia para Alta.
-- [ ] Confirmar que o campo de repetição aparece.
-- [ ] Confirmar sugestão automática "A cada 6 mídias".
-- [ ] Abrir o select premium de repetição.
-- [ ] Escolher outro valor.
-- [ ] Confirmar que o card marca alteração pendente.
-- [ ] Salvar a mídia.
-- [ ] Recarregar a página.
-- [ ] Confirmar que o valor salvo permanece.
-- [ ] Alterar prioridade para Urgente.
-- [ ] Confirmar sugestão automática "A cada 3 mídias".
+- [ ] Confirmar abertura do select premium de repetição.
+- [ ] Escolher "A cada 6 mídias".
+- [ ] Confirmar valor no select real.
+- [ ] Confirmar que o botão salvar aparece.
+- [ ] Salvar.
+- [ ] Recarregar página.
+- [ ] Confirmar valor persistido.
 - [ ] Alterar prioridade para Normal.
-- [ ] Confirmar que o campo de repetição fica oculto/zerado.
+- [ ] Confirmar que repetição fica oculta/desativada.
+- [ ] Confirmar que a playlist não repete mídia Normal.
 
 ---
 
-## 8.2 Testes de sincronização com alterações pendentes
+## 19. Testes da recorrência inteligente da playlist
 
-- [ ] Alterar título amigável de uma mídia sem salvar.
-- [ ] Clicar em "Sincronizar".
-- [ ] Confirmar que a sincronização é bloqueada.
-- [ ] Confirmar que aparece modal de aviso em tom de atenção.
-- [ ] Clicar em "Continuar editando".
-- [ ] Confirmar que o rascunho permanece na tela.
-- [ ] Clicar novamente em "Sincronizar".
-- [ ] Clicar em "Salvar alterações" dentro do modal.
-- [ ] Confirmar que o fluxo de salvamento é acionado.
-- [ ] Confirmar que as alterações são salvas.
-- [ ] Confirmar que o botão global "Salvar alterações" desaparece após salvar.
-- [ ] Clicar em "Sincronizar" sem alterações pendentes.
-- [ ] Confirmar que a biblioteca sincroniza normalmente.
+### Objetivo
 
----
+Validar se a playlist evita mídias repetidas muito próximas da própria posição original.
 
-## 8.3 Testes do modal premium de período
+### Cenário recomendado
 
-- [ ] Abrir a biblioteca.
-- [ ] Clicar em "Período de exibição" de uma mídia.
-- [ ] Confirmar que o modal premium de período abre.
-- [ ] Confirmar que o nome amigável da mídia aparece no modal.
-- [ ] Confirmar que o modal fecha pelo botão X.
-- [ ] Confirmar que o modal fecha pelo botão Cancelar.
-- [ ] Confirmar que o modal fecha ao clicar fora.
-- [ ] Confirmar que o modal fecha com ESC.
-- [ ] Confirmar que "Tempo indeterminado" aparece marcado quando a mídia não possui início/fim.
-- [ ] Escolher uma data de início.
-- [ ] Confirmar que "Tempo indeterminado" é desmarcado automaticamente.
-- [ ] Confirmar que aparecem os botões "Limpar campo selecionado" e "Aplicar início".
-- [ ] Clicar em "Aplicar início".
-- [ ] Confirmar que aparece feedback interno.
-- [ ] Confirmar que o modal passa para seleção de fim.
-- [ ] Escolher uma data de fim.
-- [ ] Clicar em "Aplicar fim".
-- [ ] Confirmar que aparece feedback interno.
-- [ ] Confirmar que os botões do campo somem após aplicar.
-- [ ] Clicar em "Aplicar período".
-- [ ] Confirmar que o período é salvo diretamente no backend.
-- [ ] Confirmar que não aparece confirmação extra.
-- [ ] Confirmar que o card não fica com botão Salvar pendente.
-- [ ] Recarregar a página.
-- [ ] Confirmar que o período salvo permanece.
+Criar ou usar pelo menos duas mídias com recorrência ativa:
+
+```txt
+Mídia A — repetir a cada 3 mídias
+Mídia B — repetir a cada 3 mídias
+```
+
+### Testes
+
+- [ ] Gerar playlist com duas mídias recorrentes.
+- [ ] Abrir `playlist.json`.
+- [ ] Confirmar que a mesma mídia não aparece colada nela mesma.
+- [ ] Confirmar que a mesma mídia não aparece separada por apenas uma posição, quando evitável.
+- [ ] Mover uma mídia recorrente para perto do início da lista.
+- [ ] Gerar playlist novamente.
+- [ ] Confirmar distribuição visual aceitável.
+- [ ] Mover uma mídia recorrente para perto do meio da lista.
+- [ ] Gerar playlist novamente.
+- [ ] Confirmar distribuição visual aceitável.
+- [ ] Mover uma mídia recorrente para perto do final da lista.
+- [ ] Gerar playlist novamente.
+- [ ] Confirmar que a lógica considera o loop da playlist.
+- [ ] Confirmar que a contagem não reseta de forma estranha no início de um novo ciclo.
+- [ ] Confirmar que, se necessário, o sistema pula uma repetição para evitar duplicação visual incômoda.
+
+### Resultado esperado
+
+A recorrência deve destacar mídias importantes sem gerar sensação de bug visual.
 
 ---
 
-## 8.4 Testes do seletor premium de horário
+# TESTES DE PLAYLIST E PLAYER
 
-- [ ] Abrir o modal premium de período.
-- [ ] Escolher uma data de início.
-- [ ] Clicar no campo Horário.
-- [ ] Confirmar que o mini modal de horário abre.
-- [ ] Clicar na seta para aumentar hora.
-- [ ] Clicar na seta para diminuir hora.
-- [ ] Clicar na seta para aumentar minuto.
-- [ ] Clicar na seta para diminuir minuto.
-- [ ] Clicar em Aplicar no mini modal.
-- [ ] Confirmar que o horário visual é atualizado.
-- [ ] Confirmar que o mini modal fecha.
-- [ ] Confirmar que o botão "Aplicar início" aparece quando houver data ativa.
-- [ ] Pressionar ESC com o mini modal aberto.
-- [ ] Confirmar que apenas o mini modal fecha.
-- [ ] Pressionar ESC novamente.
-- [ ] Confirmar que o modal principal de período fecha.
-- [ ] Repetir o fluxo para a data final.
-- [ ] Salvar o período.
-- [ ] Recarregar a página.
-- [ ] Confirmar que datas e horários persistem corretamente.
+## 20. Testes de geração da playlist
+
+- [ ] Gerar playlist manualmente.
+- [ ] Confirmar mensagem de sucesso.
+- [ ] Confirmar atualização de `playlist.json`.
+- [ ] Confirmar que mídias inativas não entram.
+- [ ] Confirmar que mídias vencidas não entram.
+- [ ] Confirmar que mídias futuras não entram antes da data.
+- [ ] Confirmar que prioridade e recorrência são respeitadas.
+- [ ] Confirmar que a recorrência inteligente evita duplicações coladas.
+- [ ] Confirmar log/auditoria, quando aplicável.
 
 ---
 
-## 8.3 Testes de validação do período
-
-- [ ] Escolher uma data inicial.
-- [ ] Escolher uma data final anterior à inicial.
-- [ ] Clicar em "Aplicar período".
-- [ ] Confirmar que o sistema não salva.
-- [ ] Confirmar que aparece aviso interno no modal.
-- [ ] Corrigir a data final.
-- [ ] Clicar novamente em "Aplicar período".
-- [ ] Confirmar que salva corretamente.
-- [ ] Marcar "Tempo indeterminado" em uma mídia que possuía período.
-- [ ] Clicar em "Aplicar período".
-- [ ] Confirmar que início e fim são limpos.
-- [ ] Recarregar a página.
-- [ ] Confirmar que a mídia permanece sem período definido.
-
----
-
-## 9. Testes de filtros
-
-- [ ] Abrir filtros.
-- [ ] Confirmar que botões não aparecem sem alteração.
-- [ ] Selecionar filtro.
-- [ ] Confirmar que aparece “Aplicar filtros”.
-- [ ] Clicar fora sem aplicar.
-- [ ] Confirmar que o rascunho foi descartado.
-- [ ] Selecionar filtro novamente.
-- [ ] Aplicar filtro.
-- [ ] Confirmar contador no botão.
-- [ ] Abrir filtros com filtro ativo.
-- [ ] Confirmar botão “Limpar filtros”.
-- [ ] Limpar filtros.
-- [ ] Confirmar listagem completa.
-
----
-
-## 9.1 Testes de selects premium dos filtros
-
-- [ ] Abrir o popover de filtros.
-- [ ] Confirmar que os filtros aparecem com visual premium.
-- [ ] Abrir filtro de Status.
-- [ ] Selecionar uma opção de Status.
-- [ ] Confirmar que o botão "Aplicar filtros" aparece.
-- [ ] Abrir filtro de Tipo.
-- [ ] Selecionar uma opção de Tipo.
-- [ ] Abrir filtro de Período.
-- [ ] Selecionar uma opção de Período.
-- [ ] Abrir filtro de Prioridade.
-- [ ] Selecionar uma opção de Prioridade.
-- [ ] Abrir filtro de Repetição.
-- [ ] Selecionar uma opção de Repetição.
-- [ ] Clicar fora sem aplicar.
-- [ ] Confirmar que o rascunho é descartado.
-- [ ] Abrir filtros novamente.
-- [ ] Confirmar que os selects premium voltaram ao estado aplicado anterior.
-- [ ] Selecionar filtros e clicar em "Aplicar filtros".
-- [ ] Confirmar que a listagem é filtrada corretamente.
-- [ ] Confirmar que o contador de filtros aplicados aparece.
-- [ ] Clicar em "Limpar filtros".
-- [ ] Confirmar que todos os selects premium voltam ao padrão.
-
----
-
-## 10. Testes de ordenação
-
-- [ ] Mover mídia para cima.
-- [ ] Mover mídia para baixo.
-- [ ] Arrastar mídia, se disponível.
-- [ ] Confirmar nova ordem.
-- [ ] Confirmar atualização da playlist.
-
----
-
-## 11. Testes de exclusão de mídia
-
-- [ ] Excluir mídia individual.
-- [ ] Confirmar modal de confirmação.
-- [ ] Cancelar exclusão.
-- [ ] Confirmar que mídia permanece.
-- [ ] Excluir novamente e confirmar.
-- [ ] Confirmar remoção da biblioteca.
-- [ ] Confirmar atualização da playlist.
-- [ ] Confirmar log de exclusão.
-
----
-
-## 12. Testes de exclusão em lote
-
-- [ ] Ativar modo seleção.
-- [ ] Selecionar múltiplas mídias.
-- [ ] Cancelar exclusão em lote.
-- [ ] Confirmar que mídias permanecem.
-- [ ] Confirmar exclusão em lote.
-- [ ] Confirmar remoção.
-- [ ] Confirmar log de exclusão em lote.
-
----
-
-## 13. Testes de usuários
-
-- [ ] Criar usuário.
-- [ ] Editar usuário.
-- [ ] Resetar senha.
-- [ ] Desativar usuário.
-- [ ] Ativar usuário.
-- [ ] Excluir usuário teste.
-- [ ] Confirmar proteção contra autoexclusão.
-- [ ] Confirmar proteção contra autodesativação.
-- [ ] Confirmar proteção de superadmin.
-
----
-
-## 14. Testes de perfis
-
-Testar com:
-
-- [ ] superadmin;
-- [ ] admin;
-- [ ] editor;
-- [ ] viewer.
-
-Confirmar:
-
-- [ ] botões visíveis conforme perfil;
-- [ ] rotas protegidas no backend;
-- [ ] ações proibidas retornam erro;
-- [ ] usuários sem permissão não conseguem alterar dados sensíveis.
-
----
-
-## 15. Testes de logs
-
-- [ ] Fazer login.
-- [ ] Fazer logout.
-- [ ] Enviar mídia.
-- [ ] Editar mídia.
-- [ ] Excluir mídia.
-- [ ] Criar usuário.
-- [ ] Resetar senha.
-- [ ] Alterar status.
-- [ ] Confirmar registros na tela de auditoria.
-
----
-
-## 16. Testes do player
+## 21. Testes do player
 
 - [ ] Abrir player.
-- [ ] Confirmar splash inicial.
-- [ ] Confirmar carregamento da playlist.
+- [ ] Confirmar splash/carregamento inicial.
+- [ ] Confirmar reprodução de vídeo.
 - [ ] Confirmar exibição de imagem.
-- [ ] Confirmar exibição de vídeo.
-- [ ] Confirmar troca automática.
-- [ ] Confirmar loop.
+- [ ] Confirmar duração configurada para imagens.
+- [ ] Confirmar troca automática de mídia.
+- [ ] Confirmar loop da playlist.
+- [ ] Confirmar atualização automática após nova playlist.
 - [ ] Confirmar relógio.
-- [ ] Confirmar controles temporários.
-- [ ] Confirmar atualização após mudança de playlist.
-- [ ] Inativar uma mídia pelo admin e confirmar que ela sai do player após a sincronização.
-- [ ] Reativar uma mídia pelo admin e confirmar que ela volta ao player após a sincronização.
-- [ ] Agendar uma mídia para horário próximo e confirmar entrada na playlist com atraso reduzido.
-- [ ] Confirmar que o player sincroniza a playlist silenciosamente, sem recarregar a página inteira.
-- [ ] Confirmar que alterações salvas no admin refletem no player após sincronização automática.
-- [ ] Confirmar que sincronização manual não ocorre quando existem alterações pendentes na biblioteca.
+- [ ] Confirmar sidebar/visual premium.
+- [ ] Confirmar ausência de erro vermelho no console.
+- [ ] Confirmar áudio no mini PC, quando aplicável.
+- [ ] Confirmar comportamento em tela cheia/quiosque.
 
 ---
 
-## 17. Testes de deploy
+# TESTES DE USUÁRIOS E PERMISSÕES
 
-Na VM:
+## 22. Testes de usuários
+
+- [ ] Acessar área de usuários como superadmin.
+- [ ] Criar novo usuário.
+- [ ] Editar usuário.
+- [ ] Alterar role.
+- [ ] Ativar/desativar usuário.
+- [ ] Resetar senha.
+- [ ] Excluir usuário.
+- [ ] Confirmar que superadmin não consegue excluir a si mesmo.
+- [ ] Confirmar que usuário não consegue desativar a si mesmo.
+- [ ] Confirmar proteção contra admin comum alterar superadmin.
+- [ ] Confirmar proteção contra admin comum promover usuário para superadmin.
+- [ ] Confirmar logs das ações.
+
+---
+
+## 23. Testes por perfil
+
+### Superadmin
+
+- [ ] Acessa usuários.
+- [ ] Acessa auditoria.
+- [ ] Acessa backups.
+- [ ] Acessa diagnóstico.
+- [ ] Gera backup do banco.
+- [ ] Executa ações administrativas sensíveis.
+
+### Admin
+
+- [ ] Acessa funções permitidas.
+- [ ] Não acessa funções exclusivas de superadmin.
+- [ ] Não altera superadmin.
+- [ ] Não promove usuário para superadmin.
+
+### Editor
+
+- [ ] Pode operar mídias conforme permissão definida.
+- [ ] Não acessa gerenciamento sensível de usuários.
+- [ ] Não acessa backups/diagnóstico, se restrito.
+
+### Viewer
+
+- [ ] Não realiza ações de edição.
+- [ ] Visualiza apenas o que for permitido.
+
+---
+
+# TESTES DE AUDITORIA
+
+## 24. Testes de logs de auditoria
+
+- [ ] Confirmar carregamento da seção Auditoria para superadmin.
+- [ ] Confirmar que a seção fica oculta para usuários sem permissão.
+- [ ] Confirmar log de login.
+- [ ] Confirmar log de logout.
+- [ ] Confirmar log de upload.
+- [ ] Confirmar log de upload bloqueado.
+- [ ] Confirmar log de edição de mídia.
+- [ ] Confirmar log de exclusão de mídia.
+- [ ] Confirmar log de exclusão em lote.
+- [ ] Confirmar log de criação de usuário.
+- [ ] Confirmar log de edição de usuário.
+- [ ] Confirmar log de reset de senha.
+- [ ] Confirmar log de exclusão de usuário.
+- [ ] Confirmar log de backup JSON automático.
+- [ ] Confirmar log de backup SQLite manual.
+- [ ] Confirmar log de limpeza automática de chunks.
+- [ ] Confirmar títulos amigáveis dos logs.
+- [ ] Confirmar resumos humanos.
+- [ ] Confirmar detalhes técnicos expansíveis.
+- [ ] Confirmar rolagem interna da lista.
+
+---
+
+# TESTES DA FASE 3 — ROBUSTEZ OPERACIONAL
+
+## 25. Testes de armazenamento
+
+- [ ] Acessar `/api/admin/resumo`.
+- [ ] Confirmar bloco `armazenamento`.
+- [ ] Confirmar `midiasFormatado`.
+- [ ] Confirmar `limiteMidiasFormatado`.
+- [ ] Confirmar `midiasUsoPercentual`.
+- [ ] Confirmar `discoLivreFormatado`.
+- [ ] Confirmar `status`.
+- [ ] Confirmar card visual de armazenamento na dashboard.
+- [ ] Confirmar barra visual de progresso.
+- [ ] Confirmar texto de usado/limite/livre.
+- [ ] Confirmar mudança visual quando limite temporário é reduzido no `.env`.
+
+---
+
+## 26. Testes de limpeza automática de chunks
+
+### Preparação
+
+Criar uma pasta temporária de teste em:
+
+```txt
+data/upload-chunks/
+```
+
+Quando necessário, usar tempo reduzido temporariamente no código apenas para teste.
+
+### Testes
+
+- [ ] Confirmar que a rotina detecta chunks antigos.
+- [ ] Confirmar que pastas antigas são removidas.
+- [ ] Confirmar que uploads recentes não são removidos.
+- [ ] Confirmar log/auditoria `sistema.chunks.limpeza`.
+- [ ] Confirmar detalhes técnicos do log.
+- [ ] Restaurar tempo normal de 24 horas após o teste.
+
+---
+
+## 27. Testes de backups
+
+- [ ] Abrir seção Backups como superadmin.
+- [ ] Confirmar que a seção fica oculta para usuários sem permissão.
+- [ ] Confirmar listagem de backups.
+- [ ] Confirmar contagem total.
+- [ ] Confirmar contagem de `midia-config`.
+- [ ] Confirmar contagem de `playlist`.
+- [ ] Confirmar contagem de banco SQLite.
+- [ ] Confirmar rolagem interna.
+- [ ] Confirmar cards de backup.
+- [ ] Confirmar tamanho do arquivo.
+- [ ] Confirmar data/hora local.
+- [ ] Gerar backup manual do banco SQLite.
+- [ ] Confirmar criação de arquivo `.db` em `backups/`.
+- [ ] Confirmar log `sistema.backup.database`.
+- [ ] Confirmar atualização da listagem após gerar backup.
+- [ ] Confirmar atualização do diagnóstico após gerar backup.
+
+---
+
+## 28. Testes de diagnóstico operacional
+
+- [ ] Abrir seção Diagnóstico como superadmin.
+- [ ] Confirmar que a seção fica oculta para usuários sem permissão.
+- [ ] Confirmar que o dropdown inicia recolhido.
+- [ ] Clicar para expandir.
+- [ ] Confirmar status geral.
+- [ ] Confirmar Banco SQLite.
+- [ ] Confirmar Armazenamento.
+- [ ] Confirmar Backups.
+- [ ] Confirmar Mídias.
+- [ ] Confirmar Arquivos essenciais.
+- [ ] Confirmar Avisos, quando existirem.
+- [ ] Confirmar Problemas críticos, quando existirem.
+- [ ] Confirmar que avisos mostram texto detalhado.
+- [ ] Clicar em atualizar diagnóstico.
+- [ ] Confirmar atualização sem erro.
+- [ ] Confirmar ausência de erro vermelho no console.
+
+---
+
+## 29. Testes das rotas operacionais
+
+### Health público
+
+```txt
+/api/health
+```
+
+- [ ] Confirmar `ok: true`.
+- [ ] Confirmar nome do sistema.
+- [ ] Confirmar uptime.
+- [ ] Confirmar ambiente.
+- [ ] Confirmar data/hora UTC.
+
+---
+
+### Resumo admin
+
+```txt
+/api/admin/resumo
+```
+
+- [ ] Confirmar retorno autenticado.
+- [ ] Confirmar resumo de mídias.
+- [ ] Confirmar resumo da playlist.
+- [ ] Confirmar resumo de armazenamento.
+- [ ] Confirmar servidor/data/hora.
+
+---
+
+### Backups
+
+```txt
+/api/admin/backups
+```
+
+- [ ] Confirmar retorno autenticado.
+- [ ] Confirmar backups JSON.
+- [ ] Confirmar backups SQLite.
+- [ ] Confirmar tipos de backup.
+- [ ] Confirmar total por tipo.
+
+---
+
+### Diagnóstico
+
+```txt
+/api/admin/diagnostico
+```
+
+- [ ] Confirmar acesso apenas permitido conforme regra definida.
+- [ ] Confirmar status geral.
+- [ ] Confirmar banco.
+- [ ] Confirmar armazenamento.
+- [ ] Confirmar backups.
+- [ ] Confirmar mídias.
+- [ ] Confirmar arquivos essenciais.
+
+---
+
+# TESTES DE DEPLOY NA VM
+
+## 30. Checklist pós-deploy na VM
+
+Após deploy:
+
+- [ ] Confirmar `git status` limpo na VM.
+- [ ] Confirmar branch `fix-admin-funcionalidades`.
+- [ ] Executar `git pull origin fix-admin-funcionalidades`.
+- [ ] Reiniciar PM2 com `--update-env`.
+- [ ] Confirmar `pm2 status`.
+- [ ] Confirmar `pm2 save`.
+- [ ] Acessar painel em produção.
+- [ ] Fazer login.
+- [ ] Confirmar dashboard.
+- [ ] Confirmar player.
+- [ ] Confirmar upload.
+- [ ] Confirmar playlist.
+- [ ] Confirmar backups.
+- [ ] Confirmar diagnóstico.
+- [ ] Confirmar auditoria.
+- [ ] Confirmar ausência de erro no console.
+
+Comandos:
 
 ```powershell
 cd c:\tv-v2\tv
-git pull
-pm2 restart painel-tv-v2
+git status
+git pull origin fix-admin-funcionalidades
+pm2 restart painel-tv-v2 --update-env
 pm2 status
 pm2 save
 ```
 
-Confirmar:
+---
 
-- [ ] processo online;
-- [ ] sem erro no PM2;
-- [ ] admin acessível;
-- [ ] player acessível;
-- [ ] console sem erro crítico.
+## 31. Teste do primeiro backup SQLite na VM
+
+Após deploy da funcionalidade de backup SQLite:
+
+- [ ] Abrir seção Backups na VM.
+- [ ] Gerar primeiro backup do banco.
+- [ ] Confirmar novo arquivo `.db`.
+- [ ] Atualizar diagnóstico.
+- [ ] Confirmar que o aviso de backup SQLite ausente desapareceu.
+- [ ] Confirmar log de auditoria.
 
 ---
 
-## 18. Testes de console
+# TESTES DE RESPONSIVIDADE
 
-Abrir DevTools e verificar:
+## 32. Testes mobile/tablet
 
-- [ ] ausência de erro vermelho;
-- [ ] warnings conhecidos não críticos;
-- [ ] requisições sem falha;
-- [ ] APIs respondendo corretamente.
-
-Warnings conhecidos:
-
-- Font Awesome via CDN pode gerar aviso no Edge relacionado a `cdnjs.cloudflare.com`.
-
----
-
-## 19. Critério de aprovação
-
-A Fase 2 pode ser considerada validada quando:
-
-- login funcionar;
-- dashboard carregar;
-- upload funcionar;
-- biblioteca funcionar;
-- filtros funcionarem;
-- playlist atualizar;
-- player exibir corretamente;
-- usuários funcionarem;
-- logs funcionarem;
-- permissões forem respeitadas;
-- deploy na VM estiver estável.
+- [ ] Testar login em tela pequena.
+- [ ] Testar dashboard em tela pequena.
+- [ ] Testar cards de resumo.
+- [ ] Testar biblioteca.
+- [ ] Testar filtros.
+- [ ] Testar modal de detalhes.
+- [ ] Testar modal de período.
+- [ ] Testar mini modal de horário.
+- [ ] Testar seção Backups.
+- [ ] Testar seção Diagnóstico.
+- [ ] Verificar rolagem interna dos dropdowns.
+- [ ] Verificar botões em largura total quando necessário.
 
 ---
 
-## 20. Observação final
+# TESTES DE REGRESSÃO
 
-Este guia deve ser usado antes da apresentação e também antes de grandes alterações futuras.
+## 33. Regressão obrigatória após mexer no backend
 
-Após refatorações, os testes devem ser repetidos.
+- [ ] Login.
+- [ ] Sessão.
+- [ ] Upload.
+- [ ] Upload em chunks.
+- [ ] Listagem de mídias.
+- [ ] Salvamento de mídia.
+- [ ] Geração de playlist.
+- [ ] Player.
+- [ ] Logs.
+- [ ] Usuários.
+- [ ] Backups.
+- [ ] Diagnóstico.
+- [ ] Console sem erro.
+
+---
+
+## 34. Regressão obrigatória após mexer no admin.js
+
+- [ ] Dashboard carrega.
+- [ ] Upload funciona.
+- [ ] Biblioteca renderiza.
+- [ ] Filtros funcionam.
+- [ ] Modais abrem e fecham.
+- [ ] Salvar mídia funciona.
+- [ ] Ativar/Inativar funciona.
+- [ ] Usuários funcionam.
+- [ ] Auditoria carrega.
+- [ ] Backups carrega.
+- [ ] Diagnóstico carrega.
+- [ ] Console sem erro.
+
+---
+
+## 35. Regressão obrigatória após mexer no admin.css
+
+- [ ] Login visualmente correto.
+- [ ] Header correto.
+- [ ] Cards de resumo corretos.
+- [ ] Upload correto.
+- [ ] Biblioteca correta.
+- [ ] Cards de mídia corretos.
+- [ ] Modais corretos.
+- [ ] Auditoria correta.
+- [ ] Backups correto.
+- [ ] Diagnóstico correto.
+- [ ] Responsivo aceitável.
+- [ ] Sem quebras visuais graves.
+
+---
+
+# 36. Critérios gerais de aprovação
+
+Uma alteração só deve ser considerada aprovada quando:
+
+- [ ] não houver erro vermelho no console;
+- [ ] não houver erro no terminal do Node;
+- [ ] o fluxo principal continuar funcionando;
+- [ ] o comportamento novo estiver testado;
+- [ ] o comportamento antigo não tiver quebrado;
+- [ ] a playlist for gerada corretamente;
+- [ ] o player continuar exibindo conteúdo;
+- [ ] o `git status` estiver limpo após commit;
+- [ ] o push tiver sido realizado;
+- [ ] a VM tiver sido atualizada, quando aplicável.
+
+---
+
+# 37. Observação final
+
+Este guia deve ser atualizado sempre que novas funcionalidades forem adicionadas.
+
+Ele não substitui testes automatizados, mas organiza a validação manual necessária para manter o Painel Ribas confiável em uso real.

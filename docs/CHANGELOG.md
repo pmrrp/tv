@@ -19,15 +19,16 @@ Ele serve para:
 Cada entrada pode conter:
 
 - data aproximada;
+- fase ou tema;
 - tipo de alteração;
 - resumo;
 - impacto no sistema.
 
 ---
 
-## 2026-05 — Fase 1: Player institucional
+# 2026-04 — Fase 1: Player institucional
 
-### Implementado
+## Implementado
 
 - Criação do player web inicial.
 - Reprodução de vídeos em tela cheia.
@@ -37,19 +38,19 @@ Cada entrada pode conter:
 - Estilização inicial com identidade visual da Prefeitura.
 - Testes em navegador de computador e Smart TVs.
 
-### Contexto
+## Contexto
 
 A primeira versão foi pensada para rodar diretamente no navegador das Smart TVs, com foco em simplicidade e leveza.
 
-### Limitação identificada
+## Limitação identificada
 
 Durante os testes, navegadores de Smart TVs, especialmente LG, passaram a apresentar bloqueios de autoplay, inviabilizando a operação automática sem intervenção manual.
 
 ---
 
-## 2026-05 — Decisão de infraestrutura
+# 2026-05 — Decisão de infraestrutura
 
-### Implementado
+## Implementado
 
 - Criação de VM para hospedar o sistema.
 - Publicação do sistema em ambiente próprio.
@@ -57,15 +58,15 @@ Durante os testes, navegadores de Smart TVs, especialmente LG, passaram a aprese
 - Configuração de Cloudflare Tunnel.
 - Uso inicial do domínio `painelribas.com.br`.
 
-### Impacto
+## Impacto
 
 A solução deixou de depender de hospedagem estática e passou a rodar em ambiente controlado, com backend próprio, suporte a uploads e maior estabilidade.
 
 ---
 
-## 2026-05 — Fase 2: Dashboard administrativa
+# 2026-05 — Fase 2: Dashboard administrativa
 
-### Implementado
+## Implementado
 
 - Criação da dashboard administrativa.
 - Criação da tela de login.
@@ -80,15 +81,15 @@ A solução deixou de depender de hospedagem estática e passou a rodar em ambie
 - Exclusão em lote.
 - Geração automática de playlist.
 
-### Impacto
+## Impacto
 
 O sistema passou a permitir gerenciamento dos conteúdos sem edição manual de arquivos.
 
 ---
 
-## 2026-05 — Agendamento, prioridade e recorrência
+# 2026-05 — Agendamento, prioridade e recorrência
 
-### Implementado
+## Implementado
 
 - Período de exibição por mídia.
 - Data/hora inicial.
@@ -101,15 +102,15 @@ O sistema passou a permitir gerenciamento dos conteúdos sem edição manual de 
 - Recorrência/repetição de mídias.
 - Atualização automática da playlist conforme validade.
 
-### Impacto
+## Impacto
 
 A programação das mídias passou a ser mais inteligente, permitindo campanhas temporárias, conteúdos urgentes e repetição controlada.
 
 ---
 
-## 2026-05 — Upload em partes/chunks
+# 2026-05 — Upload em partes/chunks
 
-### Implementado
+## Implementado
 
 - Upload de arquivos grandes em partes.
 - Envio sequencial de chunks.
@@ -118,36 +119,36 @@ A programação das mídias passou a ser mais inteligente, permitindo campanhas 
 - Registro da mídia após finalização.
 - Atualização automática da playlist após upload.
 
-### Contexto
+## Contexto
 
 A implementação foi necessária devido a limitações de upload em ambiente com Cloudflare gratuito e ao tamanho variável dos vídeos institucionais.
 
-### Impacto
+## Impacto
 
 O sistema passou a suportar vídeos maiores com mais estabilidade.
 
 ---
 
-## 2026-05 — Backups automáticos
+# 2026-05 — Backups automáticos iniciais
 
-### Implementado
+## Implementado
 
 - Backup automático de `midia-config.json`.
 - Backup automático de `playlist.json`.
 - Comparação para evitar backups desnecessários.
 - Limite de backups por tipo.
 - Limpeza automática de backups antigos.
-- Listagem de backups na dashboard administrativa.
+- Listagem inicial de backups na dashboard administrativa.
 
-### Impacto
+## Impacto
 
 A configuração das mídias e a playlist passaram a ter proteção contra perdas acidentais.
 
 ---
 
-## 2026-05 — Usuários e permissões
+# 2026-05 — Usuários e permissões
 
-### Implementado
+## Implementado
 
 - Banco SQLite para usuários.
 - Criação de usuários.
@@ -165,15 +166,15 @@ A configuração das mídias e a playlist passaram a ter proteção contra perda
 - Exclusão de usuário por superadmin.
 - Proteção contra autoexclusão.
 
-### Impacto
+## Impacto
 
 O sistema passou a ter controle administrativo mais seguro e preparado para múltiplos operadores.
 
 ---
 
-## 2026-05 — Logs de auditoria
+# 2026-05 — Logs de auditoria
 
-### Implementado
+## Implementado
 
 - Criação da tabela `audit_logs`.
 - Registro de login.
@@ -190,15 +191,15 @@ O sistema passou a ter controle administrativo mais seguro e preparado para múl
 - Registro de exclusão de usuário.
 - Tela de auditoria na dashboard.
 
-### Impacto
+## Impacto
 
 O sistema passou a registrar ações sensíveis, trazendo rastreabilidade e mais governança.
 
 ---
 
-## 2026-05 — Melhorias visuais e de usabilidade
+# 2026-05 — Melhorias visuais e de usabilidade
 
-### Implementado
+## Implementado
 
 - Padronização visual da dashboard.
 - Melhorias no cabeçalho.
@@ -212,15 +213,15 @@ O sistema passou a registrar ações sensíveis, trazendo rastreabilidade e mais
 - Melhorias em cards de mídia.
 - Melhorias nos filtros da biblioteca.
 
-### Impacto
+## Impacto
 
 A dashboard passou a ter aparência mais profissional, consistente e amigável.
 
 ---
 
-## 2026-05 — Filtros avançados da biblioteca
+# 2026-05 — Filtros avançados da biblioteca
 
-### Implementado
+## Implementado
 
 - Filtro por busca textual.
 - Filtro por status.
@@ -235,62 +236,15 @@ A dashboard passou a ter aparência mais profissional, consistente e amigável.
 - Rascunho descartado ao clicar fora sem aplicar.
 - Rascunho descartado ao pressionar ESC sem aplicar.
 
-### Impacto
+## Impacto
 
 A biblioteca ficou mais previsível e profissional, evitando filtros aplicados acidentalmente.
 
 ---
 
-## 2026-05 — Deploy e operação na VM
+# 2026-05 — Integração entre prioridade e repetição
 
-### Estado atual
-
-- Sistema rodando na VM em `C:\tv-v2\tv`.
-- Processo PM2 chamado `painel-tv-v2`.
-- Branch em produção: `fix-admin-funcionalidades`.
-- Script principal: `server.js`.
-- Node.js em execução via PM2.
-- Cloudflare Tunnel ativo.
-- Domínio em uso: `painelribas.com.br`.
-
-### Fluxo operacional
-
-```powershell
-cd c:\tv-v2\tv
-git pull
-pm2 restart painel-tv-v2
-pm2 status
-pm2 save
-```
-
----
-
-## 2026-05 — Documentação do projeto
-
-### Implementado
-
-Criação da pasta `docs/` com documentação inicial:
-
-- `CONTEXTO_PROJETO.md`;
-- `DEPLOY_VM.md`;
-- `CHECKLIST_FASE_2.md`;
-- `ARQUITETURA.md`;
-- `DECISOES_TECNICAS.md`;
-- `ROADMAP.md`;
-- `HISTORICO_PROJETO.md`;
-- `CHANGELOG.md`.
-
-### Impacto
-
-A documentação passou a registrar contexto, arquitetura, decisões, histórico, deploy e evolução do sistema, reduzindo dependência do histórico de conversa.
-
----
-
----
-
-## 2026-05 — Integração entre prioridade e repetição
-
-### Implementado
+## Implementado
 
 - Ajuste conceitual entre prioridade e recorrência das mídias.
 - Prioridade Normal passa a manter a mídia sem repetição.
@@ -300,7 +254,7 @@ A documentação passou a registrar contexto, arquitetura, decisões, histórico
 - O comportamento foi aplicado tanto para imagens quanto para vídeos.
 - O badge de prioridade passou a atualizar visualmente junto com a configuração da mídia.
 
-### Impacto
+## Impacto
 
 A interface ficou mais lógica para o usuário, reduzindo a confusão entre “prioridade” e “repetição”.
 
@@ -308,21 +262,21 @@ A prioridade agora orienta a frequência de exibição, enquanto o campo de repe
 
 ---
 
-## 2026-05 — Refinamento de prioridade e recorrência
+# 2026-05 — Refinamento de prioridade e recorrência
 
-### Ajustes implementados
+## Ajustes implementados
 
 - Removida a opção "Não repetir" para mídias com prioridade Alta ou Urgente.
 - Prioridades Alta/Urgente agora obrigam uma recorrência válida.
 - Prioridade Normal mantém recorrência desativada.
 - Campo de repetição passou a respeitar melhor o conceito de prioridade.
 - Sugestões automáticas de recorrência foram refinadas:
-  - Alta → "A cada 6 mídias"
-  - Urgente → "A cada 3 mídias"
+  - Alta → "A cada 6 mídias";
+  - Urgente → "A cada 3 mídias".
 - Ajustada largura visual do select de repetição.
 - Melhorado comportamento visual do campo de recorrência.
 
-### Resultado
+## Resultado
 
 A interface ficou mais coerente conceitualmente, reduzindo ambiguidades entre prioridade e repetição.
 
@@ -330,9 +284,9 @@ Agora a prioridade influencia diretamente a frequência operacional da mídia na
 
 ---
 
-## 2026-05 — Refinamento do status Ativo/Inativo
+# 2026-05 — Refinamento do status Ativo/Inativo
 
-### Implementado
+## Implementado
 
 - A TAG Ativo/Inativo passou a funcionar como um switch de ação imediata.
 - O clique na TAG agora salva automaticamente o novo estado no backend.
@@ -354,7 +308,7 @@ Agora a prioridade influencia diretamente a frequência operacional da mídia na
 - Em caso de erro ao salvar o status, o card retorna ao estado anterior.
 - Os filtros da biblioteca são reaplicados após a mudança de status.
 
-### Impacto
+## Impacto
 
 A operação ficou mais simples e intuitiva para o usuário administrativo.
 
@@ -364,16 +318,16 @@ Isso reduz confusão na interface, melhora a velocidade de operação e mantém 
 
 ---
 
-## 2026-05 — Sincronização rápida da playlist
+# 2026-05 — Sincronização rápida da playlist
 
-### Implementado
+## Implementado
 
 - Backend passou a revalidar/publicar a playlist automaticamente a cada 5 segundos.
 - Player passou a sincronizar silenciosamente a playlist a cada 5 segundos.
 - Mídias agendadas passam a entrar na programação com atraso reduzido após atingir o horário configurado.
 - Alterações feitas no painel administrativo são refletidas no player com menor tempo de espera.
 
-### Impacto
+## Impacto
 
 A atualização da programação ficou mais ágil.
 
@@ -381,9 +335,9 @@ Essa decisão melhora principalmente o uso de mídias com período de exibição
 
 ---
 
-## 2026-05 — Modais, detalhes da mídia e proteção contra perda de alterações
+# 2026-05 — Modais, detalhes da mídia e proteção contra perda de alterações
 
-### Implementado
+## Implementado
 
 - Substituição do popover de detalhes da mídia por modal no padrão visual do sistema.
 - Modal de detalhes passou a exibir informações técnicas e operacionais da mídia, incluindo:
@@ -411,7 +365,7 @@ Essa decisão melhora principalmente o uso de mídias com período de exibição
 - Modal de sincronização permite continuar editando ou salvar as alterações antes de atualizar a biblioteca.
 - Modal de sincronização foi ajustado visualmente para tons de aviso/atenção.
 
-### Impacto
+## Impacto
 
 A dashboard ficou mais previsível e segura contra perda acidental de alterações.
 
@@ -419,15 +373,15 @@ O modal de detalhes melhora a leitura das informações da mídia e evita proble
 
 O bloqueio da sincronização manual com alterações pendentes evita estados inconsistentes, em que a biblioteca é recarregada a partir do backend enquanto a tela ainda indica alterações não salvas.
 
-### Observação
+## Observação
 
 O modal de detalhes já está funcional, mas seu posicionamento e experiência em telas pequenas deverão ser refinados na Fase 3, junto com os ajustes gerais de responsividade/mobile.
 
 ---
 
-## 2026-05 — Selects premium, status visual e refinamentos finais da biblioteca
+# 2026-05 — Selects premium, status visual e refinamentos finais da biblioteca
 
-### Implementado
+## Implementado
 
 - Select de repetição convertido para componente premium.
 - Select de repetição passou a usar menu em portal global, evitando conflito visual com os cards abaixo.
@@ -446,7 +400,7 @@ O modal de detalhes já está funcional, mas seu posicionamento e experiência e
 - Ajuste pontual no layout dos cards de mídia para melhorar acomodação de textos maiores.
 - Ajustes visuais foram feitos sem refatoração ampla do CSS.
 
-### Impacto
+## Impacto
 
 A biblioteca de mídias passou a ter aparência mais consistente e profissional.
 
@@ -454,15 +408,15 @@ Os componentes de seleção mais visíveis deixaram de depender do visual nativo
 
 A lógica funcional foi preservada: os selects reais continuam existindo como fonte de valor, enquanto os componentes premium atuam como camada visual e interativa.
 
-### Observação
+## Observação
 
 A refatoração geral do `admin.css` continua planejada para momento futuro, após estabilização, testes e apresentação da Fase 2.
 
 ---
 
-## 2026-05 — Modal premium de período e seletor de horário
+# 2026-05 — Modal premium de período e seletor de horário
 
-### Implementado
+## Implementado
 
 - Substituição do popover de período de exibição por modal premium.
 - Modal de período passou a seguir o padrão visual dos demais modais da dashboard.
@@ -483,7 +437,7 @@ A refatoração geral do `admin.css` continua planejada para momento futuro, ap�
 - Validação impede salvar período com data final anterior à data inicial.
 - ESC foi ajustado para fechar primeiro o mini modal de horário e somente depois o modal principal de período.
 
-### Impacto
+## Impacto
 
 A configuração de período de exibição ficou mais clara, previsível e profissional.
 
@@ -491,7 +445,7 @@ O uso de modal elimina problemas anteriores de popover cortado, conflito de bord
 
 O seletor premium de horário evita o uso de campos nativos inconsistentes entre navegadores e impede horários inválidos por seleção visual controlada.
 
-### Observação
+## Observação
 
 O período de exibição agora é tratado como fluxo completo dentro de modal. Por isso, ao clicar em "Aplicar período", o sistema já salva a configuração da mídia diretamente no backend.
 
@@ -499,9 +453,9 @@ Melhorias futuras podem incluir exibição resumida do período no card e simpli
 
 ---
 
-## 2026-05 — Fechamento da Fase 2 em produção
+# 2026-05 — Fechamento da Fase 2 em produção
 
-### Validado
+## Validado
 
 - Validação local completa realizada.
 - Deploy realizado na VM de produção.
@@ -518,41 +472,79 @@ Melhorias futuras podem incluir exibição resumida do período no card e simpli
 - Player validado em produção.
 - Console revisado durante os testes.
 
-### Impacto
+## Impacto
 
 A Fase 2 passou a ser considerada pronta para apresentação institucional.
 
 O sistema encontra-se funcional em produção, com dashboard administrativa, player, gerenciamento de mídias, usuários, logs, filtros, agendamento, prioridade, recorrência, upload em partes, modais premium e validações principais operando corretamente.
 
-### Observação
+## Observação
 
 Os próximos ajustes foram classificados como Fase 3/backlog, incluindo refatoração de CSS/JavaScript, melhorias mobile, refinamentos no modal de detalhes, exibição resumida de período no card, Font Awesome local e melhorias futuras de documentação/manual.
 
 ---
 
-## Próximos registros esperados
+# 2026-05 — Deploy e operação na VM
 
-Próximas entradas deste changelog deverão registrar:
+## Estado atual
 
-- criação do documento executivo;
-- criação do manual administrativo;
-- criação do guia de testes;
-- refinamentos visuais finais;
-- responsividade/mobile;
-- refatoração futura;
-- merge da documentação na branch funcional;
-- fechamento oficial da Fase 2.
+- Sistema rodando na VM em `C:\tv-v2\tv`.
+- Processo PM2 chamado `painel-tv-v2`.
+- Branch em produção: `fix-admin-funcionalidades`.
+- Script principal: `server.js`.
+- Node.js em execução via PM2.
+- Cloudflare Tunnel ativo.
+- Domínio em uso: `painelribas.com.br`.
 
-## Fase 3 — Robustez operacional
+## Fluxo operacional
 
-### Adicionado
+```powershell
+cd c:\tv-v2\tv
+git pull
+pm2 restart painel-tv-v2 --update-env
+pm2 status
+pm2 save
+```
+
+## Impacto
+
+O fluxo de atualização da VM ficou padronizado para deploys e correções futuras.
+
+---
+
+# 2026-05 — Documentação do projeto
+
+## Implementado
+
+Criação e organização da pasta `docs/` com documentação inicial e complementar:
+
+- `CONTEXTO_PROJETO.md`;
+- `DEPLOY_VM.md`;
+- `CHECKLIST_FASE_2.md`;
+- `ARQUITETURA.md`;
+- `DECISOES_TECNICAS.md`;
+- `ROADMAP.md`;
+- `HISTORICO_PROJETO.md`;
+- `CHANGELOG.md`;
+- `BACKLOG_FASE_3_E_4.md`;
+- `FASE_3_ROBUSTEZ_OPERACIONAL.md`.
+
+## Impacto
+
+A documentação passou a registrar contexto, arquitetura, decisões, histórico, deploy, backlog e evolução do sistema, reduzindo dependência do histórico de conversa.
+
+---
+
+# 2026-05 — Fase 3: Robustez operacional
+
+## Adicionado
 
 - Implementada limpeza automática de uploads temporários antigos em `data/upload-chunks/`.
 - Adicionada auditoria da limpeza automática de chunks com a ação `sistema.chunks.limpeza`.
 - Adicionado resumo operacional de armazenamento no backend.
 - Adicionadas configurações de limite operacional via `.env`:
-  - `MEDIA_MAX_STORAGE_GB`
-  - `DISK_MIN_FREE_GB`
+  - `MEDIA_MAX_STORAGE_GB`;
+  - `DISK_MIN_FREE_GB`.
 - Implementado bloqueio preventivo de uploads quando o arquivo ultrapassa o limite da pasta `midia/` ou ameaça a reserva mínima de disco.
 - Adicionada auditoria de uploads bloqueados com a ação `midia.upload.bloqueado`.
 - Adicionado card visual de armazenamento na dashboard administrativa.
@@ -563,7 +555,7 @@ Próximas entradas deste changelog deverão registrar:
 - Adicionada rota protegida `/api/admin/diagnostico` para diagnóstico operacional completo.
 - Adicionado painel visual de Diagnóstico no admin, visível apenas para superadmin.
 
-### Alterado
+## Alterado
 
 - A rota `/api/admin/resumo` passou a retornar informações de armazenamento.
 - A listagem `/api/admin/backups` passou a incluir backups `.db` do banco SQLite.
@@ -572,9 +564,64 @@ Próximas entradas deste changelog deverão registrar:
 - O diagnóstico visual passou a exibir avisos detalhados em vez de apenas informar que há pontos de atenção.
 - A visualização de auditoria passou a exibir títulos e resumos amigáveis para eventos técnicos.
 
-### Segurança operacional
+## Segurança operacional
 
 - O backend passou a proteger o servidor contra crescimento descontrolado da pasta de mídias.
 - O sistema passou a preservar reserva mínima de disco configurável.
 - Backups JSON e SQLite passaram a ter rastreabilidade por auditoria.
 - A manutenção automática de chunks passou a ser auditável.
+
+## Validação
+
+- Funcionalidades testadas localmente.
+- Merge realizado na branch `fix-admin-funcionalidades`.
+- Deploy realizado na VM.
+- PM2 reiniciado.
+- Primeiro backup SQLite gerado no ambiente real da VM.
+- Diagnóstico operacional validado em produção.
+
+## Impacto
+
+A Fase 3 fortaleceu o sistema para operação contínua, reduzindo riscos de falhas por armazenamento, perda de dados, uploads incompletos e ausência de diagnóstico.
+
+O painel passou a contar com recursos de manutenção, rastreabilidade e suporte operacional mais maduros.
+
+---
+
+# 2026-05 — Recorrência inteligente da playlist
+
+## Corrigido
+
+- Melhorada a lógica de recorrência da playlist para evitar que mídias repetidas apareçam muito próximas da própria posição original.
+- A recorrência agora considera a última aparição real da mídia.
+- A recorrência agora considera o loop da playlist, evitando reset incorreto da contagem no início de um novo ciclo.
+- Criada regra de distância mínima entre aparições da mesma mídia.
+- Evitadas duplicações visuais incômodas, como a mesma mídia aparecendo colada ou próxima demais dela mesma.
+
+## Contexto
+
+Durante teste real, foi identificado que mídias configuradas para repetir a cada N itens poderiam aparecer muito próximas da própria posição original.
+
+Também foi identificado que, ao retornar ao início da playlist, a contagem de recorrência reiniciava, ignorando o fato de que a playlist roda em loop.
+
+## Impacto
+
+A playlist passou a ter distribuição visual mais agradável e comportamento mais coerente em uso real.
+
+A recorrência continua respeitando a intenção de destacar mídias importantes, mas evita sensação de bug ou repetição colada na exibição da TV.
+
+---
+
+# Próximos registros esperados
+
+Próximas entradas deste changelog deverão registrar:
+
+- criação de tooltips/ajudas contextuais;
+- refinamentos de usabilidade para o operador;
+- diagnóstico de rede/travamentos documentado;
+- checklist final de implantação por ponto;
+- melhorias mobile;
+- refatoração futura do CSS/admin;
+- Font Awesome local;
+- melhorias futuras para whitelabel/comercial;
+- fechamento oficial da Fase 3.

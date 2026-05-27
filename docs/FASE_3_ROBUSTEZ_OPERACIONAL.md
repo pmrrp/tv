@@ -4,13 +4,30 @@
 
 A Fase 3 do Painel TV Prefeitura tem como foco aumentar a segurança operacional, a rastreabilidade, a manutenção preventiva e a capacidade de diagnóstico do sistema.
 
-Nesta etapa, o sistema deixa de apenas executar uploads, playlist e exibição de mídias, passando também a monitorar limites, registrar eventos importantes, proteger o armazenamento, gerar backups e oferecer ferramentas administrativas para suporte e manutenção.
+Nesta etapa, o sistema deixa de apenas executar uploads, playlist e exibição de mídias, passando também a monitorar limites, registrar eventos importantes, proteger o armazenamento, gerar backups, oferecer ferramentas administrativas para suporte e melhorar a qualidade da playlist em uso real.
 
 ---
 
-## 2. Principais entregas implementadas
+## 2. Escopo desta fase
 
-### 2.1 Limpeza automática de uploads temporários antigos
+A Fase 3 contempla melhorias voltadas para:
+
+- armazenamento;
+- prevenção de falhas;
+- auditoria;
+- backups;
+- diagnóstico operacional;
+- manutenção automática;
+- qualidade da playlist;
+- validação em produção;
+- documentação operacional;
+- preparação para uso contínuo.
+
+---
+
+## 3. Principais entregas implementadas
+
+### 3.1 Limpeza automática de uploads temporários antigos
 
 Foi implementada uma rotina de limpeza automática da pasta:
 
@@ -36,7 +53,7 @@ sistema.chunks.limpeza
 
 ---
 
-### 2.2 Resumo de armazenamento no backend
+### 3.2 Resumo de armazenamento no backend
 
 A rota de resumo administrativo passou a retornar informações operacionais de armazenamento, incluindo:
 
@@ -55,7 +72,7 @@ Essas informações são usadas tanto pela dashboard quanto pelas validações p
 
 ---
 
-### 2.3 Limites operacionais por `.env`
+### 3.3 Limites operacionais por `.env`
 
 Foram adicionadas configurações no `.env` para controlar o crescimento do sistema:
 
@@ -80,7 +97,7 @@ Reserva mínima de disco livre: 50 GB
 
 ---
 
-### 2.4 Bloqueio preventivo de uploads por armazenamento
+### 3.4 Bloqueio preventivo de uploads por armazenamento
 
 Foi implementado bloqueio preventivo para impedir uploads quando:
 
@@ -105,7 +122,7 @@ midia.upload.bloqueado
 
 ---
 
-### 2.5 Card visual de armazenamento na dashboard
+### 3.5 Card visual de armazenamento na dashboard
 
 Foi criado um card visual de armazenamento na dashboard administrativa.
 
@@ -125,7 +142,7 @@ A reserva real de disco continua sendo usada pelo backend como proteção operac
 
 ---
 
-### 2.6 Auditoria de uploads bloqueados
+### 3.6 Auditoria de uploads bloqueados
 
 O sistema agora registra quando um upload é bloqueado por armazenamento.
 
@@ -153,7 +170,7 @@ midia.upload.bloqueado
 
 ---
 
-### 2.7 Refinamento da visualização de logs/auditoria
+### 3.7 Refinamento da visualização de logs/auditoria
 
 A seção de logs do sistema foi refinada visualmente.
 
@@ -181,11 +198,12 @@ usuario.resetar_senha
 sistema.chunks.limpeza
 sistema.backup.json
 sistema.backup.database
+sistema.backup.database.falha
 ```
 
 ---
 
-### 2.8 Auditoria de backups automáticos JSON
+### 3.8 Auditoria de backups automáticos JSON
 
 As funções de backup automático dos arquivos JSON foram aprimoradas.
 
@@ -217,7 +235,7 @@ sistema.backup.json
 
 ---
 
-### 2.9 Backup auditado do banco SQLite
+### 3.9 Backup auditado do banco SQLite
 
 Foi implementado backup seguro do banco SQLite:
 
@@ -259,7 +277,7 @@ sistema.backup.database.falha
 
 ---
 
-### 2.10 Painel de backups no admin
+### 3.10 Painel de backups no admin
 
 Foi criada uma seção visual de Backups no painel administrativo, visível apenas para superadmin.
 
@@ -282,7 +300,7 @@ A lista possui rolagem interna para evitar que o dropdown fique muito alto quand
 
 ---
 
-### 2.11 Diagnóstico operacional protegido
+### 3.11 Diagnóstico operacional protegido
 
 Foi criada a rota protegida:
 
@@ -325,7 +343,7 @@ A rota é protegida e acessível apenas para superadmin.
 
 ---
 
-### 2.12 Painel visual de diagnóstico operacional
+### 3.12 Painel visual de diagnóstico operacional
 
 Foi criada uma seção visual de Diagnóstico no admin, também visível apenas para superadmin.
 
@@ -352,7 +370,68 @@ A seção inicia recolhida por padrão, seguindo o padrão visual das demais se�
 
 ---
 
-## 3. Rotas envolvidas
+### 3.13 Avisos detalhados no diagnóstico
+
+O diagnóstico visual passou a exibir o texto detalhado dos avisos.
+
+Antes, o usuário via apenas uma mensagem genérica como:
+
+```txt
+Sistema com avisos
+```
+
+Agora, quando houver aviso, o painel mostra o motivo específico.
+
+Exemplo:
+
+```txt
+Nenhum backup do banco SQLite encontrado.
+```
+
+ou:
+
+```txt
+O disco está se aproximando da reserva mínima de segurança.
+```
+
+Isso evita que o superadmin veja um alerta sem entender o que precisa ser conferido.
+
+---
+
+### 3.14 Recorrência inteligente da playlist
+
+A lógica de recorrência da playlist foi aprimorada.
+
+Antes, a repetição era baseada em uma regra simples de posição:
+
+```txt
+A cada X mídias, inserir novamente a mídia recorrente.
+```
+
+Esse comportamento podia causar situações visualmente incômodas, como:
+
+- a mesma mídia aparecer colada nela mesma;
+- a mídia repetir logo antes ou logo depois da posição original;
+- a contagem reiniciar no começo da playlist, ignorando que o player roda em loop.
+
+A nova lógica considera:
+
+- última aparição real da mídia;
+- posição original da mídia na playlist base;
+- distância mínima entre aparições;
+- loop entre fim e início da playlist;
+- múltiplas mídias com recorrência ativa.
+
+Resultado:
+
+- a playlist fica mais agradável visualmente;
+- mídias importantes continuam sendo destacadas;
+- o sistema evita sensação de bug por repetição colada;
+- a recorrência pode pular uma inserção quando ela ficaria muito próxima da própria mídia.
+
+---
+
+## 4. Rotas envolvidas
 
 ### Health público
 
@@ -416,7 +495,19 @@ Lista eventos registrados na auditoria.
 
 ---
 
-## 4. Auditorias adicionadas/refinadas
+### Upload bloqueado por armazenamento
+
+O bloqueio pode ocorrer em rotas de upload e finalização de chunks, conforme o tipo de envio:
+
+```txt
+POST /api/upload
+POST /api/upload/chunk
+POST /api/upload/finalizar
+```
+
+---
+
+## 5. Auditorias adicionadas/refinadas
 
 Durante a Fase 3, foram adicionados ou refinados os seguintes eventos de auditoria:
 
@@ -438,7 +529,7 @@ Esses eventos permitem acompanhar:
 
 ---
 
-## 5. Configurações de ambiente
+## 6. Configurações de ambiente
 
 Variáveis adicionadas:
 
@@ -453,9 +544,9 @@ Também devem constar no `.env.example`.
 
 ---
 
-## 6. Como testar
+## 7. Como testar
 
-### 6.1 Testar resumo de armazenamento
+### 7.1 Testar resumo de armazenamento
 
 Acessar:
 
@@ -471,7 +562,7 @@ Verificar se o retorno possui o bloco:
 
 ---
 
-### 6.2 Testar bloqueio de upload
+### 7.2 Testar bloqueio de upload
 
 Temporariamente alterar no `.env` local:
 
@@ -498,7 +589,7 @@ DISK_MIN_FREE_GB=50
 
 ---
 
-### 6.3 Testar limpeza automática de chunks
+### 7.3 Testar limpeza automática de chunks
 
 Temporariamente reduzir o tempo máximo de chunk antigo no código para teste.
 
@@ -517,7 +608,7 @@ Após o teste, retornar o tempo normal para 24 horas.
 
 ---
 
-### 6.4 Testar backup do banco SQLite
+### 7.4 Testar backup do banco SQLite
 
 No painel admin, como superadmin:
 
@@ -529,7 +620,7 @@ No painel admin, como superadmin:
 
 ---
 
-### 6.5 Testar diagnóstico operacional
+### 7.5 Testar diagnóstico operacional
 
 Acessar:
 
@@ -551,7 +642,80 @@ Verificar:
 
 ---
 
-## 7. Impacto operacional
+### 7.6 Testar recorrência inteligente
+
+Configurar pelo menos duas mídias com recorrência ativa.
+
+Exemplo:
+
+```txt
+Mídia A — repetir a cada 3 mídias
+Mídia B — repetir a cada 3 mídias
+```
+
+Gerar a playlist e verificar o arquivo:
+
+```txt
+playlist.json
+```
+
+Resultado esperado:
+
+- a mesma mídia não deve aparecer colada nela mesma;
+- a mesma mídia não deve aparecer muito próxima dela mesma, quando evitável;
+- a contagem deve considerar o loop da playlist;
+- a lógica pode pular uma repetição se ela ficaria visualmente ruim.
+
+---
+
+## 8. Validação em produção/VM
+
+Após o merge da Fase 3 na branch funcional, as alterações foram publicadas na VM de produção.
+
+Ambiente:
+
+```txt
+C:\tv-v2\tv
+```
+
+Branch:
+
+```txt
+fix-admin-funcionalidades
+```
+
+Processo PM2:
+
+```txt
+painel-tv-v2
+```
+
+Comando padrão de reinício:
+
+```powershell
+pm2 restart painel-tv-v2 --update-env
+```
+
+---
+
+### 8.1 Itens validados na VM
+
+- [x] Código atualizado na branch `fix-admin-funcionalidades`.
+- [x] PM2 reiniciado.
+- [x] Dashboard carregando.
+- [x] Player funcionando.
+- [x] Card de armazenamento exibido.
+- [x] Seção Backups disponível para superadmin.
+- [x] Seção Diagnóstico disponível para superadmin.
+- [x] Auditoria disponível para superadmin.
+- [x] Diagnóstico operacional carregando.
+- [x] Primeiro backup SQLite gerado no ambiente real.
+- [x] Aviso de ausência de backup SQLite removido após geração do backup.
+- [x] Sistema validado após deploy.
+
+---
+
+## 9. Impacto operacional
 
 Com as entregas da Fase 3, o sistema passa a ter maior proteção contra:
 
@@ -561,7 +725,8 @@ Com as entregas da Fase 3, o sistema passa a ter maior proteção contra:
 - perda de arquivos JSON importantes;
 - perda do banco SQLite;
 - dificuldade de diagnóstico;
-- falta de rastreabilidade de ações técnicas.
+- falta de rastreabilidade de ações técnicas;
+- repetição visualmente incômoda de mídias na playlist.
 
 A manutenção passa a contar com:
 
@@ -570,11 +735,12 @@ A manutenção passa a contar com:
 - backup manual do banco;
 - diagnóstico operacional;
 - indicadores visuais no admin;
-- limites configuráveis por ambiente.
+- limites configuráveis por ambiente;
+- recorrência de playlist mais inteligente.
 
 ---
 
-## 8. Benefícios para produção
+## 10. Benefícios para produção
 
 Na VM/produção, essas melhorias ajudam a:
 
@@ -584,11 +750,12 @@ Na VM/produção, essas melhorias ajudam a:
 - facilitar suporte técnico;
 - identificar problemas antes que afetem o player;
 - documentar ações importantes;
-- dar mais segurança para uso institucional.
+- dar mais segurança para uso institucional;
+- melhorar a qualidade visual da playlist exibida nas TVs.
 
 ---
 
-## 9. Situação atual
+## 11. Situação atual
 
 A Fase 3 já possui um bloco robusto de melhorias operacionais concluídas.
 
@@ -608,28 +775,35 @@ Entregas concluídas:
 [OK] Painel de backups no admin
 [OK] Diagnóstico operacional protegido
 [OK] Painel visual de diagnóstico operacional
+[OK] Avisos detalhados no diagnóstico
+[OK] Recorrência inteligente da playlist
+[OK] Deploy na VM
+[OK] Primeiro backup SQLite em produção
+[OK] Diagnóstico validado em produção
 ```
 
 ---
 
-## 10. Pendências futuras / backlog
+## 12. Pendências futuras / backlog
 
 Itens que podem ser tratados posteriormente:
 
 ```txt
+[ ] Criar sistema de tooltips/ajuda contextual no admin
+[ ] Criar checklist final de implantação por ponto
+[ ] Documentar diagnóstico de rede/travamentos
 [ ] Refatorar admin.css em blocos mais organizados
-[ ] Melhorar responsividade mobile dos novos cards
-[ ] Criar filtros na listagem de backups por tipo
-[ ] Criar download seguro de backups pela interface
-[ ] Criar restauração controlada de backups, se necessário
-[ ] Melhorar modal detalhado do diagnóstico operacional
-[ ] Criar documentação executiva da Fase 3
-[ ] Revisar deploy em produção após merge
+[ ] Melhorar responsividade mobile dos novos cards de Backups e Diagnóstico
+[ ] Criar filtros por tipo na listagem de backups
+[ ] Avaliar download seguro de backups pela interface
+[ ] Avaliar restauração controlada de backups
+[ ] Criar modal detalhado para diagnóstico operacional completo
+[ ] Atualizar documentação executiva da Fase 3
 ```
 
 ---
 
-## 11. Observação sobre CSS
+## 13. Observação sobre CSS
 
 Durante a Fase 3, novas seções visuais foram adicionadas ao admin, como Backups e Diagnóstico.
 
@@ -659,10 +833,10 @@ Essa refatoração deve ser planejada com cuidado para evitar regressões visuai
 
 ---
 
-## 12. Conclusão
+## 14. Conclusão
 
 A Fase 3 fortaleceu significativamente o Painel TV Prefeitura.
 
-O sistema agora possui mecanismos de proteção, rastreabilidade, backup e diagnóstico, tornando a operação mais segura e facilitando manutenção futura.
+O sistema agora possui mecanismos de proteção, rastreabilidade, backup, diagnóstico e distribuição mais inteligente da playlist, tornando a operação mais segura e facilitando manutenção futura.
 
 Essas melhorias aumentam a confiabilidade do sistema tanto para uso institucional na Prefeitura quanto para uma possível evolução futura do projeto.
