@@ -129,37 +129,45 @@
 
         Os números abaixo são preenchidos pelo admin.js usando:
         /api/admin/resumo
+
+        As dicas rápidas usam title nativo para manter a interface limpa,
+        sem excesso de ícones de ajuda.
         ================================================= -->
         <section class="summaryGrid" aria-label="Resumo operacional do painel">
-            <article class="summaryCard summaryCardPrimary">
+            <article class="summaryCard summaryCardPrimary"
+                title="Mostra o total de mídias cadastradas no sistema e quantas estão ativas ou inativas na biblioteca.">
                 <span class="summaryIcon" aria-hidden="true"><i class="fa-solid fa-photo-film"></i></span>
                 <span class="summaryLabel">Mídias cadastradas</span>
                 <strong id="summaryTotalMedia">--</strong>
                 <small id="summaryActiveMedia">Carregando resumo...</small>
             </article>
 
-            <article class="summaryCard">
+            <article class="summaryCard"
+                title="Mostra quantas mídias estão dentro do período de exibição configurado. Também indica mídias agendadas para o futuro ou já vencidas.">
                 <span class="summaryIcon" aria-hidden="true"><i class="fa-solid fa-calendar-check"></i></span>
                 <span class="summaryLabel">Na validade</span>
                 <strong id="summaryValidMedia">--</strong>
                 <small id="summaryScheduledMedia">Agendadas: --</small>
             </article>
 
-            <article class="summaryCard">
+            <article class="summaryCard"
+                title="Mostra mídias com prioridade ou recorrência configurada. Prioridade Alta/Urgente pode fazer a mídia aparecer com mais frequência na playlist.">
                 <span class="summaryIcon" aria-hidden="true"><i class="fa-solid fa-bolt"></i></span>
                 <span class="summaryLabel">Prioridades</span>
                 <strong id="summaryPriorityMedia">--</strong>
                 <small id="summaryRepeatMedia">Recorrência: --</small>
             </article>
 
-            <article class="summaryCard">
+            <article class="summaryCard"
+                title="Mostra quantos itens estão na playlist publicada e quando ela foi atualizada pela última vez.">
                 <span class="summaryIcon" aria-hidden="true"><i class="fa-solid fa-list-check"></i></span>
                 <span class="summaryLabel">Playlist publicada</span>
                 <strong id="summaryPlaylistItems">--</strong>
                 <small id="summaryPlaylistUpdated">Última atualização: --</small>
             </article>
 
-            <article class="summaryCard summaryStorageCard" id="summaryStorageCard">
+            <article class="summaryCard summaryStorageCard" id="summaryStorageCard"
+                title="Mostra o uso da pasta de mídias em relação ao limite operacional configurado. O sistema pode bloquear uploads para proteger o armazenamento da VM.">
                 <span class="summaryIcon" aria-hidden="true"><i class="fa-solid fa-hard-drive"></i></span>
                 <span class="summaryLabel">Armazenamento</span>
                 <strong id="summaryStorageMedia">--</strong>
@@ -189,7 +197,7 @@
                 <div class="cardHeader">
                     <div>
                         <span class="sectionKicker">Upload</span>
-                        <h2 class="titleWithHelp">
+                        <h2 id="uploadTitle" class="titleWithHelp">
                             Enviar mídia
                             <span class="helpTooltip helpTooltipBottom" tabindex="0"
                                 data-tooltip="Envie imagens e vídeos para a biblioteca. Arquivos grandes são enviados em partes para reduzir falhas durante o upload."
@@ -197,49 +205,61 @@
                                 <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
                             </span>
                         </h2>
-                        <p>
+                        <p
+                            title="A mídia enviada será cadastrada na biblioteca e poderá entrar na playlist conforme status, período de exibição, prioridade e recorrência.">
                             Envie vídeos ou imagens para a biblioteca. A nova mídia será adicionada ao fim da playlist.
                         </p>
                     </div>
                 </div>
 
-                <form id="uploadForm" class="uploadForm">
-                    <label class="uploadBox" for="arquivo">
+                <form id="uploadForm" class="uploadForm"
+                    title="Envie apenas uma mídia por vez. Para arquivos grandes, o sistema usa upload em partes automaticamente.">
+                    <label class="uploadBox" for="arquivo"
+                        title="Clique para escolher um arquivo ou arraste uma mídia para esta área. Somente o primeiro arquivo selecionado será enviado.">
                         <span class="uploadIcon" aria-hidden="true">
                             <i class="fa-solid fa-cloud-arrow-up"></i>
                         </span>
-                        <span class="uploadTitle">Selecionar arquivo</span>
 
-                        <span class="uploadHint">
+                        <span class="uploadTitle">
+                            Selecionar arquivo
+                        </span>
+
+                        <span class="uploadHint"
+                            title="Você pode clicar nesta área ou arrastar um arquivo para iniciar a seleção da mídia.">
                             Arraste e solte aqui ou clique para escolher um arquivo.
                         </span>
 
                         <span class="uploadFormats">
-                            <span class="uploadFormatPill uploadFormatVideo">
+                            <span class="uploadFormatPill uploadFormatVideo"
+                                title="Formatos de vídeo aceitos pelo sistema: MP4, WEBM, OGG e MOV.">
                                 <i class="fa-solid fa-film" aria-hidden="true"></i>
                                 Vídeos: MP4, WEBM, OGG, MOV
                             </span>
 
-                            <span class="uploadFormatPill uploadFormatImage">
+                            <span class="uploadFormatPill uploadFormatImage"
+                                title="Formatos de imagem aceitos pelo sistema: JPG, JPEG, PNG, WEBP e GIF.">
                                 <i class="fa-solid fa-image" aria-hidden="true"></i>
                                 Imagens: JPG, PNG, WEBP, GIF
                             </span>
                         </span>
 
-                        <span id="selectedFileName" class="selectedFileName">
+                        <span id="selectedFileName" class="selectedFileName"
+                            title="Mostra o nome do arquivo selecionado para envio.">
                             Nenhum arquivo selecionado
                         </span>
                     </label>
 
                     <!--
-                        Input real do arquivo.
-                        Sem atributo "multiple" para ficar compatível com
-                        a rota atual /api/upload do backend.
-                    -->
+                Input real do arquivo.
+                Sem atributo "multiple" para ficar compatível com
+                a rota atual /api/upload do backend.
+            -->
                     <input id="arquivo" name="arquivo" type="file"
-                        accept=".mp4,.webm,.ogg,.mov,.jpg,.jpeg,.png,.webp,.gif" />
+                        accept=".mp4,.webm,.ogg,.mov,.jpg,.jpeg,.png,.webp,.gif"
+                        title="Selecione uma imagem ou vídeo compatível para enviar ao painel." />
 
-                    <button id="btnUpload" class="primaryAction" type="submit">
+                    <button id="btnUpload" class="primaryAction" type="submit"
+                        title="Envia a mídia selecionada para a biblioteca. Após o envio, a playlist será atualizada conforme as regras do sistema.">
                         <i class="fa-solid fa-upload" aria-hidden="true"></i>
                         Enviar mídia
                     </button>
@@ -281,7 +301,7 @@
             <div class="cardHeader">
                 <div>
                     <span class="sectionKicker">Biblioteca</span>
-                    <h2 class="titleWithHelp">
+                    <h2 id="mediaTitle" class="titleWithHelp">
                         Biblioteca de mídias
                         <span class="helpTooltip" tabindex="0"
                             data-tooltip="Aqui ficam todas as mídias cadastradas. Você pode ativar, inativar, ordenar, editar período, prioridade, recorrência e excluir conteúdos."
@@ -289,7 +309,8 @@
                             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
                         </span>
                     </h2>
-                    <p>
+                    <p
+                        title="Use esta área para gerenciar conteúdos, aplicar filtros, reorganizar mídias e ajustar o que será exibido na playlist publicada.">
                         Gerencie os conteúdos disponíveis, filtre mídias, organize a ordem de exibição
                         e ajuste as configurações da playlist publicada.
                     </p>
@@ -297,7 +318,8 @@
             </div>
 
             <details class="libraryDropdown">
-                <summary class="libraryDropdownSummary">
+                <summary class="libraryDropdownSummary"
+                    title="Clique para abrir ou recolher a lista de mídias cadastradas.">
                     <span class="libraryDropdownText">
                         <strong>Mídias disponíveis</strong>
                         <small id="libraryDropdownMeta">Carregando mídias...</small>
@@ -310,16 +332,19 @@
                 <div class="libraryDropdownBody">
                     <div class="mediaToolbar mediaToolbarClean">
                         <!-- Busca principal sempre visível -->
-                        <label class="mediaSearchLabel mediaToolbarSearch">
+                        <label class="mediaSearchLabel mediaToolbarSearch"
+                            title="Pesquise mídias pelo nome amigável, nome do arquivo ou tipo de conteúdo.">
                             <span>Buscar</span>
-                            <input id="mediaSearch" type="search" placeholder="Nome, arquivo ou tipo" />
+                            <input id="mediaSearch" type="search" placeholder="Nome, arquivo ou tipo"
+                                title="Digite parte do nome, arquivo ou tipo da mídia que deseja localizar." />
                         </label>
 
                         <!-- Ações principais da biblioteca -->
                         <div class="mediaToolbarActions">
                             <!-- Filtros avançados recolhidos em popover -->
                             <details class="mediaFiltersDropdown">
-                                <summary class="secondaryAction mediaFiltersButton">
+                                <summary class="secondaryAction mediaFiltersButton"
+                                    title="Abre os filtros avançados da biblioteca. Os filtros só são aplicados quando você confirma em Aplicar filtros.">
                                     <i class="fa-solid fa-filter" aria-hidden="true"></i>
 
                                     <span>Filtros</span>
@@ -330,12 +355,14 @@
                                         Ele começa oculto e só aparece quando pelo menos
                                         um filtro estiver ativo.
                                     -->
-                                    <span id="mediaFiltersCount" class="mediaFiltersCount hidden">0</span>
+                                    <span id="mediaFiltersCount" class="mediaFiltersCount hidden"
+                                        title="Quantidade de filtros ativos no momento.">0</span>
 
                                     <i class="fa-solid fa-chevron-down mediaFiltersChevron" aria-hidden="true"></i>
                                 </summary>
 
-                                <div class="mediaFiltersPopover">
+                                <div class="mediaFiltersPopover"
+                                    title="Escolha os critérios desejados e clique em Aplicar filtros para atualizar a lista.">
                                     <div class="mediaFiltersHeader">
                                         <div>
                                             <strong>Filtros da biblioteca</strong>
@@ -344,27 +371,33 @@
                                     </div>
 
                                     <div class="mediaFiltersGrid">
-                                        <label class="mediaFilterLabel">
+                                        <label class="mediaFilterLabel"
+                                            title="Filtra as mídias conforme o status atual: ativas, inativas ou todas.">
                                             <span>Status</span>
-                                            <select id="mediaStatusFilter">
+                                            <select id="mediaStatusFilter"
+                                                title="Escolha se deseja ver todas as mídias, apenas ativas ou apenas inativas.">
                                                 <option value="todas">Todas</option>
                                                 <option value="ativas">Ativas</option>
                                                 <option value="inativas">Inativas</option>
                                             </select>
                                         </label>
 
-                                        <label class="mediaFilterLabel">
+                                        <label class="mediaFilterLabel"
+                                            title="Filtra as mídias pelo tipo do arquivo: vídeos ou imagens.">
                                             <span>Tipo</span>
-                                            <select id="mediaTypeFilter">
+                                            <select id="mediaTypeFilter"
+                                                title="Escolha se deseja ver todos os tipos, apenas vídeos ou apenas imagens.">
                                                 <option value="todos">Todos</option>
                                                 <option value="video">Vídeos</option>
                                                 <option value="imagem">Imagens</option>
                                             </select>
                                         </label>
 
-                                        <label class="mediaFilterLabel">
+                                        <label class="mediaFilterLabel"
+                                            title="Filtra as mídias conforme o período de exibição configurado.">
                                             <span>Período</span>
-                                            <select id="mediaPeriodFilter">
+                                            <select id="mediaPeriodFilter"
+                                                title="Escolha se deseja ver mídias sem data final, com data definida, agendadas ou vencidas.">
                                                 <option value="todos">Todos</option>
                                                 <option value="indeterminado">Indeterminado</option>
                                                 <option value="programado">Com data definida</option>
@@ -373,9 +406,11 @@
                                             </select>
                                         </label>
 
-                                        <label class="mediaFilterLabel">
+                                        <label class="mediaFilterLabel"
+                                            title="Filtra as mídias conforme a prioridade configurada.">
                                             <span>Prioridade</span>
-                                            <select id="mediaPriorityFilter">
+                                            <select id="mediaPriorityFilter"
+                                                title="Escolha se deseja ver todas as mídias ou apenas Normal, Alta ou Urgente.">
                                                 <option value="todas">Todas</option>
                                                 <option value="normal">Normal</option>
                                                 <option value="alta">Alta</option>
@@ -383,9 +418,11 @@
                                             </select>
                                         </label>
 
-                                        <label class="mediaFilterLabel">
+                                        <label class="mediaFilterLabel"
+                                            title="Filtra mídias que possuem ou não possuem repetição configurada.">
                                             <span>Repetição</span>
-                                            <select id="mediaRepeatFilter">
+                                            <select id="mediaRepeatFilter"
+                                                title="Escolha se deseja ver todas as mídias, apenas com repetição ou apenas sem repetição.">
                                                 <option value="todas">Todas</option>
                                                 <option value="com">Com repetição</option>
                                                 <option value="sem">Sem repetição</option>
@@ -401,12 +438,14 @@
                                         e confirma clicando em "Aplicar filtros".
                                     -->
                                     <div class="mediaFiltersActions">
-                                        <button id="btnClearMediaFilters" class="secondaryAction hidden" type="button">
+                                        <button id="btnClearMediaFilters" class="secondaryAction hidden" type="button"
+                                            title="Remove todos os filtros aplicados e volta a exibir a lista completa de mídias.">
                                             <i class="fa-solid fa-eraser" aria-hidden="true"></i>
                                             Limpar filtros
                                         </button>
 
-                                        <button id="btnApplyMediaFilters" class="primaryAction hidden" type="button">
+                                        <button id="btnApplyMediaFilters" class="primaryAction hidden" type="button"
+                                            title="Aplica os filtros escolhidos e atualiza a lista de mídias exibida.">
                                             <i class="fa-solid fa-check" aria-hidden="true"></i>
                                             Aplicar filtros
                                         </button>
@@ -417,24 +456,28 @@
 
                             <!-- Botão de sincronização já existente -->
                             <button id="btnReload" type="button"
-                                title="Atualiza a biblioteca com os arquivos disponíveis na pasta de mídias">
+                                title="Atualiza a biblioteca com os arquivos disponíveis na pasta de mídias e recarrega os dados exibidos no painel.">
                                 <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
                                 Sincronizar
                             </button>
 
                             <!-- Modo seleção: vamos ativar a lógica depois -->
-                            <button id="btnToggleSelectionMode" class="secondaryAction" type="button">
+                            <button id="btnToggleSelectionMode" class="secondaryAction" type="button"
+                                title="Ativa ou desativa o modo de seleção para escolher várias mídias e executar ações em lote.">
                                 <i class="fa-solid fa-check-double" aria-hidden="true"></i>
                                 Selecionar Itens
                             </button>
 
                             <!-- Mantidos para o JS antigo não quebrar -->
-                            <label class="selectAllLabel hidden">
-                                <input id="selectAllMedia" type="checkbox" />
+                            <label class="selectAllLabel hidden"
+                                title="Marca ou desmarca todas as mídias visíveis no modo de seleção.">
+                                <input id="selectAllMedia" type="checkbox"
+                                    title="Marcar ou desmarcar todas as mídias visíveis." />
                                 Marcar todas
                             </label>
 
-                            <button id="btnDeleteSelected" class="hidden" type="button" disabled>
+                            <button id="btnDeleteSelected" class="hidden" type="button" disabled
+                                title="Exclui as mídias selecionadas. Use com cuidado, pois a exclusão remove os arquivos da biblioteca.">
                                 <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
                                 Excluir selecionadas
                             </button>
