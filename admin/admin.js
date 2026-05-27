@@ -4307,6 +4307,7 @@ function renderizarMidias(midias) {
           para rolar até ele e aplicar um destaque visual.
         */
         item.dataset.arquivo = midia.nome;
+        item.title = "Card da mídia. Use os controles internos para editar status, período, prioridade, recorrência, detalhes ou exclusão.";
 
         /*
         Guardamos os principais dados da mídia no próprio card.
@@ -4351,7 +4352,10 @@ function renderizarMidias(midias) {
 
         const controleTitulo = podeEditarMidias
             ? `
-        <label class="mediaTitleLabel">
+        <label
+            class="mediaTitleLabel"
+            title="Nome amigável usado para identificar esta mídia dentro da biblioteca. Ele não altera o nome real do arquivo."
+        >
             Nome
             <input
                 type="text"
@@ -4359,15 +4363,19 @@ function renderizarMidias(midias) {
                 data-arquivo="${nomeArquivo}"
                 value="${tituloMidia}"
                 placeholder="Ex: Campanha de Vacinação 2026"
+                title="Digite um nome claro para facilitar a identificação da mídia no painel."
             />
         </label>
-    `
+        `
             : `
-        <div class="mediaTitleReadOnly">
+        <div
+            class="mediaTitleReadOnly"
+            title="Nome amigável da mídia. Usuários sem permissão de edição não podem alterar este campo."
+        >
             <span>Nome</span>
             <strong>${tituloMidia}</strong>
         </div>
-    `;
+        `;
 
         /*
           Select real de prioridade.
@@ -4388,7 +4396,7 @@ function renderizarMidias(midias) {
             ? `
                 <label
                     class="mediaStatusToggle ${midia.ativo ? "isActive" : "isInactive"}"
-                    title="Ativo aparece na playlist. Inativo fica salvo na biblioteca, mas não aparece no player."
+                    title="Ativo aparece na playlist quando estiver dentro do período de exibição. Inativo fica salvo na biblioteca, mas não aparece no player."
                 >
                     <input
                         type="checkbox"
@@ -4400,10 +4408,13 @@ function renderizarMidias(midias) {
                 </label>
             `
             : `
-                <span class="mediaStatusToggle ${midia.ativo ? "isActive" : "isInactive"} mediaBadgeStatic">
+                <span
+                    class="mediaStatusToggle ${midia.ativo ? "isActive" : "isInactive"} mediaBadgeStatic"
+                    title="Status da mídia. Ativa pode aparecer no player; inativa permanece salva, mas fora da playlist."
+                >
                     <span>${midia.ativo ? "Ativo" : "Inativo"}</span>
                 </span>
-        `;
+            `;
 
         const prioridadeBadge = podeEditarMidias
             ? `
@@ -4417,17 +4428,32 @@ function renderizarMidias(midias) {
                 </summary>
 
                 <div class="mediaPriorityOptions">
-                    <button type="button" data-prioridade="normal" data-arquivo="${nomeArquivo}">
+                    <button
+                        type="button"
+                        data-prioridade="normal"
+                        data-arquivo="${nomeArquivo}"
+                        title="Prioridade normal: a mídia entra na playlist apenas na posição configurada, sem repetição adicional."
+                    >
                         <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
                         Normal
                     </button>
 
-                    <button type="button" data-prioridade="alta" data-arquivo="${nomeArquivo}">
+                    <button
+                        type="button"
+                        data-prioridade="alta"
+                        data-arquivo="${nomeArquivo}"
+                        title="Prioridade alta: libera recorrência e sugere que a mídia apareça com mais frequência."
+                    >
                         <i class="fa-solid fa-bolt" aria-hidden="true"></i>
                         Alta
                     </button>
 
-                    <button type="button" data-prioridade="urgente" data-arquivo="${nomeArquivo}">
+                    <button
+                        type="button"
+                        data-prioridade="urgente"
+                        data-arquivo="${nomeArquivo}"
+                        title="Prioridade urgente: libera recorrência mais frequente para conteúdos realmente importantes."
+                    >
                         <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
                         Urgente
                     </button>
@@ -4435,27 +4461,36 @@ function renderizarMidias(midias) {
             </details>
             `
             : `
-            <span class="mediaBadge ${prioridade} mediaBadgeStatic">
+            <span
+                class="mediaBadge ${prioridade} mediaBadgeStatic"
+                title="Prioridade atual da mídia. Usuários sem permissão de edição não podem alterar este campo."
+            >
                 <i class="fa-solid ${prioridadeIcone}" aria-hidden="true"></i>
                 <span>${prioridadeLabel}</span>
             </span>
-        `;
+            `;
 
         const periodoBadge = renderizarPeriodoBadge(midia);
 
         const repeticaoBadge = repetirACada > 0
             ? `
-        <span class="mediaBadge mediaRepeatBadge repeatActive">
+        <span
+            class="mediaBadge mediaRepeatBadge repeatActive"
+            title="Esta mídia possui recorrência e pode aparecer novamente a cada ${repetirACada} mídias. O sistema evita repetições muito próximas."
+        >
             <i class="fa-solid fa-repeat" aria-hidden="true"></i>
             Repete a cada ${repetirACada}
         </span>
-    `
+        `
             : `
-        <span class="mediaBadge mediaRepeatBadge repeatNone">
+        <span
+            class="mediaBadge mediaRepeatBadge repeatNone"
+            title="Esta mídia não possui recorrência adicional. Ela aparece apenas na ordem normal da playlist."
+        >
             <i class="fa-solid fa-ban" aria-hidden="true"></i>
             Não repete
         </span>
-    `;
+        `;
 
         const semValidadeDefinida = !midia.inicio && !midia.fim;
 
@@ -4486,19 +4521,16 @@ function renderizarMidias(midias) {
 
         const controleDuracao = midia.tipo === "imagem"
             ? `
-                <label class="mediaConfigLabel">
-                    <span class="labelWithHelp">
-                        Duração
-                        <span
-                            class="helpTooltip"
-                            tabindex="0"
-                            data-tooltip="Define por quantos segundos esta imagem ficará na tela antes de passar para a próxima mídia."
-                            aria-label="Ajuda sobre duração da imagem"
-                        >
-                            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
-                        </span>
-                    </span>
-                    <select class="mediaDuration" data-arquivo="${nomeArquivo}">
+                <label
+                    class="mediaConfigLabel"
+                    title="Define por quantos segundos esta imagem ficará na tela antes de passar para a próxima mídia."
+                >
+                    Duração
+                    <select
+                        class="mediaDuration"
+                        data-arquivo="${nomeArquivo}"
+                        title="Escolha o tempo de exibição desta imagem no player."
+                    >
                         <option value="5" ${duracaoImagem === 5 ? "selected" : ""}>5s</option>
                         <option value="8" ${duracaoImagem === 8 ? "selected" : ""}>8s</option>
                         <option value="10" ${duracaoImagem === 10 ? "selected" : ""}>10s</option>
@@ -4515,20 +4547,14 @@ function renderizarMidias(midias) {
           mas só aparece quando a prioridade for Alta ou Urgente.
         */
         const controleRepeticao = `
-                <label class="mediaConfigLabel mediaRepeatEditable ${prioridadePodeRepetir ? "" : "hidden mediaRepeatDisabled"}">
-                    <span class="labelWithHelp">
-                        Repetir
-                        <span
-                            class="helpTooltip"
-                            tabindex="0"
-                            data-tooltip="Define de quanto em quanto tempo esta mídia deve aparecer novamente. O sistema considera o loop da playlist e evita repetições muito próximas."
-                            aria-label="Ajuda sobre repetição da mídia"
-                        >
-                            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
-                        </span>
-                    </span>
-                <select
-                    class="mediaRepeatEvery"
+            <label
+                class="mediaConfigLabel mediaRepeatEditable ${prioridadePodeRepetir ? "" : "hidden mediaRepeatDisabled"}"
+                title="Define de quanto em quanto tempo esta mídia deve aparecer novamente. O sistema considera o loop da playlist e evita repetições muito próximas."
+            >
+                Repetir
+            <select
+                class="mediaRepeatEvery"
+                title="Escolha o intervalo de repetição desta mídia na playlist."
                     data-arquivo="${nomeArquivo}"
                     ${prioridadePodeRepetir ? "" : "disabled"}
                 >
@@ -4554,24 +4580,21 @@ function renderizarMidias(midias) {
             ${controleDuracao}
 
             <details class="mediaScheduleMenu mediaScheduleEditable">
-                <summary>
-                    <span class="labelWithHelp">
+                <summary
+                    title="Define quando esta mídia deve começar e parar de aparecer no player. Se ficar como tempo indeterminado, ela poderá aparecer enquanto estiver ativa."
+                >
+                    <span>
                         <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
                         Período de exibição
-                        <span
-                            class="helpTooltip"
-                            tabindex="0"
-                            data-tooltip="Define quando esta mídia deve começar e parar de aparecer no player. Se ficar como tempo indeterminado, ela poderá aparecer enquanto estiver ativa."
-                            aria-label="Ajuda sobre período de exibição"
-                        >
-                            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
-                        </span>
                     </span>
                     <small>${semValidadeDefinida ? "Tempo indeterminado" : "Com data definida"}</small>
                 </summary>
 
                 <div class="mediaValidityBox">
-                    <label class="mediaConfigCheckbox mediaIndefiniteLabel">
+                    <label
+                        class="mediaConfigCheckbox mediaIndefiniteLabel"
+                        title="Quando marcado, a mídia não possui data final definida e poderá aparecer enquanto estiver ativa."
+                    >
                         <input
                             type="checkbox"
                             class="mediaIndefinite"
@@ -4582,7 +4605,10 @@ function renderizarMidias(midias) {
                     </label>
 
                     <div class="mediaDateFields ${semValidadeDefinida ? "disabledDates" : ""}">
-                        <label class="mediaConfigLabel mediaDateLabel">
+                        <label
+                            class="mediaConfigLabel mediaDateLabel"
+                            title="Data e horário em que esta mídia começa a poder aparecer no player."
+                        >
                             Início
                             <input
                                 type="datetime-local"
@@ -4590,10 +4616,14 @@ function renderizarMidias(midias) {
                                 data-arquivo="${nomeArquivo}"
                                 value="${formatarIsoParaDatetimeLocal(midia.inicio)}"
                                 ${semValidadeDefinida ? "disabled" : ""}
+                                title="Escolha a data e hora inicial de exibição desta mídia."
                             />
                         </label>
 
-                        <label class="mediaConfigLabel mediaDateLabel">
+                        <label
+                            class="mediaConfigLabel mediaDateLabel"
+                            title="Data e horário em que esta mídia deixa de aparecer no player."
+                        >
                             Fim
                             <input
                                 type="datetime-local"
@@ -4601,16 +4631,27 @@ function renderizarMidias(midias) {
                                 data-arquivo="${nomeArquivo}"
                                 value="${formatarIsoParaDatetimeLocal(midia.fim)}"
                                 ${semValidadeDefinida ? "disabled" : ""}
+                                title="Escolha a data e hora final de exibição desta mídia."
                             />
                         </label>
                     </div>
 
                     <div class="mediaScheduleActions">
-                        <button class="secondaryAction mediaScheduleCancel" type="button" data-arquivo="${nomeArquivo}">
+                        <button
+                            class="secondaryAction mediaScheduleCancel"
+                            type="button"
+                            data-arquivo="${nomeArquivo}"
+                            title="Cancela a edição do período e fecha este controle sem aplicar alterações."
+                        >
                             Cancelar
                         </button>
 
-                        <button class="successAction mediaScheduleApply" type="button" data-arquivo="${nomeArquivo}">
+                        <button
+                            class="successAction mediaScheduleApply"
+                            type="button"
+                            data-arquivo="${nomeArquivo}"
+                            title="Aplica o período configurado e salva esta alteração no sistema."
+                        >
                             <i class="fa-solid fa-check" aria-hidden="true"></i>
                             Aplicar período
                         </button>
@@ -4627,11 +4668,12 @@ function renderizarMidias(midias) {
         item.innerHTML = `
             <div class="mediaSelectArea">
                 <input
-                    type="checkbox"
-                    class="mediaSelect"
-                    data-arquivo="${nomeArquivo}"
-                    aria-label="Selecionar mídia ${nomeArquivo}"
-                />
+                type="checkbox"
+                class="mediaSelect"
+                data-arquivo="${nomeArquivo}"
+                aria-label="Selecionar mídia ${nomeArquivo}"
+                title="Seleciona esta mídia para ações em lote, como exclusão de várias mídias."
+            />
             </div>
 
             <div class="mediaOrder">
@@ -4640,6 +4682,7 @@ function renderizarMidias(midias) {
                 <span
                     class="mediaDragHandle"
                     aria-label="Clique e arraste para reorganizar"
+                    title="Clique e arraste para reorganizar a posição desta mídia na playlist."
                     data-tooltip="Clique e arraste para reorganizar"
                 >
                     <i class="fa-solid fa-grip-vertical" aria-hidden="true"></i>
@@ -4661,7 +4704,11 @@ function renderizarMidias(midias) {
                     </div>
 
                     <div class="mediaDetailsHover">
-                        <button class="mediaDetailsTrigger" type="button">
+                        <button
+                            class="mediaDetailsTrigger"
+                            type="button"
+                            title="Abre os detalhes técnicos e operacionais desta mídia."
+                        >
                             <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
                             Detalhes
                         </button>
@@ -4671,12 +4718,22 @@ function renderizarMidias(midias) {
                         </div>
                     </div>
 
-                    <button class="mediaDeleteButton" type="button" data-arquivo="${nomeArquivo}">
+                    <button
+                        class="mediaDeleteButton"
+                        type="button"
+                        data-arquivo="${nomeArquivo}"
+                        title="Exclui esta mídia da biblioteca. Use com cuidado, pois o arquivo será removido do sistema."
+                    >
                         <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
                         Excluir
                     </button>
 
-                    <button class="mediaSaveButton hidden" type="button" data-arquivo="${nomeArquivo}">
+                    <button
+                        class="mediaSaveButton hidden"
+                        type="button"
+                        data-arquivo="${nomeArquivo}"
+                        title="Salva as alterações feitas nesta mídia."
+                    >
                         <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
                         Salvar
                     </button>
