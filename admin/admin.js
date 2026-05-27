@@ -4405,7 +4405,10 @@ function renderizarMidias(midias) {
         const prioridadeBadge = podeEditarMidias
             ? `
             <details class="mediaPriorityMenu">
-                <summary class="mediaBadge ${prioridade}">
+                <summary
+                    class="mediaBadge ${prioridade}"
+                    title="Prioridade da mídia"
+                >
                     <i class="fa-solid ${prioridadeIcone}" aria-hidden="true"></i>
                     <span>${prioridadeLabel}</span>
                 </summary>
@@ -4499,8 +4502,18 @@ function renderizarMidias(midias) {
           mas só aparece quando a prioridade for Alta ou Urgente.
         */
         const controleRepeticao = `
-            <label class="mediaConfigLabel mediaRepeatEditable ${prioridadePodeRepetir ? "" : "hidden mediaRepeatDisabled"}">
-                Repetir
+                <label class="mediaConfigLabel mediaRepeatEditable ${prioridadePodeRepetir ? "" : "hidden mediaRepeatDisabled"}">
+                    <span class="labelWithHelp">
+                        Repetir
+                        <span
+                            class="helpTooltip"
+                            tabindex="0"
+                            data-tooltip="Define de quanto em quanto tempo esta mídia deve aparecer novamente. O sistema evita repetições coladas para deixar a playlist mais agradável."
+                            aria-label="Ajuda sobre repetição da mídia"
+                        >
+                            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+                        </span>
+                    </span>
                 <select
                     class="mediaRepeatEvery"
                     data-arquivo="${nomeArquivo}"
