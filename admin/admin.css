@@ -11068,3 +11068,191 @@ body.modalAberto {
 .diagnosticCard .secondaryAction {
     border-radius: 999px !important;
 }
+
+/* =========================================================
+   AJUDA CONTEXTUAL / TOOLTIPS
+   =========================================================
+   Tooltip visual premium, discreto e reutilizável.
+
+   Variações:
+   - .helpTooltip
+   - .helpTooltipBottom       -> tooltip abre para baixo
+   - .helpTooltipAlignRight   -> ancora à direita (bom para cards)
+   ========================================================= */
+
+.helpTooltip {
+    position: relative;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 18px;
+    height: 18px;
+
+    margin-left: 6px;
+
+    color: #0f70c4;
+    font-size: 14px;
+    line-height: 1;
+
+    cursor: help;
+    user-select: none;
+
+    opacity: 0.88;
+
+    transition:
+        color 0.18s ease,
+        opacity 0.18s ease,
+        transform 0.18s ease;
+}
+
+.helpTooltip:hover,
+.helpTooltip:focus-visible {
+    color: #075894;
+    opacity: 1;
+    transform: translateY(-1px);
+}
+
+.helpTooltip i {
+    pointer-events: none;
+}
+
+/*
+  Tooltip padrão: abre para cima.
+*/
+.helpTooltip::after {
+    content: attr(data-tooltip);
+
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 12px);
+
+    width: 280px;
+    max-width: min(280px, calc(100vw - 32px));
+
+    padding: 11px 13px;
+
+    border-radius: 16px;
+
+    background: rgba(8, 47, 79, 0.97);
+    color: #ffffff;
+
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: break-word;
+
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.22);
+
+    opacity: 0;
+    pointer-events: none;
+
+    transform: translate(-50%, 6px);
+    transition:
+        opacity 0.16s ease,
+        transform 0.16s ease;
+
+    z-index: 9999;
+}
+
+.helpTooltip::before {
+    content: "";
+
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 7px);
+
+    width: 10px;
+    height: 10px;
+
+    background: rgba(8, 47, 79, 0.97);
+
+    opacity: 0;
+    pointer-events: none;
+
+    transform: translateX(-50%) rotate(45deg);
+    transition: opacity 0.16s ease;
+
+    z-index: 9998;
+}
+
+.helpTooltip:hover::after,
+.helpTooltip:hover::before,
+.helpTooltip:focus-visible::after,
+.helpTooltip:focus-visible::before {
+    opacity: 1;
+}
+
+.helpTooltip:hover::after,
+.helpTooltip:focus-visible::after {
+    transform: translate(-50%, 0);
+}
+
+/*
+  Variante: tooltip abre para baixo.
+  Use só quando estiver muito colado no topo da tela.
+*/
+.helpTooltipBottom::after {
+    top: calc(100% + 12px);
+    bottom: auto;
+
+    transform: translate(-50%, -6px);
+}
+
+.helpTooltipBottom::before {
+    top: calc(100% + 7px);
+    bottom: auto;
+}
+
+.helpTooltipBottom:hover::after,
+.helpTooltipBottom:focus-visible::after {
+    transform: translate(-50%, 0);
+}
+
+/*
+  Variante: ancora o tooltip pela direita.
+  Ideal para áreas apertadas, como o campo "Repetir".
+*/
+.helpTooltipAlignRight::after {
+    left: auto;
+    right: 0;
+
+    transform: translateY(6px);
+}
+
+.helpTooltipAlignRight::before {
+    left: auto;
+    right: 8px;
+
+    transform: rotate(45deg);
+}
+
+.helpTooltipAlignRight:hover::after,
+.helpTooltipAlignRight:focus-visible::after {
+    transform: translateY(0);
+}
+
+/*
+  Labels/títulos com tooltip.
+*/
+.labelWithHelp,
+.titleWithHelp {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+@media (max-width: 640px) {
+
+    .helpTooltip::after,
+    .helpTooltipAlignRight::after,
+    .helpTooltipBottom::after {
+        width: 240px;
+        max-width: calc(100vw - 28px);
+        font-size: 11px;
+    }
+}
