@@ -979,3 +979,15 @@ Antes de transformar uma ideia em desenvolvimento, classificar:
 - [ ] Criar modal detalhado para diagnóstico operacional completo.
 - [ ] Atualizar documentação executiva da Fase 3.
 - [ ] Validar deploy em produção/VM após merge.
+
+### Melhorias de usabilidade e experiência do operador
+
+- [ ] Criar sistema de tooltips/ajuda contextual no admin para orientar usuários sobre campos, botões e regras de funcionamento.
+- [ ] Adicionar textos explicativos para prioridade, recorrência, período de exibição, armazenamento, backups e diagnóstico.
+
+### Melhorias na geração da playlist
+
+- [ ] Melhorar algoritmo de recorrência da playlist para evitar que uma mídia repetida apareça muito próxima da sua posição original.
+- [ ] Criar regra de distância mínima entre aparições da mesma mídia.
+- [ ] Evitar repetições coladas no início/fim do ciclo da playlist.
+- [ ] Testar cenários com poucas mídias e mídias configuradas como alta/urgente.
