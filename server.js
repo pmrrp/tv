@@ -1674,6 +1674,155 @@ function gerarPlaylistArquivo() {
         return null;
     }
 
+    /**
+ * Retorna um identificador estável da mídia dentro da playlist.
+ *
+ * Usamos o campo "arquivo" porque ele representa o caminho real
+ * usado pelo player, por exemplo:
+ *
+ * midia/video-institucional.mp4
+ *
+ * Esse identificador permite comparar se dois itens representam
+ * a mesma mídia, mesmo quando ela aparece como item original
+ * ou como repetição.
+ */
+    function obterChaveItemPlaylist(item) {
+        return item && item.arquivo
+            ? String(item.arquivo)
+            : "";
+    }
+
+    /**
+     * Calcula a distância mínima recomendada entre duas aparições
+     * da mesma mídia.
+     *
+     * Regra adotada:
+     * - usa metade do intervalo de repetição;
+     * - nunca permite menos de 2 posições de distância.
+     *
+     * Exemplo:
+     * repetir a cada 6 mídias => distância mínima 3.
+     * repetir a cada 3 mídias => distância mínima 2.
+     */
+    function calcularDistanciaMinimaRepeticao(intervalo) {
+        const intervaloSeguro = Math.max(1, Number(intervalo || 1));
+
+        return Math.max(
+            2,
+            Math.floor(intervaloSeguro / 2)
+        );
+    }
+
+    /**
+     * Verifica se uma mídia apareceu recentemente na playlist já montada.
+     *
+     * Isso evita casos como:
+     * - mídia original;
+     * - outra mídia;
+     * - repetição da mesma mídia logo em seguida.
+     */
+    function itemApareceuRecentemente(playlist, item, distanciaMinima) {
+        const chaveItem = obterChaveItemPlaylist(item);
+
+        if (!chaveItem) return false;
+
+        const distanciaSegura = Math.max(1, Number(distanciaMinima || 1));
+        const ultimosItens = playlist.slice(-distanciaSegura);
+
+        return ultimosItens.some((itemExistente) => {
+            return obterChaveItemPlaylist(itemExistente) === chaveItem;
+        });
+    }
+
+    /**
+     * Verifica se a mídia original aparecerá logo adiante na playlist base.
+     *
+     * Essa proteção evita inserir uma repetição imediatamente antes
+     * da posição original da própria mídia.
+     *
+     * Exemplo evitado:
+     * - repetição da mídia X;
+     * - mídia X original logo depois.
+     *
+     * A busca é circular, ou seja, também considera o início da playlist
+     * quando estamos perto do final.
+     */
+    function distanciaAteProximaAparicaoBase(playlistBase, indiceAtual, item, limiteBusca) {
+        const chaveItem = obterChaveItemPlaylist(item);
+
+        if (!chaveItem || !playlistBase.length) return null;
+
+        const limiteSeguro = Math.max(1, Number(limiteBusca || 1));
+        const total = playlistBase.length;
+
+        for (let deslocamento = 1; deslocamento <= limiteSeguro; deslocamento++) {
+            const indiceProximo = (indiceAtual + deslocamento) % total;
+            const proximoItem = playlistBase[indiceProximo];
+
+            if (obterChaveItemPlaylist(proximoItem) === chaveItem) {
+                return deslocamento;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Cria o estado de controle de uma mídia recorrente.
+     *
+     * A parte mais importante aqui é a posição inicial.
+     *
+     * Como a playlist roda em loop, uma mídia que está perto do final
+     * da playlist já apareceu no ciclo anterior antes do item 1 rodar.
+     *
+     * Exemplo:
+     * - playlist base tem 10 itens;
+     * - mídia X está na posição 8;
+     * - ao começar um novo ciclo, consideramos que ela apareceu
+     *   na posição 8 do ciclo anterior.
+     *
+     * Isso impede que o contador "resete" no início da playlist.
+     */
+    function criarEstadoRecorrencia(midia, playlistBase) {
+        const item = converterMidiaParaPlaylist(midia);
+
+        if (!item) return null;
+
+        const chave = obterChaveItemPlaylist(item);
+        const intervalo = Number(midia.repetirACada || 0);
+
+        if (!chave || intervalo <= 0) return null;
+
+        const indiceOriginal = playlistBase.findIndex((itemBase) => {
+            return obterChaveItemPlaylist(itemBase) === chave;
+        });
+
+        /*
+          Posição inicial considerando o ciclo anterior.
+
+          Se a mídia está na posição 8 de uma playlist com 10 itens:
+          indiceOriginal = 7
+          posição anterior = 8 - 10 = -2
+
+          Então, após tocar o item 1 do ciclo atual:
+          distância = 1 - (-2) = 3
+
+          Isso faz a recorrência atravessar corretamente o loop.
+        */
+        const ultimaPosicao = indiceOriginal >= 0
+            ? (indiceOriginal + 1) - playlistBase.length
+            : 0;
+
+        return {
+            midia,
+            item,
+            chave,
+            intervalo,
+            distanciaMinima: calcularDistanciaMinimaRepeticao(intervalo),
+            ultimaPosicao
+        };
+    }
+
     /*
       Playlist base:
       todas as mídias ativas entram uma vez.
@@ -1702,27 +1851,116 @@ function gerarPlaylistArquivo() {
         });
 
     /*
-      Se houver recorrência configurada, ela prevalece.
-      Isso evita duplicar excessivamente usando prioridade + repetição.
+    Se houver recorrência configurada, ela prevalece.
+    Isso evita duplicar excessivamente usando prioridade + repetição.
+
+    Fase 3 — recorrência inteligente:
+    ---------------------------------
+    A regra anterior usava apenas:
+    posição atual % intervalo === 0
+
+    Isso causava dois problemas:
+    - a mídia podia repetir muito perto dela mesma;
+    - a contagem reiniciava no começo da playlist, ignorando o loop.
+
+    Agora cada mídia recorrente possui um contador próprio.
+    Assim, a recorrência considera a última aparição real daquela mídia,
+    inclusive quando a playlist volta do final para o início.
     */
     if (midiasComRepeticao.length > 0) {
         const playlistFinal = [];
 
+        /*
+          Posição de exibição dentro da playlist final.
+
+          Diferente do índice da playlist base, essa posição também conta
+          repetições inseridas dinamicamente.
+        */
+        let posicaoExibicao = 0;
+
+        /*
+          Cria o estado de cada mídia recorrente.
+
+          Cada estado guarda:
+          - item convertido para playlist;
+          - intervalo de repetição;
+          - última posição em que apareceu;
+          - distância mínima contra duplicação visual.
+        */
+        const estadosRecorrencia = midiasComRepeticao
+            .map((midia) => criarEstadoRecorrencia(midia, playlistBase))
+            .filter(Boolean);
+
         playlistBase.forEach((itemBase, index) => {
             playlistFinal.push(itemBase);
+            posicaoExibicao++;
 
-            const posicaoAtual = index + 1;
+            const chaveBase = obterChaveItemPlaylist(itemBase);
 
-            midiasComRepeticao.forEach((midiaRepetida) => {
-                const intervalo = Number(midiaRepetida.repetirACada);
+            /*
+              Se o item base atual for uma mídia com recorrência,
+              atualizamos sua última aparição.
 
-                if (intervalo > 0 && posicaoAtual % intervalo === 0) {
-                    const itemRepetido = converterMidiaParaPlaylist(midiaRepetida);
-
-                    if (itemRepetido) {
-                        playlistFinal.push(itemRepetido);
-                    }
+              Isso faz a posição original da mídia também contar como
+              aparição válida e reinicia o intervalo dela.
+            */
+            estadosRecorrencia.forEach((estado) => {
+                if (estado.chave === chaveBase) {
+                    estado.ultimaPosicao = posicaoExibicao;
                 }
+            });
+
+            /*
+              Após inserir a mídia normal da playlist, verificamos
+              se alguma mídia recorrente já atingiu seu intervalo.
+            */
+            estadosRecorrencia.forEach((estado) => {
+                const distanciaDesdeUltimaAparicao = posicaoExibicao - estado.ultimaPosicao;
+
+                if (distanciaDesdeUltimaAparicao < estado.intervalo) {
+                    return;
+                }
+
+                /*
+                  Evita repetir se a mesma mídia apareceu há poucas posições.
+                */
+                if (itemApareceuRecentemente(
+                    playlistFinal,
+                    estado.item,
+                    estado.distanciaMinima
+                )) {
+                    return;
+                }
+
+                /*
+                  Evita repetir se a posição original da mesma mídia
+                  aparecerá logo adiante.
+
+                  Isso resolve casos em que a repetição cairia imediatamente
+                  antes da mídia original.
+                */
+                const distanciaProximaOriginal = distanciaAteProximaAparicaoBase(
+                    playlistBase,
+                    index,
+                    estado.item,
+                    estado.distanciaMinima
+                );
+
+                if (
+                    distanciaProximaOriginal !== null &&
+                    distanciaProximaOriginal <= estado.distanciaMinima
+                ) {
+                    return;
+                }
+
+                playlistFinal.push(estado.item);
+                posicaoExibicao++;
+
+                /*
+                  A repetição também conta como aparição.
+                  Portanto, atualizamos a última posição da mídia.
+                */
+                estado.ultimaPosicao = posicaoExibicao;
             });
         });
 
