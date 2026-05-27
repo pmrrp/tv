@@ -24,17 +24,17 @@ Ao final da configuração, o PC deve:
 
 ## 2. Padrão recomendado
 
-| Item | Configuração recomendada |
-|---|---|
-| Nome do computador | `PAINEL-TV-01`, `PAINEL-TV-02`, `PAINEL-TV-03` |
-| Usuário do Windows | `Painel` |
-| Tipo de conta | Conta local |
-| Navegador | Google Chrome |
-| Modo de exibição | Quiosque |
-| Site do player | `https://painelribas.com.br/` |
-| Acesso remoto | AnyDesk com acesso não supervisionado |
-| Rede | Preferencialmente cabo |
-| Uso do equipamento | Exclusivo para o Painel Ribas |
+| Item                  | Configuração recomendada                          |
+|-----------------------|---------------------------------------------------|
+| Nome do computador    | `PAINEL-TV-01`, `PAINEL-TV-02`, `PAINEL-TV-03`    |
+| Usuário do Windows    | `Painel`                                          |
+| Tipo de conta         | Conta local                                       |
+| Navegador             | Google Chrome                                     |
+| Modo de exibição      | Quiosque                                          |
+| Site do player        | `https://painelribas.com.br/`                     |
+| Acesso remoto         | AnyDesk com acesso não supervisionado             |
+| Rede                  | Preferencialmente cabo                            |
+| Uso do equipamento    | Exclusivo para o Painel Ribas                     |
 
 ---
 
@@ -97,39 +97,9 @@ Se o computador estiver limpo, recém-formatado ou já preparado pela TI, essa e
 
 ---
 
-## 5. Nomear o computador
+## 5. Criar conta local do Windows
 
-Durante a configuração inicial ou depois pelo Windows, usar um nome padronizado.
-
-Sugestão:
-
-```txt
-PAINEL-TV-01
-PAINEL-TV-02
-PAINEL-TV-03
-```
-
-Esse nome será útil para:
-
-- identificar o equipamento na rede;
-- configurar login automático via Registro;
-- organizar suporte remoto;
-- preencher ficha técnica do ponto;
-- identificar o equipamento no AnyDesk.
-
-### Caminho no Windows
-
-```txt
-Configurações > Sistema > Sobre > Renomear este computador
-```
-
-Após renomear, reiniciar o computador.
-
----
-
-## 6. Criar conta local do Windows
-
-## 6.1 Conta recomendada
+## 5.1 Conta recomendada
 
 Criar uma conta local chamada:
 
@@ -153,7 +123,7 @@ A conta `Painel` deve ter senha exclusiva, definida pela equipe técnica.
 
 ---
 
-## 6.2 Criar conta local durante instalação do Windows 11
+## 5.2 Criar conta local durante instalação do Windows 11
 
 Em algumas versões do Windows 11, a Microsoft tenta obrigar login com conta Microsoft.
 
@@ -187,7 +157,7 @@ Perguntas de segurança: respostas controladas pela TI
 
 ---
 
-## 6.3 Método alternativo sem internet
+## 5.3 Método alternativo sem internet
 
 Se o método anterior não funcionar, no Prompt de Comando executar:
 
@@ -213,7 +183,7 @@ Painel
 
 ---
 
-## 6.4 Se nenhum método funcionar
+## 5.4 Se nenhum método funcionar
 
 Se nenhuma opção de conta local estiver disponível, concluir temporariamente com uma conta Microsoft institucional ou técnica.
 
@@ -233,18 +203,48 @@ Depois configurar essa conta como a conta operacional definitiva do equipamento.
 
 ---
 
+## 6. Nomear o computador
+
+Durante a configuração inicial ou depois pelo Windows, usar um nome padronizado.
+
+Sugestão:
+
+```txt
+PAINEL-TV-01
+PAINEL-TV-02
+PAINEL-TV-03
+```
+
+Esse nome será útil para:
+
+- identificar o equipamento na rede;
+- configurar login automático via Registro;
+- organizar suporte remoto;
+- preencher ficha técnica do ponto;
+- identificar o equipamento no AnyDesk.
+
+### Caminho no Windows
+
+```txt
+Configurações > Sistema > Sobre > Renomear este computador
+```
+
+Após renomear, reiniciar o computador.
+
+---
+
 ## 7. Configurações de privacidade na instalação
 
 Durante a configuração inicial do Windows, desativar permissões desnecessárias.
 
-| Opção | Configuração recomendada |
-|---|---|
-| Localização | Não |
-| Localizar meu dispositivo | Não, salvo decisão da TI |
-| Dados de diagnóstico opcionais | Não |
-| Melhorar escrita e digitação | Não |
-| Experiências personalizadas | Não |
-| ID de publicidade | Não |
+| Opção                             | Configuração recomendada  |
+|-----------------------------------|---------------------------|
+| Localização                       | Não                       |
+| Localizar meu dispositivo         | Não, salvo decisão da TI  |
+| Dados de diagnóstico opcionais    | Não                       |
+| Melhorar escrita e digitação      | Não                       |
+| Experiências personalizadas       | Não                       |
+| ID de publicidade                 | Não                       |
 
 O objetivo é reduzir notificações, sugestões, integrações e serviços que não são necessários para um PC dedicado ao painel.
 
@@ -428,10 +428,10 @@ Configurações > Sistema > Energia
 
 Configurar:
 
-| Opção | Valor |
-|---|---|
+| Opção         | Valor |
+|---------------|-------|
 | Desligar tela | Nunca |
-| Suspender | Nunca |
+| Suspender     | Nunca |
 
 Se aparecer opção separada para tomada/bateria, configurar na tomada:
 
@@ -703,15 +703,15 @@ Se o Chrome estiver em outro caminho, testar:
 
 ## 14.2 Explicação do comando
 
-| Parâmetro | Função |
-|---|---|
-| `chrome.exe` | Executa o Google Chrome |
-| `--user-data-dir="C:\PainelChromeQuiosque"` | Cria perfil separado só para o painel |
-| `--kiosk` | Abre em tela cheia sem barra de endereço |
-| `--no-first-run` | Evita tela inicial de boas-vindas do Chrome |
-| `--disable-session-crashed-bubble` | Evita aviso de restaurar páginas após queda de energia |
-| `--autoplay-policy=no-user-gesture-required` | Ajuda no autoplay em ambiente controlado |
-| `https://painelribas.com.br/` | Endereço do player |
+| Parâmetro                                     | Função                                                    |
+|-----------------------------------------------|-----------------------------------------------------------|
+| `chrome.exe`                                  | Executa o Google Chrome                                   |
+| `--user-data-dir="C:\PainelChromeQuiosque"`   | Cria perfil separado só para o painel                     |
+| `--kiosk`                                     | Abre em tela cheia sem barra de endereço                  |
+| `--no-first-run`                              | Evita tela inicial de boas-vindas do Chrome               |
+| `--disable-session-crashed-bubble`            | Evita aviso de restaurar páginas após queda de energia    |
+| `--autoplay-policy=no-user-gesture-required`  | Ajuda no autoplay em ambiente controlado                  |
+| `https://painelribas.com.br/`                 | Endereço do player                                        |
 
 ---
 
@@ -1020,11 +1020,11 @@ Configurações > Sistema > Tela
 
 Configurar:
 
-| Item | Recomendado |
-|---|---|
-| Resolução | 1920 x 1080, se suportado |
-| Escala | 100% ou recomendada |
-| Orientação | Paisagem |
+| Item          | Recomendado               |
+|---------------|---------------------------|
+| Resolução     | 1920 x 1080, se suportado |
+| Escala        | 100% ou recomendada       |
+| Orientação    | Paisagem                  |
 
 Se a imagem ficar cortada, ajustar na TV:
 
@@ -1079,32 +1079,32 @@ Vídeos grandes sofrem bastante com rede ruim. O player pode estar certo e a int
 
 Antes de instalar atrás da TV, testar em bancada.
 
-| OK | Item | Observação |
-|---|---|---|
-| [ ] | Reiniciar | Windows entra sozinho e abre player |
-| [ ] | Desligar e ligar | Equipamento volta ao painel |
-| [ ] | Sem teclado/mouse | PC inicia sem travar |
-| [ ] | AnyDesk | Conecta remotamente após reinício |
-| [ ] | Rodagem prolongada | Deixar rodando por horas |
-| [ ] | Pop-ups | Nenhum pop-up aparece |
-| [ ] | Som | Áudio automático validado |
-| [ ] | Quiosque | Chrome abre sem barra de endereço |
+| OK    | Item                  | Observação                            |
+|-------|-----------------------|---------------------------------------|
+|  [ ]  | Reiniciar             | Windows entra sozinho e abre player   |
+|  [ ]  | Desligar e ligar      | Equipamento volta ao painel           |
+|  [ ]  | Sem teclado/mouse     | PC inicia sem travar                  |
+|  [ ]  | AnyDesk               | Conecta remotamente após reinício     |
+|  [ ]  | Rodagem prolongada    | Deixar rodando por horas              |
+|  [ ]  | Pop-ups               | Nenhum pop-up aparece                 |
+|  [ ]  | Som                   | Áudio automático validado             |
+|  [ ]  | Quiosque              | Chrome abre sem barra de endereço     |
 
 ---
 
 ## 22. Teste na TV
 
-| OK | Item | Observação |
-|---|---|---|
-| [ ] | HDMI | Imagem aparece na TV |
-| [ ] | Resolução | Preferencialmente 1920x1080 |
-| [ ] | Escala | Sem corte de bordas |
-| [ ] | Áudio HDMI | Som sai pela TV |
-| [ ] | Rede | Player carrega sem travamentos |
-| [ ] | Controle local | Teclado/mouse funcionam para manutenção |
-| [ ] | Acesso remoto | AnyDesk acessível |
-| [ ] | Quiosque | Player abre em tela cheia |
-| [ ] | Pop-ups | Nenhuma notificação aparece sobre o player |
+| OK    | Item              | Observação                                    |
+|-------|-------------------|---------------------------------------------- |
+|  [ ]  | HDMI              | Imagem aparece na TV                          |
+|  [ ]  | Resolução         | Preferencialmente 1920x1080                   |
+|  [ ]  | Escala            | Sem corte de bordas                           |
+|  [ ]  | Áudio HDMI        | Som sai pela TV                               |
+|  [ ]  | Rede              | Player carrega sem travamentos                |
+|  [ ]  | Controle local    | Teclado/mouse funcionam para manutenção       |
+|  [ ]  | Acesso remoto     | AnyDesk acessível                             |
+|  [ ]  | Quiosque          | Player abre em tela cheia                     |
+|  [ ]  | Pop-ups           | Nenhuma notificação aparece sobre o player    |
 
 ---
 
@@ -1167,20 +1167,20 @@ Verificar:
 
 ## 25. Problemas comuns e solução rápida
 
-| Problema | Possível solução |
-|---|---|
-| Chrome não abriu automaticamente | Verificar se o atalho está em `shell:startup` |
-| Chrome abriu com barra de endereço | Confirmar se o atalho usa `--kiosk` |
-| Apareceu aviso de restaurar páginas | Confirmar uso de `--disable-session-crashed-bubble` |
-| Apareceu tela inicial do Chrome | Confirmar uso de `--no-first-run` |
-| Windows pediu senha | Revisar `netplwiz` ou Registro |
-| PC não liga após queda de energia | Revisar opção de energia na BIOS |
-| PC trava sem teclado | Revisar `Halt On`, `Wait for F1 if Error` ou `Keyboard Error` |
-| Sem som | Verificar saída HDMI/TV e volume |
-| AnyDesk não conecta | Verificar internet, ID, senha e serviço AnyDesk |
-| Apareceu pop-up | Revisar notificações, inicialização, apps instalados e Chrome |
-| Imagem cortada na TV | Ajustar resolução/escala no Windows e formato de tela da TV |
-| Vídeo travando | Testar rede, usar cabo e verificar peso do vídeo |
+| Problema                              | Possível solução                                              |
+|---------------------------------------|---------------------------------------------------------------|
+| Chrome não abriu automaticamente      | Verificar se o atalho está em `shell:startup`                 |
+| Chrome abriu com barra de endereço    | Confirmar se o atalho usa `--kiosk`                           |
+| Apareceu aviso de restaurar páginas   | Confirmar uso de `--disable-session-crashed-bubble`           |
+| Apareceu tela inicial do Chrome       | Confirmar uso de `--no-first-run`                             |
+| Windows pediu senha                   | Revisar `netplwiz` ou Registro                                |
+| PC não liga após queda de energia     | Revisar opção de energia na BIOS                              |
+| PC trava sem teclado                  | Revisar `Halt On`, `Wait for F1 if Error` ou `Keyboard Error` |
+| Sem som                               | Verificar saída HDMI/TV e volume                              |
+| AnyDesk não conecta                   | Verificar internet, ID, senha e serviço AnyDesk               |
+| Apareceu pop-up                       | Revisar notificações, inicialização, apps instalados e Chrome |
+| Imagem cortada na TV                  | Ajustar resolução/escala no Windows e formato de tela da TV   |
+| Vídeo travando                        | Testar rede, usar cabo e verificar peso do vídeo              |
 
 ---
 
@@ -1379,31 +1379,31 @@ A ficha com senhas deve ficar sob controle restrito da TI.
 
 ## 37. Checklist final de entrega
 
-| OK | Item | Observação |
-|---|---|---|
-| [ ] | Windows restaurado/limpo | Sem arquivos e configurações antigas |
-| [ ] | Nome do PC definido | `PAINEL-TV-XX` |
-| [ ] | Conta local criada | Usuário `Painel` |
-| [ ] | Privacidade ajustada | Permissões desnecessárias desativadas |
-| [ ] | Windows Update finalizado | Sem pendências críticas |
-| [ ] | Apps inúteis removidos | Sem bloatware/trials |
-| [ ] | Notificações desativadas | Sem pop-ups na TV |
-| [ ] | Apps de inicialização revisados | Só o necessário |
-| [ ] | Energia configurada | Tela/suspensão nunca |
-| [ ] | Hibernação desativada | `powercfg -h off` |
-| [ ] | BIOS energia configurada | Liga após queda |
-| [ ] | BIOS teclado/mouse ajustada | Não trava sem periféricos |
-| [ ] | Chrome instalado | Sem login Google |
-| [ ] | Atalho quiosque criado | Com flags corretas |
-| [ ] | Atalho no Startup | `shell:startup` |
-| [ ] | Login automático | Windows entra sozinho |
-| [ ] | AnyDesk instalado | Não supervisionado |
-| [ ] | Áudio HDMI testado | Som sai pela TV |
-| [ ] | Rede testada | Preferencialmente cabo |
-| [ ] | Player testado | Mídias rodam |
-| [ ] | Teste de queda de energia | Volta sozinho |
-| [ ] | Teste prolongado | Sem pop-ups/travamentos |
-| [ ] | Ficha interna preenchida | Dados do ponto registrados |
+| OK    | Item                              | Observação                            |
+|-------|-----------------------------------|---------------------------------------|
+|  [ ]  | Windows restaurado/limpo          | Sem arquivos e configurações antigas  |
+|  [ ]  | Nome do PC definido               | `PAINEL-TV-XX`                        |
+|  [ ]  | Conta local criada                | Usuário `Painel`                      |
+|  [ ]  | Privacidade ajustada              | Permissões desnecessárias desativadas |
+|  [ ]  | Windows Update finalizado         | Sem pendências críticas               |
+|  [ ]  | Apps inúteis removidos            | Sem bloatware/trials                  |
+|  [ ]  | Notificações desativadas          | Sem pop-ups na TV                     |
+|  [ ]  | Apps de inicialização revisados   | Só o necessário                       |
+|  [ ]  | Energia configurada               | Tela/suspensão nunca                  |
+|  [ ]  | Hibernação desativada             | `powercfg -h off`                     |
+|  [ ]  | BIOS energia configurada          | Liga após queda                       |
+|  [ ]  | BIOS teclado/mouse ajustada       | Não trava sem periféricos             |   
+|  [ ]  | Chrome instalado                  | Sem login Google                      |
+|  [ ]  | Atalho quiosque criado            | Com flags corretas                    |
+|  [ ]  | Atalho no Startup                 | `shell:startup`                       |
+|  [ ]  | Login automático                  | Windows entra sozinho                 |
+|  [ ]  | AnyDesk instalado                 | Não supervisionado                    |
+|  [ ]  | Áudio HDMI testado                | Som sai pela TV                       |
+|  [ ]  | Rede testada                      | Preferencialmente cabo                |
+|  [ ]  | Player testado                    | Mídias rodam                          |
+|  [ ]  | Teste de queda de energia         | Volta sozinho                         |
+|  [ ]  | Teste prolongado                  | Sem pop-ups/travamentos               |
+|  [ ]  | Ficha interna preenchida          | Dados do ponto registrados            |
 
 ---
 
