@@ -4386,7 +4386,10 @@ function renderizarMidias(midias) {
 
         const statusBadge = podeEditarMidias
             ? `
-                <label class="mediaStatusToggle ${midia.ativo ? "isActive" : "isInactive"}">
+                <label
+                    class="mediaStatusToggle ${midia.ativo ? "isActive" : "isInactive"}"
+                    title="Ativo aparece na playlist. Inativo fica salvo na biblioteca, mas não aparece no player."
+                >
                     <input
                         type="checkbox"
                         class="mediaActive"
@@ -4407,7 +4410,7 @@ function renderizarMidias(midias) {
             <details class="mediaPriorityMenu">
                 <summary
                     class="mediaBadge ${prioridade}"
-                    title="Prioridade da mídia"
+                    title="A prioridade define a importância da mídia. Normal não repete; Alta e Urgente liberam recorrência para aparecer com mais frequência."
                 >
                     <i class="fa-solid ${prioridadeIcone}" aria-hidden="true"></i>
                     <span>${prioridadeLabel}</span>
@@ -4484,7 +4487,17 @@ function renderizarMidias(midias) {
         const controleDuracao = midia.tipo === "imagem"
             ? `
                 <label class="mediaConfigLabel">
-                    Duração
+                    <span class="labelWithHelp">
+                        Duração
+                        <span
+                            class="helpTooltip"
+                            tabindex="0"
+                            data-tooltip="Define por quantos segundos esta imagem ficará na tela antes de passar para a próxima mídia."
+                            aria-label="Ajuda sobre duração da imagem"
+                        >
+                            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+                        </span>
+                    </span>
                     <select class="mediaDuration" data-arquivo="${nomeArquivo}">
                         <option value="5" ${duracaoImagem === 5 ? "selected" : ""}>5s</option>
                         <option value="8" ${duracaoImagem === 8 ? "selected" : ""}>8s</option>
@@ -4508,7 +4521,7 @@ function renderizarMidias(midias) {
                         <span
                             class="helpTooltip"
                             tabindex="0"
-                            data-tooltip="Define de quanto em quanto tempo esta mídia deve aparecer novamente. O sistema evita repetições coladas para deixar a playlist mais agradável."
+                            data-tooltip="Define de quanto em quanto tempo esta mídia deve aparecer novamente. O sistema considera o loop da playlist e evita repetições muito próximas."
                             aria-label="Ajuda sobre repetição da mídia"
                         >
                             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
@@ -4542,9 +4555,17 @@ function renderizarMidias(midias) {
 
             <details class="mediaScheduleMenu mediaScheduleEditable">
                 <summary>
-                    <span>
+                    <span class="labelWithHelp">
                         <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
                         Período de exibição
+                        <span
+                            class="helpTooltip"
+                            tabindex="0"
+                            data-tooltip="Define quando esta mídia deve começar e parar de aparecer no player. Se ficar como tempo indeterminado, ela poderá aparecer enquanto estiver ativa."
+                            aria-label="Ajuda sobre período de exibição"
+                        >
+                            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+                        </span>
                     </span>
                     <small>${semValidadeDefinida ? "Tempo indeterminado" : "Com data definida"}</small>
                 </summary>
