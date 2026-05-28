@@ -462,6 +462,24 @@ O objetivo é melhorar a experiência do operador, reduzindo dúvidas sobre o fu
 
 ---
 
+### 3.16 Anti-cache para assets do admin
+
+Foi adicionada uma proteção simples contra cache antigo nos arquivos leves do painel administrativo.
+
+O backend agora envia headers anti-cache para arquivos do admin como:
+
+- HTML;
+- CSS;
+- JavaScript.
+
+Essa configuração reduz situações em que, após um deploy, o navegador carrega HTML atualizado, mas mantém CSS ou JS antigo em cache.
+
+A regra foi limitada ao frontend administrativo e não deve afetar arquivos pesados, mídias, vídeos, imagens ou conteúdos exibidos pelo player.
+
+Essa solução não substitui um versionamento completo por hash ou `APP_VERSION`, mas resolve o problema prático de deploy com baixo risco e baixa complexidade.
+
+---
+
 ## 4. Rotas envolvidas
 
 ### Health público
@@ -813,6 +831,9 @@ Entregas concluídas:
 [OK] Diagnóstico validado em produção
 [OK] Dicas nativas/hover nos principais controles do admin
 [OK] Estratégia de ajuda contextual sem poluir visualmente a interface
+[OK] Headers anti-cache para assets leves do admin
+[OK] Avaliar versionamento/cache busting automático dos assets CSS/JS no deploy
+[OK] Implementar versionamento/cache busting automático dos assets CSS/JS no deploy, evitando necessidade de hard reload após alterações visuais no admin/player.
 ```
 
 ---
@@ -833,8 +854,7 @@ Itens que podem ser tratados posteriormente:
 [ ] Criar modal detalhado para diagnóstico operacional completo
 [ ] Atualizar documentação executiva da Fase 3
 [ ] Evoluir ajuda contextual por seção para modais ou vídeos tutoriais
-[ ] Avaliar versionamento/cache busting automático dos assets CSS/JS no deploy
-[ ] Implementar versionamento/cache busting automático dos assets CSS/JS no deploy, evitando necessidade de hard reload após alterações visuais no admin/player.
+[ ] Avaliar versionamento automático por `APP_VERSION` ou hash do commit para CSS/JS
 ```
 
 ---

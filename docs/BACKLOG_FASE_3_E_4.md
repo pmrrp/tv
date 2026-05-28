@@ -492,6 +492,8 @@ Reduzir dúvidas do usuário e tornar o painel mais autoexplicativo.
 - [x] Adicionar textos explicativos para armazenamento.
 - [x] Adicionar textos explicativos para backups.
 - [x] Adicionar textos explicativos para diagnóstico.
+- [x] Implementar primeira proteção contra cache antigo nos assets do admin usando headers anti-cache para HTML/CSS/JS.
+- [ ] Avaliar futuramente versionamento por `APP_VERSION` ou hash de commit para cache busting mais controlado.
 - [ ] Evoluir futuramente os ícones de ajuda das seções para abrir modais explicativos ou vídeos tutoriais.
 - [ ] Criar textos tutoriais mais completos por seção do painel.
 - [ ] Avaliar criação de uma central de ajuda interna no admin.
@@ -1033,6 +1035,7 @@ Status: concluída em grande parte.
 - [x] Melhorar textos explicativos da recorrência.
 - [x] Melhorar orientações de armazenamento.
 - [x] Melhorar orientações de backups e diagnóstico.
+- [x] Adicionar headers anti-cache nos arquivos leves do frontend administrativo para reduzir problemas de CSS/JS antigo após deploy.
 - [ ] Revisar manual administrativo.
 - [ ] Revisar manual de operação dos pontos instalados.
 

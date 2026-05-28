@@ -683,6 +683,9 @@ Após deploy:
 - [ ] Fazer hard reload ou testar em aba anônima após alterações de CSS/JS.
 - [ ] Confirmar que os estilos dos ícones de ajuda foram carregados corretamente.
 - [ ] Confirmar que as dicas nativas aparecem nos principais controles.
+- [ ] Abrir DevTools > Network e confirmar headers anti-cache em `admin.css` e `admin.js`.
+- [ ] Confirmar que `Cache-Control` aparece como `no-cache, no-store, must-revalidate` nos assets do admin.
+- [ ] Confirmar que o admin carrega corretamente após deploy sem inconsistência visual.
 
 Comandos:
 
@@ -710,9 +713,23 @@ Após deploy da funcionalidade de backup SQLite:
 
 ---
 
+## 32. Testes de cache do frontend administrativo
+
+- [ ] Abrir o painel administrativo.
+- [ ] Abrir DevTools > Network.
+- [ ] Recarregar a página.
+- [ ] Conferir `admin.css`.
+- [ ] Conferir `admin.js`.
+- [ ] Confirmar header `Cache-Control: no-cache, no-store, must-revalidate`.
+- [ ] Confirmar que mídias/vídeos/imagens não foram afetados pela regra anti-cache.
+- [ ] Confirmar dashboard sem erro visual.
+- [ ] Confirmar console sem erro.
+
+---
+
 # TESTES DE RESPONSIVIDADE
 
-## 32. Testes mobile/tablet
+## 33. Testes mobile/tablet
 
 - [ ] Testar login em tela pequena.
 - [ ] Testar dashboard em tela pequena.
@@ -731,7 +748,7 @@ Após deploy da funcionalidade de backup SQLite:
 
 # TESTES DE REGRESSÃO
 
-## 33. Regressão obrigatória após mexer no backend
+## 34. Regressão obrigatória após mexer no backend
 
 - [ ] Login.
 - [ ] Sessão.
@@ -749,7 +766,7 @@ Após deploy da funcionalidade de backup SQLite:
 
 ---
 
-## 34. Regressão obrigatória após mexer no admin.js
+## 35. Regressão obrigatória após mexer no admin.js
 
 - [ ] Dashboard carrega.
 - [ ] Upload funciona.
@@ -766,7 +783,7 @@ Após deploy da funcionalidade de backup SQLite:
 
 ---
 
-## 35. Regressão obrigatória após mexer no admin.css
+## 36. Regressão obrigatória após mexer no admin.css
 
 - [ ] Login visualmente correto.
 - [ ] Header correto.
@@ -783,7 +800,7 @@ Após deploy da funcionalidade de backup SQLite:
 
 ---
 
-# 36. Critérios gerais de aprovação
+# 37. Critérios gerais de aprovação
 
 Uma alteração só deve ser considerada aprovada quando:
 
@@ -800,7 +817,7 @@ Uma alteração só deve ser considerada aprovada quando:
 
 ---
 
-# 37. Observação final
+# 38. Observação final
 
 Este guia deve ser atualizado sempre que novas funcionalidades forem adicionadas.
 

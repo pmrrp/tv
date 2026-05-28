@@ -612,7 +612,7 @@ A recorrência continua respeitando a intenção de destacar mídias importantes
 
 ---
 
-### Usabilidade / Ajuda contextual
+# 2026-05 - Usabilidade / Ajuda contextual
 
 - Adicionadas dicas nativas de interface usando `title` nos principais controles do painel administrativo.
 - Aplicadas dicas rápidas nos cards de resumo operacional, upload, biblioteca, filtros, cards de mídia, usuários, auditoria, backups e diagnóstico.
@@ -623,11 +623,24 @@ A recorrência continua respeitando a intenção de destacar mídias importantes
   - a base fica preparada para futura evolução com modais ou vídeos tutoriais por seção.
 - Refinada a experiência do operador sem alterar regras de negócio, backend ou fluxo funcional do sistema.
 
-### Impacto
+## Impacto
 
 A dashboard administrativa ficou mais autoexplicativa para usuários e operadores, reduzindo dúvidas sobre botões, filtros, status, prioridade, recorrência, backups, diagnóstico e ações sensíveis.
 
 A mudança melhora a usabilidade sem poluir visualmente o painel e sem comprometer o padrão premium adotado na interface.
+
+---
+
+# 2026-05 - Cache do frontend administrativo
+
+- Adicionados headers anti-cache para arquivos leves do frontend administrativo.
+- O sistema agora orienta o navegador a revalidar arquivos como HTML, CSS e JavaScript do admin após deploy.
+- A melhoria reduz casos em que o HTML novo carrega junto com CSS/JS antigo em cache.
+- A regra foi aplicada apenas aos assets leves do admin, sem afetar mídias, vídeos ou imagens da pasta `midia/`.
+
+## Impacto
+
+Reduz a necessidade de hard reload após alterações visuais ou funcionais no painel administrativo e evita inconsistências de interface após deploy.
 
 ---
 
