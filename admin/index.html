@@ -685,13 +685,15 @@ e resetar senha dos usuários do painel.
                             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
                         </span>
                     </h2>
-                    <p>
+                    <p
+                        title="Consulte eventos importantes registrados pelo sistema, como ações de usuários, alterações de mídias, backups, bloqueios e rotinas automáticas.">
                         Consulte as últimas ações realizadas no painel administrativo.
                     </p>
                 </div>
 
                 <div class="usersActions">
-                    <button id="btnReloadAuditLogs" class="secondaryAction" type="button">
+                    <button id="btnReloadAuditLogs" class="secondaryAction" type="button"
+                        title="Recarrega os logs de auditoria mais recentes.">
                         <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
                         Atualizar logs
                     </button>
@@ -699,10 +701,13 @@ e resetar senha dos usuários do painel.
             </div>
 
             <details id="auditDropdown" class="usersDropdown">
-                <summary class="usersDropdownSummary">
+                <summary class="usersDropdownSummary"
+                    title="Clique para abrir ou recolher a lista das últimas ações registradas no sistema.">
                     <div>
                         <strong>Últimas ações registradas</strong>
-                        <span id="auditDropdownCount">Carregando logs...</span>
+                        <span id="auditDropdownCount" title="Mostra a quantidade de registros de auditoria carregados.">
+                            Carregando logs...
+                        </span>
                     </div>
 
                     <span class="dropdownToggleIcon" aria-hidden="true">
@@ -710,7 +715,8 @@ e resetar senha dos usuários do painel.
                     </span>
                 </summary>
 
-                <div id="auditLogsList" class="usersList auditLogsList">
+                <div id="auditLogsList" class="usersList auditLogsList"
+                    title="Lista de ações registradas na auditoria do sistema.">
                     <div class="message">Carregando logs...</div>
                 </div>
             </details>

@@ -1584,7 +1584,14 @@ function renderizarLogsAuditoria(logs) {
     if (!auditLogsList) return;
 
     if (!logs.length) {
-        auditLogsList.innerHTML = `<div class="message">Nenhum log encontrado.</div>`;
+        auditLogsList.innerHTML = `
+            <div
+                class="message"
+                title="Nenhum registro de auditoria foi encontrado no momento."
+            >
+                Nenhum log encontrado.
+            </div>
+        `;
         return;
     }
 
@@ -1599,48 +1606,68 @@ function renderizarLogsAuditoria(logs) {
         const iconeAcao = obterIconeAcaoAuditoria(acaoOriginal);
 
         return `
-            <article class="auditLogItem ${classeAcao}">
+            <article
+                class="auditLogItem ${classeAcao}"
+                title="Registro de auditoria do sistema. Use os detalhes técnicos para verificar informações adicionais desta ação."
+            >
                 <div class="auditLogMain">
-                    <div class="auditLogTitle">
+                    <div
+                        class="auditLogTitle"
+                        title="Tipo de ação registrada e data/hora em que ocorreu."
+                    >
                         <span class="auditLogIcon" aria-hidden="true">
                             <i class="fa-solid ${iconeAcao}"></i>
                         </span>
 
                         <div>
-                            <strong>${escaparHtml(acao)}</strong>
-                            <span>${escaparHtml(data)}</span>
+                            <strong title="Nome amigável da ação registrada.">${escaparHtml(acao)}</strong>
+                            <span title="Data e hora em que esta ação foi registrada.">${escaparHtml(data)}</span>
                         </div>
                     </div>
 
-                    <span class="auditLogActionRaw">${escaparHtml(acaoOriginal || "ação")}</span>
+                    <span
+                        class="auditLogActionRaw"
+                        title="Identificador técnico da ação usado internamente pelo sistema."
+                    >
+                        ${escaparHtml(acaoOriginal || "ação")}
+                    </span>
                 </div>
 
                 <div class="auditLogMeta">
-                    <span>
-                        <i class="fa-solid fa-user"></i>
+                    <span title="Usuário responsável pela ação. Quando a ação é automática, aparece como Sistema.">
+                        <i class="fa-solid fa-user" aria-hidden="true"></i>
                         ${escaparHtml(usuario)}${email ? ` (${escaparHtml(email)})` : ""}
                     </span>
 
-                    <span>
-                        <i class="fa-solid fa-location-dot"></i>
+                    <span title="Endereço IP associado ao registro, quando disponível.">
+                        <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
                         ${escaparHtml(log.ip || "--")}
                     </span>
                 </div>
 
-                <p class="auditLogSummary">
+                <p
+                    class="auditLogSummary"
+                    title="Resumo em linguagem simples do que aconteceu neste registro."
+                >
                     ${escaparHtml(detalhesResumo)}
                 </p>
 
-                <details class="auditLogDetails">
+                <details
+                    class="auditLogDetails"
+                    title="Abre os detalhes técnicos deste registro de auditoria."
+                >
                     <summary>
                         <span>
-                            <i class="fa-solid fa-code"></i>
+                            <i class="fa-solid fa-code" aria-hidden="true"></i>
                             Ver detalhes técnicos
                         </span>
                         <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
                     </summary>
 
-                    <div class="auditLogDetailsContent">
+                    <div
+                        class="auditLogDetailsContent"
+                        title="Detalhes técnicos registrados em formato estruturado para suporte e conferência."
+                    >
                         ${renderizarDetalhesAuditoria(log.details)}
                     </div>
                 </details>
@@ -1652,8 +1679,14 @@ function renderizarLogsAuditoria(logs) {
 async function carregarLogsAuditoria() {
     if (!auditLogsList) return;
 
-    auditLogsList.innerHTML = `<div class="message">Carregando logs...</div>`;
-
+    auditLogsList.innerHTML = `
+        <div
+            class="message"
+            title="Aguarde enquanto os registros de auditoria são carregados."
+        >
+            Carregando logs...
+        </div>
+    `;
     if (auditDropdownCount) {
         auditDropdownCount.textContent = "Carregando logs...";
     }
@@ -1672,7 +1705,14 @@ async function carregarLogsAuditoria() {
             auditDropdownCount.textContent = `${dados.total || 0} registros encontrados`;
         }
     } catch (erro) {
-        auditLogsList.innerHTML = `<div class="message error">Erro ao carregar logs.</div>`;
+        auditLogsList.innerHTML = `
+            <div
+                class="message error"
+                title="Não foi possível carregar os logs de auditoria. Verifique a sessão, permissões ou conexão com o servidor."
+            >
+                Erro ao carregar logs.
+            </div>
+        `;
 
         if (auditDropdownCount) {
             auditDropdownCount.textContent = "Erro ao carregar logs";
