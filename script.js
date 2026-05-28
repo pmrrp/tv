@@ -223,6 +223,117 @@ function atualizarStatus(texto) {
 }
 
 /* =========================================================
+   STATUS DE CONEXÃO / FALLBACK
+   ========================================================= */
+
+let timerConnectionStatus = null;
+let estadoConexaoPlayer = "online";
+
+/**
+ * Atualiza o indicador discreto de conexão do player.
+ *
+ * Estados:
+ * - online: conexão OK, indicador aparece rapidamente e some;
+ * - offline: sem conexão com o servidor, mantém conteúdo atual;
+ * - fallback: usando última playlist salva localmente;
+ * - erro: situação crítica de carregamento.
+ */
+function atualizarIndicadorConexao(estado, texto) {
+  const connectionStatus = document.getElementById("connectionStatus");
+
+  if (!connectionStatus) return;
+
+  const icone = connectionStatus.querySelector("i");
+  const label = connectionStatus.querySelector("span");
+
+  estadoConexaoPlayer = estado;
+
+  connectionStatus.classList.remove(
+    "hidden",
+    "connectionStatusOnline",
+    "connectionStatusOffline",
+    "connectionStatusFallback",
+    "connectionStatusError"
+  );
+
+  if (timerConnectionStatus) {
+    clearTimeout(timerConnectionStatus);
+    timerConnectionStatus = null;
+  }
+
+  if (estado === "online") {
+    connectionStatus.classList.add("connectionStatusOnline");
+
+    if (icone) {
+      icone.className = "fa-solid fa-wifi";
+    }
+
+    if (label) {
+      label.textContent = texto || "Conexão restabelecida.";
+    }
+
+    /*
+      Online é apenas um aviso rápido.
+      No uso normal, não queremos um indicador permanente na TV.
+    */
+    timerConnectionStatus = setTimeout(() => {
+      connectionStatus.classList.add("hidden");
+    }, 3500);
+
+    return;
+  }
+
+  if (estado === "offline") {
+    connectionStatus.classList.add("connectionStatusOffline");
+
+    if (icone) {
+      icone.className = "fa-solid fa-wifi-slash";
+    }
+
+    if (label) {
+      label.textContent = texto || "Sem conexão. Mantendo conteúdo atual.";
+    }
+
+    return;
+  }
+
+  if (estado === "fallback") {
+    connectionStatus.classList.add("connectionStatusFallback");
+
+    if (icone) {
+      icone.className = "fa-solid fa-clock-rotate-left";
+    }
+
+    if (label) {
+      label.textContent = texto || "Usando última playlist salva.";
+    }
+
+    return;
+  }
+
+  connectionStatus.classList.add("connectionStatusError");
+
+  if (icone) {
+    icone.className = "fa-solid fa-triangle-exclamation";
+  }
+
+  if (label) {
+    label.textContent = texto || "Falha operacional no player.";
+  }
+}
+
+/**
+ * Esconde o indicador de conexão.
+ */
+function esconderIndicadorConexao() {
+  const connectionStatus = document.getElementById("connectionStatus");
+
+  if (!connectionStatus) return;
+
+  connectionStatus.classList.add("hidden");
+}
+
+/* =========================================================
    CONFIGURAÇÃO
    ========================================================= */
 
@@ -406,6 +517,10 @@ async function carregarPlaylist() {
     playlist = dados;
     indiceAtual = 0;
 
+    if (estadoConexaoPlayer !== "online") {
+      atualizarIndicadorConexao("online", "Conexão restabelecida.");
+    }
+
     atualizarStatus("Playlist carregada.");
     debugMensagem(`playlist.json carregado. Total de itens: ${playlist.length}`);
 
@@ -421,11 +536,14 @@ async function carregarPlaylist() {
     playlist = playlistLocal;
     indiceAtual = 0;
 
+    atualizarIndicadorConexao("fallback", "Usando última playlist salva.");
     atualizarStatus("Usando última playlist salva.");
     debugMensagem(`Fallback local carregado. Total de itens: ${playlist.length}`);
 
     return;
   }
+
+  atualizarIndicadorConexao("erro", "Não foi possível carregar playlist.");
 
   throw new Error("Não foi possível carregar a playlist remota nem uma playlist local salva.");
 }
@@ -661,6 +779,74 @@ async function prepararPrimeiraMidiaDoCiclo() {
 }
 
 /* =========================================================
+   FALLBACK DE ERRO DE MÍDIA
+   =========================================================
+   Evita que o player fique travado quando uma mídia falha.
+
+   Exemplos:
+   - arquivo removido;
+   - vídeo corrompido;
+   - imagem inexistente;
+   - rede oscilando;
+   - cache local sem o arquivo solicitado.
+   ========================================================= */
+
+const TEMPO_AVANCAR_APOS_FALHA_MIDIA_MS = 1000;
+const TEMPO_RETENTAR_APOS_TODAS_FALHAREM_MS = 30000;
+
+let falhasSequenciaisDeMidia = 0;
+
+/**
+ * Deve ser chamado quando uma mídia começa a tocar/exibir com sucesso.
+ */
+function registrarMidiaExecutadaComSucesso() {
+  falhasSequenciaisDeMidia = 0;
+}
+
+/**
+ * Trata falha da mídia atual e tenta avançar para a próxima.
+ *
+ * Possui proteção para evitar loop infinito caso todas as mídias
+ * da playlist estejam indisponíveis.
+ */
+function tratarFalhaMidiaAtual(motivo = "Falha ao abrir mídia.") {
+  falhasSequenciaisDeMidia += 1;
+
+  debugMensagem(`${motivo} Falhas sequenciais: ${falhasSequenciaisDeMidia}.`);
+
+  if (timerImagem) {
+    clearTimeout(timerImagem);
+    timerImagem = null;
+  }
+
+  emTransicao = false;
+
+  const totalMidias = Array.isArray(playlist) ? playlist.length : 0;
+
+  if (totalMidias > 0 && falhasSequenciaisDeMidia >= totalMidias) {
+    atualizarIndicadorConexao("erro", "Nenhuma mídia carregou.");
+    atualizarStatus("Nenhuma mídia carregou. Tentando novamente em instantes...");
+
+    debugMensagem(
+      "Todas as mídias da playlist falharam em sequência. Aguardando antes de tentar novamente."
+    );
+
+    setTimeout(() => {
+      falhasSequenciaisDeMidia = 0;
+      proximoItem();
+    }, TEMPO_RETENTAR_APOS_TODAS_FALHAREM_MS);
+
+    return;
+  }
+
+  atualizarStatus("Falha ao abrir mídia, avançando...");
+
+  setTimeout(() => {
+    proximoItem();
+  }, TEMPO_AVANCAR_APOS_FALHA_MIDIA_MS);
+}
+
+/* =========================================================
    REPRODUÇÃO DA MÍDIA ATUAL
    ========================================================= */
 
@@ -677,9 +863,7 @@ async function tocarItemAtual() {
   const item = playlist[indiceAtual];
 
   if (!item || !item.tipo || !item.arquivo) {
-    atualizarStatus("Conteúdo inválido, avançando...");
-    emTransicao = false;
-    setTimeout(proximoItem, 1000);
+    tratarFalhaMidiaAtual("Conteúdo inválido na playlist.");
     return;
   }
 
@@ -704,6 +888,21 @@ async function tocarItemAtual() {
       videoPlayer.removeEventListener("loadeddata", tentarIniciarVideo);
       videoPlayer.removeEventListener("canplay", tentarIniciarVideo);
       videoPlayer.removeEventListener("canplaythrough", tentarIniciarVideo);
+      videoPlayer.removeEventListener("error", tratarErroVideo);
+    }
+
+    function tratarErroVideo() {
+      removerEventosVideo();
+
+      if (timeoutSegurancaVideo) {
+        clearTimeout(timeoutSegurancaVideo);
+      }
+
+      const erroVideo = videoPlayer.error
+        ? `Código do erro do vídeo: ${videoPlayer.error.code}`
+        : "Erro desconhecido no vídeo.";
+
+      tratarFalhaMidiaAtual(`Falha ao carregar vídeo. ${erroVideo}`);
     }
 
     function tentarIniciarVideo() {
@@ -744,6 +943,9 @@ async function tocarItemAtual() {
 
       videoPlayer.play()
         .then(() => {
+
+          registrarMidiaExecutadaComSucesso();
+
           debugMensagem("videoPlayer.play() executado com sucesso.");
           debugEstadoVideo("Depois do play()");
 
@@ -773,6 +975,8 @@ async function tocarItemAtual() {
 
             videoPlayer.play()
               .then(() => {
+                registrarMidiaExecutadaComSucesso();
+
                 debugMensagem("Fallback mutado executado com sucesso.");
                 debugEstadoVideo("Depois do fallback mutado");
 
@@ -787,9 +991,7 @@ async function tocarItemAtual() {
                 );
 
                 debugEstadoVideo("Falha ao tentar fallback mutado");
-                atualizarStatus("Falha ao abrir mídia, avançando...");
-                emTransicao = false;
-                setTimeout(proximoItem, 1000);
+                tratarFalhaMidiaAtual("Falha ao executar vídeo mesmo no fallback mutado.");
               });
 
             return;
@@ -797,9 +999,7 @@ async function tocarItemAtual() {
 
           debugMensagem(`Falha no play(): ${erro && erro.message ? erro.message : erro}`);
           debugEstadoVideo("Falha ao tentar play()");
-          atualizarStatus("Falha ao abrir mídia, avançando...");
-          emTransicao = false;
-          setTimeout(proximoItem, 1000);
+          tratarFalhaMidiaAtual("Falha ao executar vídeo.");
         });
     }
 
@@ -807,6 +1007,7 @@ async function tocarItemAtual() {
     videoPlayer.addEventListener("loadeddata", tentarIniciarVideo);
     videoPlayer.addEventListener("canplay", tentarIniciarVideo);
     videoPlayer.addEventListener("canplaythrough", tentarIniciarVideo);
+    videoPlayer.addEventListener("error", tratarErroVideo);
 
     timeoutSegurancaVideo = setTimeout(() => {
       if (!jaTentouIniciar && tipoAtual === "video") {
@@ -839,7 +1040,27 @@ async function tocarItemAtual() {
   } else if (item.tipo === "imagem") {
     const img = new Image();
 
+    let imagemResolvida = false;
+
+    const timeoutSegurancaImagem = setTimeout(() => {
+      if (imagemResolvida) return;
+
+      imagemResolvida = true;
+
+      img.onload = null;
+      img.onerror = null;
+
+      tratarFalhaMidiaAtual("Timeout ao carregar imagem.");
+    }, 8000);
+
     img.onload = () => {
+      if (imagemResolvida) return;
+
+      imagemResolvida = true;
+      clearTimeout(timeoutSegurancaImagem);
+
+      registrarMidiaExecutadaComSucesso();
+
       imagePlayer.src = item.arquivo;
       mostrarImagem();
 
@@ -856,16 +1077,17 @@ async function tocarItemAtual() {
     };
 
     img.onerror = () => {
-      atualizarStatus("Falha ao abrir mídia, avançando...");
-      emTransicao = false;
-      setTimeout(proximoItem, 1000);
+      if (imagemResolvida) return;
+
+      imagemResolvida = true;
+      clearTimeout(timeoutSegurancaImagem);
+
+      tratarFalhaMidiaAtual("Falha ao carregar imagem.");
     };
 
     img.src = item.arquivo;
   } else {
-    atualizarStatus("Tipo de mídia desconhecido, avançando...");
-    emTransicao = false;
-    setTimeout(proximoItem, 1000);
+    tratarFalhaMidiaAtual("Tipo de mídia desconhecido na playlist.");
   }
 }
 
@@ -1393,6 +1615,10 @@ setInterval(async () => {
   try {
     const novaPlaylist = await buscarPlaylistRemota();
 
+    if (estadoConexaoPlayer !== "online") {
+      atualizarIndicadorConexao("online", "Conexão restabelecida.");
+    }
+
     if (JSON.stringify(novaPlaylist) !== JSON.stringify(playlist)) {
       sincronizarPlaylistSemReiniciar(novaPlaylist);
     }
@@ -1407,7 +1633,7 @@ setInterval(async () => {
     console.warn("Erro ao atualizar playlist. Mantendo playlist atual:", erro);
 
     if (playlistEhValida(playlist)) {
-      atualizarStatus("Sem conexão. Mantendo conteúdo atual.");
+      atualizarIndicadorConexao("offline", "Sem conexão. Mantendo conteúdo atual.");
     }
   }
 }, INTERVALO_SINCRONIZACAO_PLAYLIST_MS);

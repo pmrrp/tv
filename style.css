@@ -1593,6 +1593,78 @@ body.debug-mode #debugPanel {
   }
 }
 
+/* =========================================================
+   STATUS DE CONEXÃO / FALLBACK
+   ========================================================= */
+
+.connectionStatus {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  z-index: 80;
+
+  min-height: 38px;
+  max-width: min(420px, calc(100vw - 48px));
+
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 10px 14px;
+
+  border: 1px solid rgba(226, 232, 240, 0.72);
+  border-radius: 999px;
+
+  background: rgba(15, 23, 42, 0.78);
+  color: #ffffff;
+
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.24);
+  backdrop-filter: blur(18px);
+
+  opacity: 1;
+  transform: translateY(0);
+
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease,
+    background 0.22s ease,
+    border-color 0.22s ease;
+}
+
+.connectionStatus.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+}
+
+.connectionStatus i {
+  font-size: 13px;
+}
+
+.connectionStatusOnline {
+  background: rgba(22, 101, 52, 0.78);
+  border-color: rgba(187, 247, 208, 0.35);
+}
+
+.connectionStatusOffline {
+  background: rgba(146, 64, 14, 0.86);
+  border-color: rgba(253, 230, 138, 0.38);
+}
+
+.connectionStatusFallback {
+  background: rgba(30, 64, 175, 0.84);
+  border-color: rgba(191, 219, 254, 0.36);
+}
+
+.connectionStatusError {
+  background: rgba(127, 29, 29, 0.86);
+  border-color: rgba(254, 202, 202, 0.38);
+}
+
 /*
   Mobile/tablet em retrato:
   painel inferior premium.
