@@ -13,7 +13,19 @@
    Em produção com painelribas.com.br, está OK.
    ========================================================= */
 
-const PLAYER_CACHE_NAME = "painel-ribas-player-cache-v1";
+const PLAYER_CACHE_NAME = "painel-ribas-player-cache-v4";
+
+const PLAYER_SHELL_URLS = [
+    "/",
+    "/index.html",
+    "/style.css",
+    "/script.js",
+    "/config.json",
+    "/assets/favicon.svg",
+    "/assets/logo-prefeitura.svg",
+    "/assets/wallpaper.jpg",
+    "/assets/watermark-prefeitura.svg"
+];
 
 const EXTENSOES_IMAGEM = [
     ".jpg",
@@ -33,6 +45,17 @@ function ehImagem(url) {
     return EXTENSOES_IMAGEM.some((extensao) => {
         return pathname.endsWith(extensao);
     });
+}
+
+/**
+ * Verifica se a requisição é parte essencial do player.
+ */
+function ehArquivoBaseDoPlayer(url) {
+    const pathname = new URL(url).pathname;
+
+    if (pathname === "/") return true;
+
+    return PLAYER_SHELL_URLS.includes(pathname);
 }
 
 /**
@@ -67,7 +90,25 @@ self.addEventListener("install", (event) => {
     self.skipWaiting();
 
     event.waitUntil(
-        caches.open(PLAYER_CACHE_NAME)
+        caches.open(PLAYER_CACHE_NAME).then(async (cache) => {
+            await Promise.allSettled(
+                PLAYER_SHELL_URLS.map(async (url) => {
+                    try {
+                        const response = await fetch(url, {
+                            cache: "reload"
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+
+                        await cache.put(url, response.clone());
+                    } catch (erro) {
+                        console.warn(`Falha ao cachear arquivo base do player: ${url}`, erro);
+                    }
+                })
+            );
+        })
     );
 });
 
@@ -96,31 +137,115 @@ self.addEventListener("fetch", (event) => {
         return;
     }
 
-    if (!deveTratarRequisicao(request)) {
+    const url = new URL(request.url);
+
+    if (url.origin !== self.location.origin) {
+        return;
+    }
+
+    /*
+      Não interferimos no admin.
+      O admin continua seguindo o fluxo normal do servidor.
+    */
+    if (url.pathname.startsWith("/admin/")) {
+        return;
+    }
+
+    /*
+      Navegação do player.
+  
+      Importante:
+      URLs como:
+      - /
+      - /?debug=1
+      - /index.html
+      devem conseguir abrir offline usando a versão cacheada do player.
+    */
+    const ehNavegacao =
+        request.mode === "navigate" ||
+        request.destination === "document";
+
+    if (ehNavegacao) {
+        event.respondWith(
+            fetch(request)
+                .then((response) => {
+                    if (response && response.ok) {
+                        const respostaParaCache = response.clone();
+
+                        caches.open(PLAYER_CACHE_NAME).then((cache) => {
+                            cache.put("/", respostaParaCache.clone());
+                            cache.put("/index.html", respostaParaCache);
+                        });
+                    }
+
+                    return response;
+                })
+                .catch(async () => {
+                    const cache = await caches.open(PLAYER_CACHE_NAME);
+
+                    const indexCache =
+                        await cache.match("/index.html") ||
+                        await cache.match("/") ||
+                        await caches.match("/index.html") ||
+                        await caches.match("/");
+
+                    if (indexCache) {
+                        return indexCache;
+                    }
+
+                    return new Response(
+                        "<h1>Painel indisponível offline</h1><p>O player ainda não foi salvo no cache local.</p>",
+                        {
+                            status: 503,
+                            headers: {
+                                "Content-Type": "text/html; charset=utf-8"
+                            }
+                        }
+                    );
+                })
+        );
+
+        return;
+    }
+
+    const deveTratar =
+        ehArquivoBaseDoPlayer(request.url) ||
+        ehImagem(request.url);
+
+    if (!deveTratar) {
         return;
     }
 
     event.respondWith(
         fetch(request)
             .then((response) => {
-                /*
-                  Se a rede respondeu OK e for imagem, atualizamos o cache.
-                */
-                if (response && response.ok && ehImagem(request.url)) {
+                if (response && response.ok) {
                     const respostaParaCache = response.clone();
+                    const respostaParaCacheSemQuery = response.clone();
 
                     caches.open(PLAYER_CACHE_NAME).then((cache) => {
                         cache.put(request, respostaParaCache);
+
+                        /*
+                          Também salva uma cópia pelo caminho limpo, sem query string.
+                          Isso permite responder offline a URLs versionadas como:
+                          /config.json?v=123
+                          /script.js?v=123
+                        */
+                        cache.put(url.pathname, respostaParaCacheSemQuery);
                     });
                 }
 
                 return response;
             })
             .catch(async () => {
-                /*
-                  Se a rede falhar, tentamos responder com cache.
-                */
-                const respostaCache = await caches.match(request);
+                const cache = await caches.open(PLAYER_CACHE_NAME);
+
+                const respostaCache =
+                    await cache.match(request) ||
+                    await caches.match(request) ||
+                    await cache.match(url.pathname) ||
+                    await caches.match(url.pathname);
 
                 if (respostaCache) {
                     return respostaCache;

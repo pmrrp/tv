@@ -688,7 +688,7 @@ async function preCarregarImagensDaPlaylist(lista) {
   */
   if ("caches" in window) {
     try {
-      const cache = await caches.open("painel-ribas-player-cache-v1");
+      const cache = await caches.open("painel-ribas-player-4");
 
       await Promise.allSettled(
         urlsUnicas.map(async (url) => {
@@ -1814,7 +1814,7 @@ document.addEventListener("keydown", (event) => {
    CACHE OFFLINE - INSPEÇÃO E MANUTENÇÃO
    ========================================================= */
 
-const PLAYER_CACHE_NAME = "painel-ribas-player-cache-v1";
+const PLAYER_CACHE_NAME = "painel-ribas-player-cache-v4";
 
 /**
  * Lista os itens atualmente salvos no Cache Storage do player.
