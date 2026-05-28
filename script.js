@@ -1696,7 +1696,31 @@ function sincronizarPlaylistSemReiniciar(novaPlaylist) {
    ========================================================= */
 const INTERVALO_SINCRONIZACAO_PLAYLIST_MS = 5 * 1000;
 
-setInterval(async () => {
+let playerEstaOnline = navigator.onLine !== false;
+let sincronizacaoPlaylistEmAndamento = false;
+
+/**
+ * Sincroniza a playlist com o servidor quando houver conexão.
+ *
+ * Se o navegador estiver offline, não tenta buscar o servidor.
+ * Isso evita erro repetido no console e mantém o player rodando
+ * com a playlist atual/local.
+ */
+async function sincronizarPlaylistRemotaSePossivel() {
+  if (!playerEstaOnline) {
+    if (playlistEhValida(playlist)) {
+      atualizarIndicadorConexao("offline", "Sem conexão. Mantendo conteúdo atual.");
+    }
+
+    return;
+  }
+
+  if (sincronizacaoPlaylistEmAndamento) {
+    return;
+  }
+
+  sincronizacaoPlaylistEmAndamento = true;
+
   try {
     const novaPlaylist = await buscarPlaylistRemota();
 
@@ -1708,20 +1732,37 @@ setInterval(async () => {
       sincronizarPlaylistSemReiniciar(novaPlaylist);
     }
   } catch (erro) {
-    /*
-      Se a sincronização falhar, não paramos o player.
-
-      A playlist atual continua rodando em memória.
-      Se o player tiver sido aberto sem rede, o carregamento inicial
-      já tenta usar a última playlist válida salva no navegador.
-    */
     console.warn("Erro ao atualizar playlist. Mantendo playlist atual:", erro);
+
+    playerEstaOnline = navigator.onLine !== false;
 
     if (playlistEhValida(playlist)) {
       atualizarIndicadorConexao("offline", "Sem conexão. Mantendo conteúdo atual.");
     }
+  } finally {
+    sincronizacaoPlaylistEmAndamento = false;
   }
+}
+
+setInterval(() => {
+  sincronizarPlaylistRemotaSePossivel();
 }, INTERVALO_SINCRONIZACAO_PLAYLIST_MS);
+
+window.addEventListener("offline", () => {
+  playerEstaOnline = false;
+
+  atualizarIndicadorConexao("offline", "Sem conexão. Mantendo conteúdo atual.");
+  debugMensagem("Navegador entrou em modo offline. Sincronização remota pausada.");
+});
+
+window.addEventListener("online", () => {
+  playerEstaOnline = true;
+
+  atualizarIndicadorConexao("online", "Conexão restabelecida.");
+  debugMensagem("Navegador voltou ao modo online. Sincronizando playlist...");
+
+  sincronizarPlaylistRemotaSePossivel();
+});
 
 /* =========================================================
    TECLADO / CONTROLE REMOTO
