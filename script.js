@@ -304,12 +304,77 @@ function iniciarRelogio() {
    PLAYLIST
    ========================================================= */
 
+/* =========================================================
+PLAYLIST - FALLBACK LOCAL
+=========================================================
+Mantém uma cópia local da última playlist válida.
+
+Objetivo:
+- se a rede cair;
+- se o servidor ficar temporariamente indisponível;
+- ou se o playlist.json falhar no carregamento;
+
+o player tenta continuar usando a última playlist válida salva
+no navegador, evitando tela parada por falha temporária.
+========================================================= */
+
+const PLAYLIST_CACHE_KEY = "painelRibasUltimaPlaylistValida";
+const PLAYLIST_CACHE_DATA_KEY = "painelRibasUltimaPlaylistValidaEm";
+
 /**
- * Carrega o arquivo playlist.json.
+ * Valida se uma playlist possui formato mínimo aceitável.
  */
-async function carregarPlaylist() {
-  debugMensagem("Carregando playlist.json...");
-  const resposta = await fetch(`playlist.json?v=${Date.now()}`);
+function playlistEhValida(lista) {
+  return Array.isArray(lista) && lista.length > 0;
+}
+
+/**
+ * Salva localmente a última playlist válida.
+ */
+function salvarPlaylistLocal(lista) {
+  if (!playlistEhValida(lista)) return;
+
+  try {
+    localStorage.setItem(PLAYLIST_CACHE_KEY, JSON.stringify(lista));
+    localStorage.setItem(PLAYLIST_CACHE_DATA_KEY, new Date().toISOString());
+
+    debugMensagem(`Playlist salva localmente. Total de itens: ${lista.length}`);
+  } catch (erro) {
+    console.warn("Não foi possível salvar a playlist localmente:", erro);
+  }
+}
+
+/**
+ * Carrega a última playlist válida salva localmente.
+ */
+function carregarPlaylistLocal() {
+  try {
+    const texto = localStorage.getItem(PLAYLIST_CACHE_KEY);
+
+    if (!texto) {
+      return null;
+    }
+
+    const lista = JSON.parse(texto);
+
+    if (!playlistEhValida(lista)) {
+      return null;
+    }
+
+    return lista;
+  } catch (erro) {
+    console.warn("Não foi possível carregar a playlist local:", erro);
+    return null;
+  }
+}
+
+/**
+ * Busca a playlist atual no servidor.
+ */
+async function buscarPlaylistRemota() {
+  const resposta = await fetch(`playlist.json?v=${Date.now()}`, {
+    cache: "no-store"
+  });
 
   if (!resposta.ok) {
     throw new Error(`Erro HTTP ao carregar playlist: ${resposta.status}`);
@@ -317,13 +382,52 @@ async function carregarPlaylist() {
 
   const dados = await resposta.json();
 
-  if (!Array.isArray(dados) || dados.length === 0) {
-    throw new Error("A playlist está vazia.");
+  if (!playlistEhValida(dados)) {
+    throw new Error("A playlist está vazia ou inválida.");
   }
 
-  playlist = dados;
-  indiceAtual = 0;
-  debugMensagem(`playlist.json carregado. Total de itens: ${playlist.length}`);
+  salvarPlaylistLocal(dados);
+
+  return dados;
+}
+
+/**
+ * Carrega o arquivo playlist.json.
+ *
+ * Se a playlist remota falhar, tenta usar a última playlist válida
+ * salva localmente no navegador.
+ */
+async function carregarPlaylist() {
+  debugMensagem("Carregando playlist.json...");
+
+  try {
+    const dados = await buscarPlaylistRemota();
+
+    playlist = dados;
+    indiceAtual = 0;
+
+    atualizarStatus("Playlist carregada.");
+    debugMensagem(`playlist.json carregado. Total de itens: ${playlist.length}`);
+
+    return;
+  } catch (erro) {
+    console.warn("Falha ao carregar playlist remota:", erro);
+    debugMensagem("Falha ao carregar playlist remota. Tentando fallback local...");
+  }
+
+  const playlistLocal = carregarPlaylistLocal();
+
+  if (playlistEhValida(playlistLocal)) {
+    playlist = playlistLocal;
+    indiceAtual = 0;
+
+    atualizarStatus("Usando última playlist salva.");
+    debugMensagem(`Fallback local carregado. Total de itens: ${playlist.length}`);
+
+    return;
+  }
+
+  throw new Error("Não foi possível carregar a playlist remota nem uma playlist local salva.");
 }
 
 /* =========================================================
@@ -1287,17 +1391,24 @@ const INTERVALO_SINCRONIZACAO_PLAYLIST_MS = 5 * 1000;
 
 setInterval(async () => {
   try {
-    const resposta = await fetch(`playlist.json?v=${Date.now()}`);
-
-    if (!resposta.ok) return;
-
-    const novaPlaylist = await resposta.json();
+    const novaPlaylist = await buscarPlaylistRemota();
 
     if (JSON.stringify(novaPlaylist) !== JSON.stringify(playlist)) {
       sincronizarPlaylistSemReiniciar(novaPlaylist);
     }
   } catch (erro) {
-    console.error("Erro ao atualizar playlist:", erro);
+    /*
+      Se a sincronização falhar, não paramos o player.
+
+      A playlist atual continua rodando em memória.
+      Se o player tiver sido aberto sem rede, o carregamento inicial
+      já tenta usar a última playlist válida salva no navegador.
+    */
+    console.warn("Erro ao atualizar playlist. Mantendo playlist atual:", erro);
+
+    if (playlistEhValida(playlist)) {
+      atualizarStatus("Sem conexão. Mantendo conteúdo atual.");
+    }
   }
 }, INTERVALO_SINCRONIZACAO_PLAYLIST_MS);
 
