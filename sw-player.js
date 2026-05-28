@@ -53,15 +53,14 @@ function deveTratarRequisicao(request) {
         return false;
     }
 
-    if (url.pathname.startsWith("/midia/")) {
-        return true;
-    }
-
-    if (ehImagem(request.url)) {
-        return true;
-    }
-
-    return false;
+    /*
+      Neste primeiro momento, o Service Worker só trata imagens.
+  
+      Importante:
+      Não interceptamos vídeos ainda, porque vídeos podem ser grandes
+      e ainda não temos política de cache, limite e limpeza para eles.
+    */
+    return ehImagem(request.url);
 }
 
 self.addEventListener("install", (event) => {

@@ -731,6 +731,9 @@ async function preCarregarImagensDaPlaylist(lista) {
 
     img.src = url;
   });
+
+  mostrarResumoCacheOfflinePlayer();
+
 }
 
 /* =========================================================
@@ -1806,6 +1809,105 @@ document.addEventListener("keydown", (event) => {
     alternarSom();
   }
 });
+
+/* =========================================================
+   CACHE OFFLINE - INSPEÇÃO E MANUTENÇÃO
+   ========================================================= */
+
+const PLAYER_CACHE_NAME = "painel-ribas-player-cache-v1";
+
+/**
+ * Lista os itens atualmente salvos no Cache Storage do player.
+ */
+async function listarItensCacheOfflinePlayer() {
+  if (!("caches" in window)) {
+    debugMensagem("Cache Storage não disponível neste navegador.");
+    return [];
+  }
+
+  try {
+    const cache = await caches.open(PLAYER_CACHE_NAME);
+    const requests = await cache.keys();
+
+    return requests.map((request) => {
+      return request.url;
+    });
+  } catch (erro) {
+    debugMensagem(`Falha ao listar cache offline: ${erro.message || erro}`);
+    return [];
+  }
+}
+
+/**
+ * Mostra no debug um resumo do cache offline atual.
+ */
+async function mostrarResumoCacheOfflinePlayer() {
+  const itens = await listarItensCacheOfflinePlayer();
+
+  const imagens = itens.filter((url) => {
+    return /\.(jpg|jpeg|png|webp|gif|svg)(\?|$)/i.test(url);
+  });
+
+  const videos = itens.filter((url) => {
+    return /\.(mp4|webm|ogg|mov)(\?|$)/i.test(url);
+  });
+
+  const resumo = {
+    total: itens.length,
+    imagens: imagens.length,
+    videos: videos.length,
+    itens
+  };
+
+  debugMensagem(
+    `Cache offline: ${resumo.total} item(ns) | ${resumo.imagens} imagem(ns) | ${resumo.videos} vídeo(s).`
+  );
+
+  console.log("Resumo do cache offline do player:", resumo);
+
+  if (itens.length) {
+    console.table(itens.map((url) => ({ url })));
+  }
+
+  return resumo;
+}
+
+/**
+ * Limpa o cache offline do player.
+ *
+ * Útil em testes, manutenção ou quando algum arquivo antigo
+ * ficou preso no cache.
+ */
+async function limparCacheOfflinePlayer() {
+  if (!("caches" in window)) {
+    debugMensagem("Cache Storage não disponível neste navegador.");
+    return false;
+  }
+
+  try {
+    await caches.delete(PLAYER_CACHE_NAME);
+    debugMensagem("Cache offline do player limpo com sucesso.");
+
+    atualizarIndicadorConexao("online", "Cache offline limpo.");
+    return true;
+  } catch (erro) {
+    debugMensagem(`Falha ao limpar cache offline: ${erro.message || erro}`);
+    return false;
+  }
+}
+
+/*
+  Funções expostas para suporte técnico em modo debug/console.
+
+  Exemplos no console:
+  - PainelOffline.mostrarResumo()
+  - PainelOffline.limparCache()
+*/
+window.PainelOffline = {
+  mostrarResumo: mostrarResumoCacheOfflinePlayer,
+  limparCache: limparCacheOfflinePlayer,
+  listarItens: listarItensCacheOfflinePlayer
+};
 
 /* =========================================================
    SERVICE WORKER / OFFLINE BÁSICO
