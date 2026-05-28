@@ -496,13 +496,12 @@
                 </div>
             </details>
         </section>
-
         <!-- =====================================================
-        GERENCIAMENTO DE USUÁRIOS
-        =====================================================
-        Área administrativa para criar, editar, ativar/desativar
-        e resetar senha dos usuários do painel.
-        ===================================================== -->
+GERENCIAMENTO DE USUÁRIOS
+=====================================================
+Área administrativa para criar, editar, ativar/desativar
+e resetar senha dos usuários do painel.
+===================================================== -->
         <section id="usersCard" class="card usersCard">
             <div class="cardHeader">
                 <div>
@@ -515,18 +514,21 @@
                             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
                         </span>
                     </h2>
-                    <p>
+                    <p
+                        title="Use esta seção para controlar usuários, permissões, perfis de acesso, status e senhas do painel administrativo.">
                         Gerencie quem pode acessar o painel administrativo e quais permissões cada usuário possui.
                     </p>
                 </div>
 
                 <div class="usersActions">
-                    <button id="btnNewUser" class="primaryAction" type="button">
+                    <button id="btnNewUser" class="primaryAction" type="button"
+                        title="Cria um novo usuário para acessar o painel administrativo.">
                         <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
                         Novo usuário
                     </button>
 
-                    <button id="btnReloadUsers" class="secondaryAction" type="button">
+                    <button id="btnReloadUsers" class="secondaryAction" type="button"
+                        title="Atualiza a lista de usuários cadastrados no sistema.">
                         <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
                         Atualizar
                     </button>
@@ -536,16 +538,20 @@
             <div id="usersMessage" class="uploadMessage hidden"></div>
 
             <!-- =====================================================
-            DROPDOWN - LISTA DE USUÁRIOS
-            =====================================================
-            Começa fechado por padrão, seguindo o padrão adotado
-            para listas grandes do painel.
-            ===================================================== -->
+    DROPDOWN - LISTA DE USUÁRIOS
+    =====================================================
+    Começa fechado por padrão, seguindo o padrão adotado
+    para listas grandes do painel.
+    ===================================================== -->
             <details id="usersDropdown" class="usersDropdown">
-                <summary class="usersDropdownSummary">
+                <summary class="usersDropdownSummary"
+                    title="Clique para abrir ou recolher a lista de usuários cadastrados.">
                     <div>
                         <strong>Usuários cadastrados</strong>
-                        <span id="usersDropdownCount">Carregando usuários...</span>
+                        <span id="usersDropdownCount"
+                            title="Mostra a quantidade total de usuários cadastrados e quantos estão ativos.">
+                            Carregando usuários...
+                        </span>
                     </div>
 
                     <span class="dropdownToggleIcon" aria-hidden="true">
@@ -553,7 +559,8 @@
                     </span>
                 </summary>
 
-                <div id="usersList" class="usersList">
+                <div id="usersList" class="usersList"
+                    title="Lista de usuários do sistema. As ações disponíveis dependem do seu perfil de acesso.">
                     <div class="message">Carregando usuários...</div>
                 </div>
             </details>

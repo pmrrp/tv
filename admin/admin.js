@@ -954,10 +954,11 @@ function mostrarMensagemUsuarios(texto, tipo = "info") {
  * Renderiza estado vazio da lista de usuários.
  */
 function renderizarUsuariosVazio() {
-    if (!usersList) return;
-
     usersList.innerHTML = `
-        <div class="emptyState">
+        <div
+            class="emptyState"
+            title="Nenhum usuário foi encontrado no sistema."
+        >
             Nenhum usuário cadastrado.
         </div>
     `;
@@ -1000,7 +1001,7 @@ function renderizarUsuarios(usuarios) {
 
         item.dataset.userId = usuario.id;
         item.dataset.role = usuario.role;
-        item.dataset.active = Number(usuario.ativo) === 1 ? "true" : "false";
+        item.title = "Card de usuário. Use os botões de ação para editar, redefinir senha, ativar/desativar ou excluir conforme sua permissão.";
 
         const nome = escaparHtml(usuario.nome || "Usuário");
         const email = escaparHtml(usuario.email || "");
@@ -1034,7 +1035,7 @@ function renderizarUsuarios(usuarios) {
             class="secondaryAction btnCurrentUser"
             type="button"
             disabled
-            title="Você não pode desativar seu próprio usuário"
+            title="Você está logado com este usuário. O sistema impede alterar o próprio status para evitar perda de acesso."
         >
             <i class="fa-solid fa-user-check" aria-hidden="true"></i>
             Usuário atual
@@ -1046,7 +1047,7 @@ function renderizarUsuarios(usuarios) {
                 class="secondaryAction btnProtectedUser"
                 type="button"
                 disabled
-                title="Somente um superadmin pode alterar este usuário"
+                title="Este usuário é protegido. Somente um superadmin pode alterar seu status."
             >
                 <i class="fa-solid fa-lock" aria-hidden="true"></i>
                 Protegido
@@ -1059,6 +1060,7 @@ function renderizarUsuarios(usuarios) {
                 data-user-id="${usuario.id}"
                 data-user-name="${nome}"
                 data-active="${ativo ? "true" : "false"}"
+                title="${ativo ? "Desativa este usuário. Ele continuará cadastrado, mas não poderá acessar o painel." : "Ativa este usuário novamente, permitindo acesso ao painel conforme o perfil configurado."}"
             >
                 <i class="fa-solid ${ativo ? "fa-user-slash" : "fa-user-check"}" aria-hidden="true"></i>
                 ${ativo ? "Desativar" : "Ativar"}
@@ -1071,6 +1073,7 @@ function renderizarUsuarios(usuarios) {
             class="secondaryAction btnEditUser"
             type="button"
             data-user-id="${usuario.id}"
+            title="Edita os dados deste usuário, como nome, e-mail, perfil, secretaria e status."
         >
             <i class="fa-solid fa-pen" aria-hidden="true"></i>
             Editar
@@ -1081,7 +1084,7 @@ function renderizarUsuarios(usuarios) {
             class="secondaryAction btnProtectedUser"
             type="button"
             disabled
-            title="Somente um superadmin pode editar este usuário"
+            title="Este usuário é protegido. Somente um superadmin pode editar seus dados."
         >
             <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
             Protegido
@@ -1095,6 +1098,7 @@ function renderizarUsuarios(usuarios) {
             type="button"
             data-user-id="${usuario.id}"
             data-user-name="${nome}"
+            title="Redefine a senha deste usuário. A nova senha deverá ser informada no modal de confirmação."
         >
             <i class="fa-solid fa-key" aria-hidden="true"></i>
             Resetar Senha
@@ -1110,6 +1114,7 @@ function renderizarUsuarios(usuarios) {
             type="button"
             data-user-id="${usuario.id}"
             data-user-name="${nome}"
+            title="Exclui definitivamente este usuário do sistema. Esta ação é permitida apenas para superadmin e exige confirmação."
         >
             <i class="fa-solid fa-trash" aria-hidden="true"></i>
             Excluir
@@ -1118,24 +1123,41 @@ function renderizarUsuarios(usuarios) {
                 : "";
 
         item.innerHTML = `
-            <div class="userInfo">
+            <div class="userInfo"
+                title="Informações principais deste usuário."
+            >
                 <div class="userMainLine">
-                    <strong class="userName">${nome}</strong>
-                    <span class="userLogin">${email}</span>
+                    <strong
+                        class="userName"
+                        title="Nome exibido para este usuário no painel."
+                    >${nome}</strong>
+                    <span
+                        class="userLogin"
+                        title="E-mail/login usado por este usuário para acessar o painel."
+                    >${email}</span>
                 </div>
 
                 <div class="userMeta">
-                    <span class="userBadge role-${role}">
+                    <span
+                        class="userBadge role-${role}"
+                        title="Perfil de permissão deste usuário no painel."
+                    >
                         <i class="fa-solid ${roleIcon}" aria-hidden="true"></i>
                         ${roleLabel}
                     </span>
 
-                    <span class="userBadge ${statusClass}">
+                    <span
+                        class="userBadge ${statusClass}"
+                        title="${ativo ? "Usuário ativo: pode acessar o painel conforme suas permissões." : "Usuário inativo: permanece cadastrado, mas não pode acessar o painel."}"
+                    >
                         <i class="fa-solid ${ativo ? "fa-circle-check" : "fa-circle-xmark"}" aria-hidden="true"></i>
                         ${statusLabel}
                     </span>
 
-                    <span class="userBadge role-viewer">
+                    <span
+                        class="userBadge role-viewer"
+                        title="Secretaria vinculada a este usuário, quando houver."
+                    >
                         <i class="fa-solid fa-building" aria-hidden="true"></i>
                         ${secretariaNome}
                     </span>
