@@ -517,6 +517,8 @@ async function carregarPlaylist() {
     playlist = dados;
     indiceAtual = 0;
 
+    preCarregarImagensDaPlaylist(playlist);
+
     if (estadoConexaoPlayer !== "online") {
       atualizarIndicadorConexao("online", "Conexão restabelecida.");
     }
@@ -535,6 +537,8 @@ async function carregarPlaylist() {
   if (playlistEhValida(playlistLocal)) {
     playlist = playlistLocal;
     indiceAtual = 0;
+
+    preCarregarImagensDaPlaylist(playlist);
 
     atualizarIndicadorConexao("fallback", "Usando última playlist salva.");
     debugMensagem(`Fallback local carregado. Total de itens: ${playlist.length}`);
@@ -651,6 +655,82 @@ function limparMidias() {
 
   videoPlayer.pause();
   imagePlayer.removeAttribute("src");
+}
+
+/**
+ * Pré - carrega / cacheia imagens presentes na playlist.
+ *
+ * Usa duas estratégias:
+ * 1. Cache Storage, para permitir fallback offline via Service Worker;
+ * 2. Image(), para aquecer o carregamento visual do navegador.
+ *
+ * Não cacheia vídeos automaticamente.
+ */
+async function preCarregarImagensDaPlaylist(lista) {
+  if (!Array.isArray(lista) || !lista.length) return;
+
+  const imagens = lista.filter((item) => {
+    return item && item.tipo === "imagem" && item.arquivo;
+  });
+
+  if (!imagens.length) {
+    debugMensagem("Nenhuma imagem encontrada para pré-cache.");
+    return;
+  }
+
+  debugMensagem(`Preparando cache de ${imagens.length} imagem(ns) da playlist...`);
+
+  const urlsUnicas = [...new Set(imagens.map((item) => item.arquivo))];
+
+  /*
+    Estratégia 1:
+    tenta salvar no Cache Storage para uso offline real.
+  */
+  if ("caches" in window) {
+    try {
+      const cache = await caches.open("painel-ribas-player-cache-v1");
+
+      await Promise.allSettled(
+        urlsUnicas.map(async (url) => {
+          try {
+            const resposta = await fetch(url, {
+              cache: "reload"
+            });
+
+            if (!resposta.ok) {
+              throw new Error(`HTTP ${resposta.status}`);
+            }
+
+            await cache.put(url, resposta.clone());
+
+            debugMensagem(`Imagem salva no cache offline: ${url}`);
+          } catch (erro) {
+            debugMensagem(`Falha ao salvar imagem no cache offline: ${url} | ${erro.message || erro}`);
+          }
+        })
+      );
+    } catch (erro) {
+      debugMensagem(`Cache Storage indisponível ou falhou: ${erro.message || erro}`);
+    }
+  }
+
+  /*
+    Estratégia 2:
+    também aquece o cache/memória visual do navegador.
+  */
+  urlsUnicas.forEach((url) => {
+    const img = new Image();
+
+    img.onload = () => {
+      debugMensagem(`Imagem pré-carregada visualmente: ${url}`);
+    };
+
+    img.onerror = () => {
+      debugMensagem(`Falha ao pré-carregar imagem visualmente: ${url}`);
+    };
+
+    img.src = url;
+  });
 }
 
 /* =========================================================
@@ -1361,6 +1441,7 @@ function atualizarModoResponsivo() {
 async function iniciarSistema() {
   try {
     await carregarConfig();
+    registrarServiceWorkerPlayer();
     iniciarRelogio();
     await carregarPlaylist();
 
@@ -1576,6 +1657,8 @@ function sincronizarPlaylistSemReiniciar(novaPlaylist) {
 
   playlist = novaPlaylist;
 
+  preCarregarImagensDaPlaylist(novaPlaylist);
+
   const novoIndiceDoItemAtual = playlist.findIndex((item) => {
     return obterChaveMidia(item) === chaveAtual;
   });
@@ -1723,6 +1806,31 @@ document.addEventListener("keydown", (event) => {
     alternarSom();
   }
 });
+
+/* =========================================================
+   SERVICE WORKER / OFFLINE BÁSICO
+   ========================================================= */
+
+/**
+ * Registra o Service Worker do player.
+ *
+ * Ele permite cache controlado de imagens da playlist para melhorar
+ * o comportamento quando a rede cair.
+ */
+function registrarServiceWorkerPlayer() {
+  if (!("serviceWorker" in navigator)) {
+    debugMensagem("Service Worker não disponível neste navegador.");
+    return;
+  }
+
+  navigator.serviceWorker.register("/sw-player.js")
+    .then((registro) => {
+      debugMensagem(`Service Worker registrado: ${registro.scope}`);
+    })
+    .catch((erro) => {
+      debugMensagem(`Falha ao registrar Service Worker: ${erro.message || erro}`);
+    });
+}
 
 /* =========================================================
    START
