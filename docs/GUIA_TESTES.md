@@ -81,6 +81,24 @@ git --no-pager log --oneline -5
 - [ ] Confirmar menu do usuário.
 - [ ] Confirmar que o menu do usuário fecha ao clicar fora.
 
+## 5.1 Testes de dicas contextuais / tooltips nativos
+
+- [ ] Confirmar dicas nativas nos cards de resumo operacional.
+- [ ] Confirmar dicas nativas na área de upload.
+- [ ] Confirmar dicas nativas na biblioteca de mídias.
+- [ ] Confirmar dicas nativas nos filtros da biblioteca.
+- [ ] Confirmar dicas nativas nos cards de mídia.
+- [ ] Confirmar dicas nativas nos controles de duração, período, prioridade, recorrência, detalhes, exclusão e salvamento.
+- [ ] Confirmar dicas nativas na seção de usuários.
+- [ ] Confirmar dicas nativas nos botões de criar, editar, ativar/desativar, resetar senha e excluir usuário.
+- [ ] Confirmar dicas nativas na auditoria/logs.
+- [ ] Confirmar dicas nativas na seção de backups.
+- [ ] Confirmar dicas nativas na seção de diagnóstico operacional.
+- [ ] Confirmar que os ícones de ajuda aparecem apenas nos títulos principais das seções.
+- [ ] Confirmar que não há excesso visual de interrogações dentro dos cards.
+- [ ] Confirmar que os tooltips/dicas não impedem cliques, abertura de dropdowns, modais ou botões.
+- [ ] Confirmar que não há erro vermelho no console.
+
 ---
 
 ## 6. Testes dos cards de resumo
@@ -662,6 +680,9 @@ Após deploy:
 - [ ] Confirmar diagnóstico.
 - [ ] Confirmar auditoria.
 - [ ] Confirmar ausência de erro no console.
+- [ ] Fazer hard reload ou testar em aba anônima após alterações de CSS/JS.
+- [ ] Confirmar que os estilos dos ícones de ajuda foram carregados corretamente.
+- [ ] Confirmar que as dicas nativas aparecem nos principais controles.
 
 Comandos:
 

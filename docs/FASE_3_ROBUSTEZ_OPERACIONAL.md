@@ -431,6 +431,37 @@ Resultado:
 
 ---
 
+### 3.15 Ajuda contextual e dicas nativas no admin
+
+Foi adicionada uma primeira camada de ajuda contextual no painel administrativo.
+
+A estratégia adotada foi manter a interface limpa e evitar excesso de ícones visuais.
+
+Padrão definido:
+
+- controles pequenos e botões usam dica nativa no hover (`title`);
+- seções principais mantêm ícone de ajuda discreto no título;
+- os ícones de ajuda das seções ficam preparados para futura evolução com modais explicativos ou vídeos tutoriais;
+- não foram adicionadas interrogações em todos os campos para evitar poluição visual.
+
+Áreas contempladas:
+
+- resumo operacional;
+- upload de mídia;
+- biblioteca de mídias;
+- filtros da biblioteca;
+- cards de mídia;
+- usuários do sistema;
+- auditoria/logs;
+- backups;
+- diagnóstico operacional.
+
+A mudança não altera regras de negócio nem backend.
+
+O objetivo é melhorar a experiência do operador, reduzindo dúvidas sobre o funcionamento de campos, botões, filtros, status, prioridade, recorrência, backups, diagnóstico e ações administrativas sensíveis.
+
+---
+
 ## 4. Rotas envolvidas
 
 ### Health público
@@ -780,6 +811,8 @@ Entregas concluídas:
 [OK] Deploy na VM
 [OK] Primeiro backup SQLite em produção
 [OK] Diagnóstico validado em produção
+[OK] Dicas nativas/hover nos principais controles do admin
+[OK] Estratégia de ajuda contextual sem poluir visualmente a interface
 ```
 
 ---
@@ -799,6 +832,9 @@ Itens que podem ser tratados posteriormente:
 [ ] Avaliar restauração controlada de backups
 [ ] Criar modal detalhado para diagnóstico operacional completo
 [ ] Atualizar documentação executiva da Fase 3
+[ ] Evoluir ajuda contextual por seção para modais ou vídeos tutoriais
+[ ] Avaliar versionamento/cache busting automático dos assets CSS/JS no deploy
+[ ] Implementar versionamento/cache busting automático dos assets CSS/JS no deploy, evitando necessidade de hard reload após alterações visuais no admin/player.
 ```
 
 ---

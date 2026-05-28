@@ -128,6 +128,8 @@ Fortalecer a base operacional do sistema para uso contínuo em produção.
 - [x] Validar deploy em produção/VM após merge.
 - [x] Gerar primeiro backup SQLite no ambiente real da VM.
 - [x] Revalidar diagnóstico operacional em produção.
+- [x] Adicionar dicas nativas/hover nos principais controles do painel administrativo.
+- [x] Padronizar estratégia de ajuda contextual, usando `title` nativo em microcontroles e ícone de ajuda apenas em seções principais.
 
 ### Observação
 
@@ -481,17 +483,18 @@ Reduzir dúvidas do usuário e tornar o painel mais autoexplicativo.
 
 ### Itens
 
-- [ ] Criar sistema de tooltips/ajuda contextual no admin.
-- [ ] Adicionar textos explicativos para prioridade.
-- [ ] Adicionar textos explicativos para recorrência.
-- [ ] Adicionar textos explicativos para período de exibição.
-- [ ] Adicionar textos explicativos para tempo indeterminado.
-- [ ] Adicionar textos explicativos para ativo/inativo.
-- [ ] Adicionar textos explicativos para armazenamento.
-- [ ] Adicionar textos explicativos para backups.
-- [ ] Adicionar textos explicativos para diagnóstico.
-- [ ] Criar padrão visual de ajuda sem poluir a interface.
-- [ ] Avaliar uso de ícone discreto de informação nos campos principais.
+- [x] Criar sistema de tooltips/ajuda contextual no admin.
+- [x] Adicionar textos explicativos para prioridade.
+- [x] Adicionar textos explicativos para recorrência.
+- [x] Adicionar textos explicativos para período de exibição.
+- [x] Adicionar textos explicativos para tempo indeterminado.
+- [x] Adicionar textos explicativos para ativo/inativo.
+- [x] Adicionar textos explicativos para armazenamento.
+- [x] Adicionar textos explicativos para backups.
+- [x] Adicionar textos explicativos para diagnóstico.
+- [ ] Evoluir futuramente os ícones de ajuda das seções para abrir modais explicativos ou vídeos tutoriais.
+- [ ] Criar textos tutoriais mais completos por seção do painel.
+- [ ] Avaliar criação de uma central de ajuda interna no admin.
 
 ### Prioridade
 
@@ -972,7 +975,7 @@ Alta antes da venda.
 - [x] Melhoria da recorrência da playlist.
 - [ ] Checklist final de implantação por ponto.
 - [ ] Diagnóstico de rede/travamentos documentado.
-- [ ] Tooltips/ajuda contextual.
+- [x] Tooltips/ajuda contextual.
 - [ ] Manual de operação.
 - [ ] Segurança de upload complementar.
 - [ ] Whitelabel básico.
@@ -1026,10 +1029,10 @@ Status: concluída em grande parte.
 
 ## Sprint 2 — Usabilidade e operação assistida
 
-- [ ] Criar sistema de tooltips/ajuda contextual.
-- [ ] Melhorar textos explicativos da recorrência.
-- [ ] Melhorar orientações de armazenamento.
-- [ ] Melhorar orientações de backups e diagnóstico.
+- [x] Criar sistema de tooltips/ajuda contextual.
+- [x] Melhorar textos explicativos da recorrência.
+- [x] Melhorar orientações de armazenamento.
+- [x] Melhorar orientações de backups e diagnóstico.
 - [ ] Revisar manual administrativo.
 - [ ] Revisar manual de operação dos pontos instalados.
 

@@ -612,11 +612,29 @@ A recorrência continua respeitando a intenção de destacar mídias importantes
 
 ---
 
+### Usabilidade / Ajuda contextual
+
+- Adicionadas dicas nativas de interface usando `title` nos principais controles do painel administrativo.
+- Aplicadas dicas rápidas nos cards de resumo operacional, upload, biblioteca, filtros, cards de mídia, usuários, auditoria, backups e diagnóstico.
+- Mantido o ícone de ajuda visual apenas nos títulos principais das seções, evitando excesso de interrogações espalhadas pela interface.
+- Padronizada a estratégia de ajuda contextual:
+  - microcontroles usam dica nativa no hover;
+  - seções principais mantêm ícone de ajuda discreto;
+  - a base fica preparada para futura evolução com modais ou vídeos tutoriais por seção.
+- Refinada a experiência do operador sem alterar regras de negócio, backend ou fluxo funcional do sistema.
+
+### Impacto
+
+A dashboard administrativa ficou mais autoexplicativa para usuários e operadores, reduzindo dúvidas sobre botões, filtros, status, prioridade, recorrência, backups, diagnóstico e ações sensíveis.
+
+A mudança melhora a usabilidade sem poluir visualmente o painel e sem comprometer o padrão premium adotado na interface.
+
+---
+
 # Próximos registros esperados
 
 Próximas entradas deste changelog deverão registrar:
 
-- criação de tooltips/ajudas contextuais;
 - refinamentos de usabilidade para o operador;
 - diagnóstico de rede/travamentos documentado;
 - checklist final de implantação por ponto;
