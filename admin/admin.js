@@ -749,7 +749,14 @@ function renderizarBackups(backups) {
     if (!backupsList) return;
 
     if (!Array.isArray(backups) || !backups.length) {
-        backupsList.innerHTML = `<div class="message">Nenhum backup encontrado.</div>`;
+        backupsList.innerHTML = `
+            <div
+                class="message"
+                title="Nenhum arquivo de backup foi encontrado na pasta de backups do sistema."
+            >
+                Nenhum backup encontrado.
+            </div>
+        `;
         return;
     }
 
@@ -763,30 +770,43 @@ function renderizarBackups(backups) {
         const criadoEm = formatarDataBackup(backup.criadoEm);
 
         return `
-            <article class="backupItem ${classe}">
-                <div class="backupItemMain">
+            <article
+                class="backupItem ${classe}"
+                title="Arquivo de backup disponível no servidor. Confira tipo, tamanho e datas antes de usar para suporte ou recuperação."
+            >
+                <div
+                    class="backupItemMain"
+                    title="Informações principais deste arquivo de backup."
+                >
                     <span class="backupItemIcon" aria-hidden="true">
                         <i class="fa-solid ${icone}"></i>
                     </span>
 
                     <div class="backupItemInfo">
-                        <strong>${escaparHtml(backup.nome || "Backup")}</strong>
-                        <span>${escaparHtml(tipoFormatado)}</span>
+                        <strong title="Nome do arquivo de backup salvo no servidor.">
+                            ${escaparHtml(backup.nome || "Backup")}
+                        </strong>
+                        <span title="Tipo de backup: configuração de mídia, playlist, banco SQLite ou outro.">
+                            ${escaparHtml(tipoFormatado)}
+                        </span>
                     </div>
                 </div>
 
-                <div class="backupItemMeta">
-                    <span>
+                <div
+                    class="backupItemMeta"
+                    title="Metadados do arquivo de backup."
+                >
+                    <span title="Tamanho aproximado deste arquivo de backup.">
                         <i class="fa-solid fa-hard-drive" aria-hidden="true"></i>
                         ${escaparHtml(tamanho || "--")}
                     </span>
 
-                    <span>
+                    <span title="Data/hora da última modificação registrada para este backup.">
                         <i class="fa-solid fa-clock" aria-hidden="true"></i>
                         Modificado: ${escaparHtml(modificadoEm)}
                     </span>
 
-                    <span>
+                    <span title="Data/hora de criação registrada para este backup.">
                         <i class="fa-solid fa-calendar-plus" aria-hidden="true"></i>
                         Criado: ${escaparHtml(criadoEm)}
                     </span>
@@ -802,7 +822,14 @@ function renderizarBackups(backups) {
 async function carregarBackups() {
     if (!backupsList) return;
 
-    backupsList.innerHTML = `<div class="message">Carregando backups...</div>`;
+    backupsList.innerHTML = `
+        <div
+            class="message"
+            title="Aguarde enquanto a lista de backups é carregada do servidor."
+        >
+            Carregando backups...
+        </div>
+    `;
 
     if (backupsDropdownCount) {
         backupsDropdownCount.textContent = "Carregando backups...";
@@ -835,7 +862,14 @@ async function carregarBackups() {
             ].join(" • ");
         }
     } catch (erro) {
-        backupsList.innerHTML = `<div class="message error">Erro ao carregar backups.</div>`;
+        backupsList.innerHTML = `
+            <div
+                class="message error"
+                title="Não foi possível carregar a lista de backups. Verifique sessão, permissões ou conexão com o servidor."
+            >
+                Erro ao carregar backups.
+            </div>
+        `;
 
         if (backupsDropdownCount) {
             backupsDropdownCount.textContent = "Erro ao carregar backups";

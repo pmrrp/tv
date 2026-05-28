@@ -584,18 +584,21 @@ e resetar senha dos usuários do painel.
                             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
                         </span>
                     </h2>
-                    <p>
+                    <p
+                        title="Use esta seção para conferir backups automáticos de configurações e playlists, além de gerar backup manual do banco SQLite antes de alterações importantes.">
                         Consulte os backups automáticos e gere uma cópia segura do banco SQLite.
                     </p>
                 </div>
 
                 <div class="usersActions">
-                    <button id="btnCreateDatabaseBackup" class="successAction" type="button">
+                    <button id="btnCreateDatabaseBackup" class="successAction" type="button"
+                        title="Cria um backup manual e auditado do banco SQLite atual. Recomendado antes de alterações importantes em usuários, permissões ou operação do sistema.">
                         <i class="fa-solid fa-database" aria-hidden="true"></i>
                         Backup do banco
                     </button>
 
-                    <button id="btnReloadBackups" class="secondaryAction" type="button">
+                    <button id="btnReloadBackups" class="secondaryAction" type="button"
+                        title="Atualiza a lista de backups disponíveis no servidor.">
                         <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
                         Atualizar backups
                     </button>
@@ -603,10 +606,14 @@ e resetar senha dos usuários do painel.
             </div>
 
             <details id="backupsDropdown" class="usersDropdown">
-                <summary class="usersDropdownSummary">
+                <summary class="usersDropdownSummary"
+                    title="Clique para abrir ou recolher a lista de arquivos de backup disponíveis.">
                     <div>
                         <strong>Arquivos de backup disponíveis</strong>
-                        <span id="backupsDropdownCount">Carregando backups...</span>
+                        <span id="backupsDropdownCount"
+                            title="Mostra o total de backups encontrados, separados por tipo: configurações, playlists e banco SQLite.">
+                            Carregando backups...
+                        </span>
                     </div>
 
                     <span class="dropdownToggleIcon" aria-hidden="true">
@@ -614,7 +621,8 @@ e resetar senha dos usuários do painel.
                     </span>
                 </summary>
 
-                <div id="backupsList" class="usersList backupsList">
+                <div id="backupsList" class="usersList backupsList"
+                    title="Lista de backups encontrados na pasta de backups do sistema.">
                     <div class="message">Carregando backups...</div>
                 </div>
             </details>
