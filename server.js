@@ -2484,6 +2484,13 @@ function bloquearAdminAlterandoSuperadmin(req, res, usuarioAlvo) {
    - package.json;
    - outros arquivos internos.
    ========================================================= */
+/*
+  Anti-cache do frontend administrativo.
+
+  Precisa vir antes do express.static para os headers serem aplicados
+  quando o Express entregar admin.html, admin.css e admin.js.
+*/
+app.use(aplicarHeadersAntiCacheAdmin);
 
 app.use("/assets", express.static(path.join(projectRoot, "assets")));
 app.use("/midia", express.static(mediaFolder));
@@ -2738,6 +2745,58 @@ app.get("/api/auth/teste-editor", exigirLogin, exigirEditor, (req, res) => {
         usuario: req.session.user
     });
 });
+
+/* =========================================================
+   CACHE DO FRONTEND ADMIN
+   =========================================================
+   Evita que o navegador mantenha versões antigas de CSS/JS/HTML
+   após deploy.
+
+   Importante:
+   - aplicado apenas em arquivos leves do frontend administrativo;
+   - não deve ser aplicado em mídias/vídeos/imagens da pasta midia/;
+   - evita necessidade de hard reload após atualizações visuais.
+   ========================================================= */
+
+/**
+ * Aplica headers anti-cache para arquivos sensíveis do painel admin.
+ *
+ * Isso força o navegador a buscar a versão mais recente após deploy,
+ * evitando casos em que:
+ * - HTML novo carrega;
+ * - CSS antigo fica em cache;
+ * - JS antigo continua rodando;
+ * - a interface fica quebrada ou inconsistente.
+ */
+function aplicarHeadersAntiCacheAdmin(req, res, next) {
+    const caminho = String(req.path || "").toLowerCase();
+
+    const ehArquivoDoAdmin = caminho.startsWith("/admin/");
+    const ehHtmlCssOuJs =
+        caminho.endsWith(".html") ||
+        caminho.endsWith(".css") ||
+        caminho.endsWith(".js");
+
+    /*
+      Só aplicamos anti-cache nos arquivos leves do admin.
+
+      Não aplicamos em:
+      - /midia/
+      - vídeos;
+      - imagens;
+      - backups;
+      - arquivos pesados.
+
+      Isso evita prejudicar performance do player e consumo de rede.
+    */
+    if (ehArquivoDoAdmin && ehHtmlCssOuJs) {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+    }
+
+    next();
+}
 
 /* =========================================================
    ROTAS DO PLAYER E ADMIN
