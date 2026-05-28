@@ -537,7 +537,6 @@ async function carregarPlaylist() {
     indiceAtual = 0;
 
     atualizarIndicadorConexao("fallback", "Usando última playlist salva.");
-    atualizarStatus("Usando última playlist salva.");
     debugMensagem(`Fallback local carregado. Total de itens: ${playlist.length}`);
 
     return;
