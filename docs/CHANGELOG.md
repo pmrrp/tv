@@ -644,6 +644,34 @@ Reduz a necessidade de hard reload após alterações visuais ou funcionais no p
 
 ---
 
+### Fechamento do ciclo atual da Fase 3
+
+- Validado em produção o conjunto atual de melhorias da Fase 3.
+- Confirmado funcionamento dos recursos de robustez operacional, incluindo:
+  - limpeza automática de chunks antigos;
+  - resumo de armazenamento;
+  - bloqueio preventivo de uploads por limite operacional;
+  - auditoria de uploads bloqueados;
+  - auditoria de backups JSON;
+  - backup auditado do banco SQLite;
+  - painel de backups;
+  - diagnóstico operacional;
+  - painel visual de diagnóstico;
+  - recorrência inteligente da playlist;
+  - dicas contextuais no admin;
+  - headers anti-cache para assets leves do admin.
+- Confirmado funcionamento do painel administrativo após deploy na VM.
+- Confirmado funcionamento do player após deploy.
+- Documentação técnica e operacional atualizada.
+
+### Impacto
+
+O ciclo atual da Fase 3 foi considerado estável para uso em produção.
+
+O sistema passou a ter melhor proteção operacional, rastreabilidade, diagnóstico, backup, experiência de uso e previsibilidade após deploy.
+
+---
+
 # Próximos registros esperados
 
 Próximas entradas deste changelog deverão registrar:

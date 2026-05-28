@@ -843,8 +843,6 @@ Entregas concluídas:
 Itens que podem ser tratados posteriormente:
 
 ```txt
-[ ] Criar sistema de tooltips/ajuda contextual no admin
-[ ] Criar checklist final de implantação por ponto
 [ ] Documentar diagnóstico de rede/travamentos
 [ ] Refatorar admin.css em blocos mais organizados
 [ ] Melhorar responsividade mobile dos novos cards de Backups e Diagnóstico
@@ -852,7 +850,6 @@ Itens que podem ser tratados posteriormente:
 [ ] Avaliar download seguro de backups pela interface
 [ ] Avaliar restauração controlada de backups
 [ ] Criar modal detalhado para diagnóstico operacional completo
-[ ] Atualizar documentação executiva da Fase 3
 [ ] Evoluir ajuda contextual por seção para modais ou vídeos tutoriais
 [ ] Avaliar versionamento automático por `APP_VERSION` ou hash do commit para CSS/JS
 ```
@@ -886,6 +883,38 @@ responsivo
 ```
 
 Essa refatoração deve ser planejada com cuidado para evitar regressões visuais.
+
+---
+
+## Fechamento do ciclo atual da Fase 3
+
+O ciclo atual da Fase 3 foi validado em produção após implementação, testes locais, deploy na VM e atualização da documentação.
+
+Itens confirmados:
+
+```txt
+[OK] Limpeza automática de chunks antigos
+[OK] Auditoria da limpeza de chunks
+[OK] Resumo de armazenamento no backend
+[OK] Limites operacionais por .env
+[OK] Bloqueio preventivo de uploads por armazenamento
+[OK] Auditoria de uploads bloqueados
+[OK] Card visual de armazenamento
+[OK] Refinamento dos logs de auditoria
+[OK] Auditoria de backups automáticos JSON
+[OK] Backup auditado do banco SQLite
+[OK] Painel de backups no admin
+[OK] Diagnóstico operacional protegido
+[OK] Painel visual de diagnóstico
+[OK] Avisos detalhados no diagnóstico
+[OK] Recorrência inteligente da playlist
+[OK] Guia de preparação de PCs para TVs
+[OK] Dicas contextuais no painel administrativo
+[OK] Headers anti-cache para assets leves do admin
+[OK] Deploy validado na VM
+[OK] Player validado em produção
+[OK] Documentação atualizada
+```
 
 ---
 

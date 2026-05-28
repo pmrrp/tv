@@ -220,7 +220,7 @@ Reduzir dúvidas de usuários administrativos e tornar o painel mais autoexplica
 
 ### Itens planejados
 
-- [ ] Criar sistema de tooltips/ajuda contextual.
+- [x] Criar sistema de tooltips/ajuda contextual.
 - [ ] Adicionar ajuda para prioridade.
 - [ ] Adicionar ajuda para recorrência.
 - [ ] Adicionar ajuda para período de exibição.
@@ -229,8 +229,8 @@ Reduzir dúvidas de usuários administrativos e tornar o painel mais autoexplica
 - [ ] Adicionar ajuda para armazenamento.
 - [ ] Adicionar ajuda para backups.
 - [ ] Adicionar ajuda para diagnóstico.
-- [ ] Criar padrão visual discreto para ícones de informação.
-- [ ] Evitar poluição visual da interface.
+- [x] Criar padrão visual discreto para ícones de informação.
+- [x] Evitar poluição visual da interface.
 
 ### Prioridade
 
