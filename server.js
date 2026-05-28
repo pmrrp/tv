@@ -2470,6 +2470,25 @@ function bloquearAdminAlterandoSuperadmin(req, res, usuarioAlvo) {
 }
 
 /* =========================================================
+   SERVICE WORKER DO PLAYER
+   =========================================================
+   O Service Worker precisa ser servido a partir da raiz do site
+   para poder controlar o player e interceptar requisições de mídia.
+   ========================================================= */
+
+app.get("/sw-player.js", (req, res) => {
+    const swPath = path.join(projectRoot, "sw-player.js");
+
+    res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+    res.setHeader("Service-Worker-Allowed", "/");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+
+    res.sendFile(swPath);
+});
+
+/* =========================================================
    ARQUIVOS ESTÁTICOS PÚBLICOS
    =========================================================
 

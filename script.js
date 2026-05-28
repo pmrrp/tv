@@ -1823,7 +1823,9 @@ function registrarServiceWorkerPlayer() {
     return;
   }
 
-  navigator.serviceWorker.register("/sw-player.js")
+  navigator.serviceWorker.register("/sw-player.js", {
+    updateViaCache: "none"
+  })
     .then((registro) => {
       debugMensagem(`Service Worker registrado: ${registro.scope}`);
     })
