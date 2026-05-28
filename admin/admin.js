@@ -9997,15 +9997,26 @@ function obterClasseStatusDiagnostico(status) {
  * Cria um item visual simples do diagnóstico.
  */
 function criarItemDiagnostico({ icone, titulo, texto, status }) {
+    const tituloSeguro = escaparHtml(titulo);
+    const textoSeguro = escaparHtml(texto);
+    const statusFormatado = formatarStatusDiagnostico(status);
+
     return `
-        <article class="diagnosticItem ${obterClasseStatusDiagnostico(status)}">
-            <span class="diagnosticItemIcon" aria-hidden="true">
+        <article
+            class="diagnosticItem ${obterClasseStatusDiagnostico(status)}"
+            title="${tituloSeguro}: ${textoSeguro}"
+        >
+            <span
+                class="diagnosticItemIcon"
+                aria-hidden="true"
+                title="Status: ${escaparHtml(statusFormatado)}"
+            >
                 <i class="fa-solid ${icone}"></i>
             </span>
 
             <div>
-                <strong>${escaparHtml(titulo)}</strong>
-                <span>${escaparHtml(texto)}</span>
+                <strong title="Item verificado pelo diagnóstico operacional.">${tituloSeguro}</strong>
+                <span title="Resultado da verificação deste item.">${textoSeguro}</span>
             </div>
         </article>
     `;
@@ -10032,6 +10043,7 @@ function renderizarDiagnostico(dados) {
         );
 
         diagnosticCard.classList.add(obterClasseStatusDiagnostico(status));
+        diagnosticCard.title = `Diagnóstico operacional: ${formatarStatusDiagnostico(status)}.`;
     }
 
     if (diagnosticSummaryTitle) {
@@ -10165,7 +10177,14 @@ function renderizarDiagnostico(dados) {
 async function carregarDiagnosticoOperacional() {
     if (!diagnosticList) return;
 
-    diagnosticList.innerHTML = `<div class="message">Carregando diagnóstico...</div>`;
+    diagnosticList.innerHTML = `
+        <div
+            class="message"
+            title="Aguarde enquanto o sistema verifica banco, armazenamento, backups, mídias e arquivos essenciais."
+        >
+            Carregando diagnóstico...
+        </div>
+    `;
 
     if (diagnosticSummaryTitle) {
         diagnosticSummaryTitle.textContent = "Carregando diagnóstico...";
@@ -10185,7 +10204,14 @@ async function carregarDiagnosticoOperacional() {
 
         renderizarDiagnostico(dados);
     } catch (erro) {
-        diagnosticList.innerHTML = `<div class="message error">Erro ao carregar diagnóstico.</div>`;
+        diagnosticList.innerHTML = `
+            <div
+                class="message error"
+                title="Não foi possível carregar o diagnóstico operacional. Verifique sessão, permissões ou conexão com o servidor."
+            >
+                Erro ao carregar diagnóstico.
+            </div>
+        `;
 
         if (diagnosticSummaryTitle) {
             diagnosticSummaryTitle.textContent = "Diagnóstico indisponível";

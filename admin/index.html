@@ -645,13 +645,15 @@ e resetar senha dos usuários do painel.
                             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
                         </span>
                     </h2>
-                    <p>
+                    <p
+                        title="Use esta seção para conferir rapidamente a saúde operacional do sistema, incluindo banco SQLite, armazenamento, backups, mídias e arquivos essenciais.">
                         Verifique a saúde do sistema, incluindo banco, armazenamento, backups e arquivos essenciais.
                     </p>
                 </div>
 
                 <div class="usersActions">
-                    <button id="btnReloadDiagnostic" class="secondaryAction" type="button">
+                    <button id="btnReloadDiagnostic" class="secondaryAction" type="button"
+                        title="Atualiza o diagnóstico operacional consultando novamente o servidor.">
                         <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
                         Atualizar diagnóstico
                     </button>
@@ -659,10 +661,16 @@ e resetar senha dos usuários do painel.
             </div>
 
             <details id="diagnosticDropdown" class="usersDropdown">
-                <summary class="usersDropdownSummary">
+                <summary class="usersDropdownSummary"
+                    title="Clique para abrir ou recolher os detalhes do diagnóstico operacional.">
                     <div>
-                        <strong id="diagnosticSummaryTitle">Carregando diagnóstico...</strong>
-                        <span id="diagnosticSummaryText">Aguarde enquanto o sistema verifica os principais itens.</span>
+                        <strong id="diagnosticSummaryTitle" title="Status geral atual do diagnóstico operacional.">
+                            Carregando diagnóstico...
+                        </strong>
+                        <span id="diagnosticSummaryText"
+                            title="Resumo do principal aviso, problema crítico ou mensagem de saúde operacional do sistema.">
+                            Aguarde enquanto o sistema verifica os principais itens.
+                        </span>
                     </div>
 
                     <span class="dropdownToggleIcon" aria-hidden="true">
@@ -670,7 +678,8 @@ e resetar senha dos usuários do painel.
                     </span>
                 </summary>
 
-                <div id="diagnosticList" class="usersList diagnosticList">
+                <div id="diagnosticList" class="usersList diagnosticList"
+                    title="Lista dos principais itens verificados no diagnóstico operacional.">
                     <div class="message">Carregando diagnóstico...</div>
                 </div>
             </details>
