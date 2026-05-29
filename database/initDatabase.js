@@ -98,6 +98,37 @@ function initDatabase() {
     `).run();
 
     /*
+      Tabela de sessões administrativas.
+
+      Objetivo:
+      - controlar sessões ativas por usuário;
+      - permitir revogar sessões antigas;
+      - futuramente listar sessões ativas no admin;
+      - futuramente permitir desconectar sessões manualmente.
+    */
+    db.prepare(`
+        CREATE TABLE IF NOT EXISTS user_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            user_id INTEGER NOT NULL,
+            session_id TEXT NOT NULL UNIQUE,
+
+            ip TEXT,
+            user_agent TEXT,
+
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+            revoked_at TEXT,
+            revoked_reason TEXT,
+
+            FOREIGN KEY (user_id)
+                REFERENCES users (id)
+                ON DELETE CASCADE
+        )
+    `).run();
+
+    /*
       Índices simples para acelerar buscas futuras.
     */
     db.prepare(`
@@ -113,6 +144,21 @@ function initDatabase() {
     db.prepare(`
         CREATE INDEX IF NOT EXISTS idx_users_ativo
         ON users (ativo)
+    `).run();
+
+    db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id
+        ON user_sessions (user_id)
+    `).run();
+
+    db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_user_sessions_session_id
+        ON user_sessions (session_id)
+    `).run();
+
+    db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_user_sessions_revoked_at
+        ON user_sessions (revoked_at)
     `).run();
 
     console.log("Banco de dados inicializado com sucesso.");

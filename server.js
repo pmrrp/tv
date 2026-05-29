@@ -2191,11 +2191,17 @@ app.use(session({
  */
 function exigirLogin(req, res, next) {
     if (existeSessaoAdministrativa(req)) {
+        if (sessaoAtualFoiRevogada(req)) {
+            return encerrarSessaoRevogada(req, res);
+        }
+
         if (sessaoExpiradaPorInatividade(req)) {
             return encerrarSessaoPorInatividade(req, res);
         }
 
         atualizarUltimaAtividadeSessao(req);
+        atualizarUltimoUsoDaSessaoAtiva(req);
+
         return next();
     }
 
@@ -2275,6 +2281,187 @@ function atualizarUltimaAtividadeSessao(req) {
     req.session.ultimaAtividadeEm = Date.now();
 }
 
+/* =========================================================
+   CONTROLE DE SESSÕES SIMULTÂNEAS
+   ========================================================= */
+
+/**
+ * Registra a sessão atual como sessão ativa do usuário.
+ *
+ * Regra inicial:
+ * - ao fazer login, revogamos sessões antigas do mesmo usuário;
+ * - somente a sessão atual continua válida.
+ */
+function registrarSessaoAtivaDoUsuario(req, usuario) {
+    const sessionId = req.sessionID;
+
+    if (!sessionId || !usuario || !usuario.id) {
+        return {
+            sessoesRevogadas: 0
+        };
+    }
+
+    const agora = new Date().toISOString();
+    const ip = obterIpRequisicao(req);
+    const userAgent = req.headers["user-agent"] || "";
+
+    const transacao = db.transaction(() => {
+        const resultadoRevogacao = db.prepare(`
+            UPDATE user_sessions
+            SET
+                revoked_at = datetime('now', 'localtime'),
+                revoked_reason = 'novo_login'
+            WHERE user_id = ?
+              AND session_id <> ?
+              AND revoked_at IS NULL
+        `).run(usuario.id, sessionId);
+
+        const sessaoExistente = db.prepare(`
+            SELECT id
+            FROM user_sessions
+            WHERE session_id = ?
+            LIMIT 1
+        `).get(sessionId);
+
+        if (sessaoExistente) {
+            db.prepare(`
+                UPDATE user_sessions
+                SET
+                    user_id = ?,
+                    ip = ?,
+                    user_agent = ?,
+                    last_seen_at = datetime('now', 'localtime'),
+                    revoked_at = NULL,
+                    revoked_reason = NULL
+                WHERE session_id = ?
+            `).run(
+                usuario.id,
+                ip,
+                userAgent,
+                sessionId
+            );
+        } else {
+            db.prepare(`
+                INSERT INTO user_sessions (
+                    user_id,
+                    session_id,
+                    ip,
+                    user_agent,
+                    created_at,
+                    last_seen_at
+                )
+                VALUES (?, ?, ?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))
+            `).run(
+                usuario.id,
+                sessionId,
+                ip,
+                userAgent
+            );
+        }
+
+        return {
+            sessoesRevogadas: resultadoRevogacao.changes || 0,
+            registradoEm: agora
+        };
+    });
+
+    return transacao();
+}
+
+/**
+ * Verifica se a sessão atual foi revogada.
+ */
+function sessaoAtualFoiRevogada(req) {
+    if (!req.sessionID) {
+        return false;
+    }
+
+    const sessao = db.prepare(`
+        SELECT
+            revoked_at,
+            revoked_reason
+        FROM user_sessions
+        WHERE session_id = ?
+        LIMIT 1
+    `).get(req.sessionID);
+
+    return !!(sessao && sessao.revoked_at);
+}
+
+/**
+ * Atualiza o último uso da sessão atual.
+ */
+function atualizarUltimoUsoDaSessaoAtiva(req) {
+    if (!req.sessionID || !existeSessaoAdministrativa(req)) {
+        return;
+    }
+
+    try {
+        db.prepare(`
+            UPDATE user_sessions
+            SET last_seen_at = datetime('now', 'localtime')
+            WHERE session_id = ?
+              AND revoked_at IS NULL
+        `).run(req.sessionID);
+    } catch (erro) {
+        console.error("Erro ao atualizar último uso da sessão:", erro);
+    }
+}
+
+/**
+ * Marca a sessão atual como revogada.
+ */
+function revogarSessaoAtual(req, motivo = "manual") {
+    if (!req.sessionID) {
+        return;
+    }
+
+    try {
+        db.prepare(`
+            UPDATE user_sessions
+            SET
+                revoked_at = datetime('now', 'localtime'),
+                revoked_reason = ?
+            WHERE session_id = ?
+              AND revoked_at IS NULL
+        `).run(motivo, req.sessionID);
+    } catch (erro) {
+        console.error("Erro ao revogar sessão atual:", erro);
+    }
+}
+
+/**
+ * Encerra requisições feitas por sessão revogada.
+ */
+function encerrarSessaoRevogada(req, res) {
+    const usuario = req.session && req.session.user
+        ? req.session.user
+        : null;
+
+    try {
+        registrarAuditoria(req, "login.sessao.revogada", {
+            usuarioId: usuario ? usuario.id : null,
+            usuario: usuario ? usuario.email : null,
+            sessionId: req.sessionID || null,
+            motivo: "sessao_revogada_ou_novo_login"
+        });
+    } catch (erro) {
+        console.error("Erro ao registrar auditoria de sessão revogada:", erro);
+    }
+
+    req.session.destroy(() => {
+        if (req.path.startsWith("/api")) {
+            return res.status(401).json({
+                erro: true,
+                codigo: "SESSAO_REVOGADA",
+                mensagem: "Esta sessão foi encerrada porque houve um novo login deste usuário."
+            });
+        }
+
+        return res.redirect("/admin/login");
+    });
+}
+
 /**
  * Encerra a sessão quando expirar por inatividade.
  */
@@ -2293,6 +2480,8 @@ function encerrarSessaoPorInatividade(req, res) {
         console.error("Erro ao registrar auditoria de sessão expirada:", erro);
     }
 
+    revogarSessaoAtual(req, "inatividade");
+
     req.session.destroy(() => {
         if (req.path.startsWith("/api")) {
             return res.status(401).json({
@@ -2307,7 +2496,7 @@ function encerrarSessaoPorInatividade(req, res) {
 }
 
 function obterIpRequisicao(req) {
-    return (
+    const ip = (
         req.headers["cf-connecting-ip"] ||
         req.headers["true-client-ip"] ||
         req.headers["x-real-ip"] ||
@@ -2315,6 +2504,16 @@ function obterIpRequisicao(req) {
         req.socket.remoteAddress ||
         ""
     ).toString().split(",")[0].trim();
+
+    if (ip === "::1") {
+        return "localhost";
+    }
+
+    if (ip === "::ffff:127.0.0.1") {
+        return "localhost";
+    }
+
+    return ip;
 }
 
 function registrarAuditoria(req, acao, detalhes = {}) {
@@ -2761,17 +2960,30 @@ app.post("/api/login", (req, res) => {
                 });
             }
 
+            let resumoSessao = {
+                sessoesRevogadas: 0
+            };
+
+            try {
+                resumoSessao = registrarSessaoAtivaDoUsuario(req, usuario);
+            } catch (erroSessao) {
+                console.error("Erro ao registrar sessão ativa:", erroSessao);
+            }
+
             registrarAuditoria(req, "login.realizado", {
                 usuarioId: usuario.id,
                 email: usuario.email,
                 nome: usuario.nome,
-                role: usuario.role
+                role: usuario.role,
+                sessionId: req.sessionID || null,
+                sessoesRevogadas: resumoSessao.sessoesRevogadas || 0
             });
 
             res.json({
                 sucesso: true,
                 mensagem: "Login realizado com sucesso.",
-                usuario: req.session.user
+                usuario: req.session.user,
+                sessoesRevogadas: resumoSessao.sessoesRevogadas || 0
             });
         });
     } catch (erro) {
@@ -2790,6 +3002,8 @@ app.post("/api/logout", (req, res) => {
             ? req.session.user.email
             : null
     });
+
+    revogarSessaoAtual(req, "logout_manual");
 
     req.session.destroy(() => {
         res.json({

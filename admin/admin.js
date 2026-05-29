@@ -430,8 +430,27 @@ async function fetchComSessao(url, opcoes = {}) {
     });
 
     if (resposta.status === 401) {
+        let codigoErro = "";
+        let mensagemErro = "Sessão expirada. Faça login novamente.";
+
+        try {
+            const dadosErro = await resposta.clone().json();
+
+            codigoErro = dadosErro.codigo || "";
+            mensagemErro = dadosErro.mensagem || mensagemErro;
+        } catch {
+            // Mantém mensagem padrão se a resposta não for JSON.
+        }
+
+        try {
+            localStorage.setItem("painelRibasMotivoLogout", codigoErro || "SESSAO_EXPIRADA");
+            localStorage.setItem("painelRibasMensagemLogout", mensagemErro);
+        } catch {
+            // localStorage pode falhar em modo privado; sem problema.
+        }
+
         window.location.href = "/admin/login";
-        throw new Error("Sessão expirada. Faça login novamente.");
+        throw new Error(mensagemErro);
     }
 
     return resposta;
@@ -1214,6 +1233,9 @@ function formatarAcaoAuditoria(acao) {
     const mapa = {
         "login.realizado": "Login realizado",
         "login.logout": "Logout",
+        "login.sessao.revogada": "Sessão revogada",
+        "login.expirado.inatividade": "Sessão expirada por inatividade",
+
 
         "midia.upload": "Upload de mídia",
         "midia.upload.bloqueado": "Upload bloqueado",
@@ -1251,6 +1273,14 @@ function formatarAcaoAuditoria(acao) {
 function obterClasseAcaoAuditoria(acao) {
     const valor = String(acao || "").toLowerCase();
 
+    if (acao === "login.sessao.revogada") {
+        return "auditInfo";
+    }
+
+    if (acao === "login.expirado.inatividade") {
+        return "auditWarning";
+    }
+
     if (valor.includes("bloqueado") || valor.includes("erro") || valor.includes("falha")) {
         return "auditActionWarning";
     }
@@ -1284,12 +1314,15 @@ function obterClasseAcaoAuditoria(acao) {
 function obterIconeAcaoAuditoria(acao) {
     const valor = String(acao || "").toLowerCase();
 
+    if (valor === "login.sessao.revogada") return "fa-right-from-bracket";
+    if (valor === "login.expirado.inatividade") return "fa-clock";
+
     if (valor.includes("bloqueado")) return "fa-triangle-exclamation";
     if (valor.includes("limpeza") || valor.includes("chunks")) return "fa-screwdriver-wrench";
     if (valor.includes("upload")) return "fa-upload";
     if (valor.includes("playlist")) return "fa-list-check";
-    if (valor.includes("login")) return "fa-right-to-bracket";
     if (valor.includes("logout")) return "fa-right-from-bracket";
+    if (valor.includes("login")) return "fa-right-to-bracket";
     if (valor.includes("excluir") || valor.includes("delete") || valor.includes("remover")) return "fa-trash-can";
     if (valor.includes("editar")) return "fa-pen-to-square";
     if (valor.includes("mover")) return "fa-arrow-up-wide-short";
@@ -1313,6 +1346,34 @@ function resumirDetalhesAuditoria(details, acao = "") {
 
     if (acaoNormalizada === "login.logout") {
         return "Usuário saiu do painel administrativo.";
+    }
+
+    if (acaoNormalizada === "login.sessao.revogada") {
+        const motivo = details?.motivo || details?.revokedReason || "novo_login";
+
+        if (motivo === "sessao_revogada_ou_novo_login" || motivo === "novo_login") {
+            return "Sessão antiga encerrada automaticamente após novo login do mesmo usuário.";
+        }
+
+        if (motivo === "logout_manual") {
+            return "Sessão encerrada manualmente pelo usuário.";
+        }
+
+        if (motivo === "inatividade") {
+            return "Sessão encerrada automaticamente por inatividade.";
+        }
+
+        return "Sessão administrativa encerrada automaticamente.";
+    }
+
+    if (acaoNormalizada === "login.expirado.inatividade") {
+        const timeout = details?.timeoutMinutos;
+
+        if (timeout) {
+            return `Sessão encerrada automaticamente após ${timeout} minuto(s) de inatividade.`;
+        }
+
+        return "Sessão encerrada automaticamente por inatividade.";
     }
 
     if (acaoNormalizada === "sistema.chunks.limpeza") {
