@@ -117,6 +117,20 @@ const userRoleField = userRoleInput
 const usersDropdown = document.getElementById("usersDropdown");
 const usersDropdownCount = document.getElementById("usersDropdownCount");
 
+/* =========================================================
+   ELEMENTOS - SESSÕES ATIVAS
+   ========================================================= */
+
+const sessionsCard = document.getElementById("sessionsCard");
+const sessionsList = document.getElementById("sessionsList");
+const sessionsDropdownCount = document.getElementById("sessionsDropdownCount");
+const btnReloadSessions = document.getElementById("btnReloadSessions");
+
+
+/* =========================================================
+   ELEMENTOS - AUDITORIA
+   ========================================================= */
+
 const auditLogsList = document.getElementById("auditLogsList");
 const auditDropdownCount = document.getElementById("auditDropdownCount");
 const btnReloadAuditLogs = document.getElementById("btnReloadAuditLogs");
@@ -454,6 +468,55 @@ async function fetchComSessao(url, opcoes = {}) {
     }
 
     return resposta;
+}
+
+async function revogarSessaoAdministrativa(idSessao, nomeUsuario) {
+    if (!usuarioLogado || usuarioLogado.role !== "superadmin") {
+        mostrarToast("Somente superadmin pode desconectar sessões.", "erro");
+        return;
+    }
+
+    const confirmou = await confirmarAcaoModal({
+        kicker: "Segurança",
+        titulo: "Desconectar sessão",
+        mensagem: "Tem certeza que deseja desconectar esta sessão administrativa?",
+        detalhe: nomeUsuario || "Sessão selecionada",
+        confirmar: "Desconectar",
+        cancelar: "Cancelar",
+        variante: "danger"
+    });
+
+    if (!confirmou) return;
+
+    try {
+        const resposta = await fetchComSessao(
+            `/api/admin/sessoes/${encodeURIComponent(idSessao)}/revogar`,
+            {
+                method: "POST"
+            }
+        );
+
+        const dados = await resposta.json();
+
+        if (!resposta.ok || dados.erro) {
+            throw new Error(dados.mensagem || "Erro ao desconectar sessão.");
+        }
+
+        mostrarToast("Sessão desconectada com sucesso.", "sucesso");
+
+        await carregarSessoesAtivas();
+
+        if (typeof carregarLogsAuditoria === "function") {
+            await carregarLogsAuditoria();
+        }
+    } catch (erro) {
+        console.error("Erro ao desconectar sessão:", erro);
+
+        mostrarToast(
+            erro.message || "Erro ao desconectar sessão.",
+            "erro"
+        );
+    }
 }
 
 /* =========================================================
@@ -1229,12 +1292,160 @@ function renderizarUsuarios(usuarios) {
     });
 }
 
+/* =========================================================
+   SESSÕES ATIVAS - RENDERIZAÇÃO
+   ========================================================= */
+
+function renderizarSessoesAtivas(sessoes) {
+    if (!sessionsList) return;
+
+    const lista = Array.isArray(sessoes) ? sessoes : [];
+
+    const total = lista.length;
+    const totalAtivas = lista.filter((sessao) => sessao.ativa).length;
+
+    if (sessionsDropdownCount) {
+        sessionsDropdownCount.textContent =
+            `${formatarNumero(total)} sessão(ões) • ${formatarNumero(totalAtivas)} ativa(s)`;
+    }
+
+    if (!lista.length) {
+        renderizarSessoesVazias();
+        return;
+    }
+
+    sessionsList.innerHTML = lista.map((sessao) => {
+        const ativa = !!sessao.ativa;
+        const atual = !!sessao.atual;
+
+        const nome = escaparHtml(sessao.userName || "Usuário");
+        const email = escaparHtml(sessao.userEmail || "");
+        const role = escaparHtml(sessao.userRole || "usuário");
+
+        const ip = escaparHtml(sessao.ip || "--");
+        const navegador = escaparHtml(resumirUserAgent(sessao.userAgent));
+        const criadaEm = escaparHtml(formatarDataHoraSessao(sessao.createdAt));
+        const ultimoUso = escaparHtml(formatarDataHoraSessao(sessao.lastSeenAt));
+        const revogadaEm = escaparHtml(formatarDataHoraSessao(sessao.revokedAt));
+        const motivoRevogacao = escaparHtml(sessao.revokedReason || "");
+
+        const statusLabel = ativa
+            ? atual
+                ? "Sessão atual"
+                : "Ativa"
+            : "Revogada";
+
+        const statusClass = ativa
+            ? "status-active"
+            : "status-inactive";
+
+        const botaoDesconectar = ativa && !atual
+            ? `
+                <button
+                    class="dangerAction btnRevokeSession"
+                    type="button"
+                    data-session-id="${sessao.id}"
+                    data-session-user="${nome}"
+                    title="Desconecta esta sessão administrativa. O usuário precisará fazer login novamente nesse navegador/dispositivo."
+                >
+                    <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                    Desconectar
+                </button>
+            `
+            : atual
+                ? `
+                    <button
+                        class="secondaryAction"
+                        type="button"
+                        disabled
+                        title="Esta é a sessão que você está usando agora. Para encerrá-la, use o botão Sair."
+                    >
+                        <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+                        Sessão atual
+                    </button>
+                `
+                : `
+                    <button
+                        class="secondaryAction"
+                        type="button"
+                        disabled
+                        title="Esta sessão já foi encerrada."
+                    >
+                        <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                        Encerrada
+                    </button>
+                `;
+
+        return `
+            <div class="userItem ${ativa ? "" : "userItemInactive"}" title="Sessão administrativa registrada no sistema.">
+                <div class="userInfo">
+                    <div class="userMainLine">
+                        <strong class="userName" title="Usuário vinculado a esta sessão.">${nome}</strong>
+                        <span class="userLogin" title="E-mail/login do usuário desta sessão.">${email}</span>
+                    </div>
+
+                    <div class="userMeta">
+                        <span class="userBadge ${statusClass}" title="Status atual desta sessão.">
+                            <i class="fa-solid ${ativa ? "fa-circle-check" : "fa-circle-xmark"}" aria-hidden="true"></i>
+                            ${statusLabel}
+                        </span>
+
+                        <span class="userBadge role-${role}" title="Perfil do usuário desta sessão.">
+                            <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+                            ${role}
+                        </span>
+
+                        <span class="userBadge role-viewer" title="Endereço IP registrado para esta sessão.">
+                            <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                            ${ip}
+                        </span>
+
+                        <span class="userBadge role-viewer" title="Navegador identificado pelo user-agent.">
+                            <i class="fa-solid fa-window-maximize" aria-hidden="true"></i>
+                            ${navegador}
+                        </span>
+                    </div>
+
+                    <div class="userMeta">
+                        <span class="userBadge role-viewer" title="Data/hora em que a sessão foi criada.">
+                            <i class="fa-solid fa-calendar-plus" aria-hidden="true"></i>
+                            Login: ${criadaEm}
+                        </span>
+
+                        <span class="userBadge role-viewer" title="Última atividade registrada nesta sessão.">
+                            <i class="fa-solid fa-clock" aria-hidden="true"></i>
+                            Último uso: ${ultimoUso}
+                        </span>
+
+                        ${!ativa ? `
+                            <span class="userBadge status-inactive" title="Data/hora em que a sessão foi encerrada.">
+                                <i class="fa-solid fa-ban" aria-hidden="true"></i>
+                                Encerrada: ${revogadaEm}
+                            </span>
+
+                            <span class="userBadge status-inactive" title="Motivo técnico do encerramento da sessão.">
+                                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                                ${motivoRevogacao || "sem motivo"}
+                            </span>
+                        ` : ""}
+                    </div>
+                </div>
+
+                <div class="userActions">
+                    ${botaoDesconectar}
+                </div>
+            </div>
+        `;
+    }).join("");
+}
+
 function formatarAcaoAuditoria(acao) {
     const mapa = {
         "login.realizado": "Login realizado",
         "login.logout": "Logout",
         "login.sessao.revogada": "Sessão revogada",
         "login.expirado.inatividade": "Sessão expirada por inatividade",
+        "login.sessao.revogada.admin": "Sessão desconectada por superadmin",
 
 
         "midia.upload": "Upload de mídia",
@@ -1281,6 +1492,10 @@ function obterClasseAcaoAuditoria(acao) {
         return "auditWarning";
     }
 
+    if (valor === "login.sessao.revogada.admin") {
+        return "auditWarning";
+    }
+
     if (valor.includes("bloqueado") || valor.includes("erro") || valor.includes("falha")) {
         return "auditActionWarning";
     }
@@ -1316,6 +1531,7 @@ function obterIconeAcaoAuditoria(acao) {
 
     if (valor === "login.sessao.revogada") return "fa-right-from-bracket";
     if (valor === "login.expirado.inatividade") return "fa-clock";
+    if (valor === "login.sessao.revogada.admin") return "fa-user-lock";
 
     if (valor.includes("bloqueado")) return "fa-triangle-exclamation";
     if (valor.includes("limpeza") || valor.includes("chunks")) return "fa-screwdriver-wrench";
@@ -1815,6 +2031,55 @@ async function carregarLogsAuditoria() {
 
         console.error(erro);
     }
+}
+
+/* =========================================================
+   SESSÕES ATIVAS - HELPERS
+   ========================================================= */
+
+/**
+ * Formata datas vindas do SQLite para exibição simples.
+ */
+function formatarDataHoraSessao(valor) {
+    if (!valor) return "--";
+
+    const data = new Date(String(valor).replace(" ", "T"));
+
+    if (Number.isNaN(data.getTime())) {
+        return String(valor);
+    }
+
+    return data.toLocaleString("pt-BR");
+}
+
+/**
+ * Gera um rótulo amigável para user-agent.
+ */
+function resumirUserAgent(userAgent) {
+    const texto = String(userAgent || "");
+
+    if (!texto) return "Navegador não identificado";
+
+    if (texto.includes("Edg/")) return "Microsoft Edge";
+    if (texto.includes("OPR/") || texto.includes("Opera")) return "Opera";
+    if (texto.includes("Chrome/")) return "Google Chrome";
+    if (texto.includes("Firefox/")) return "Mozilla Firefox";
+    if (texto.includes("Safari/")) return "Safari";
+
+    return "Navegador identificado";
+}
+
+/**
+ * Renderiza estado vazio das sessões.
+ */
+function renderizarSessoesVazias() {
+    if (!sessionsList) return;
+
+    sessionsList.innerHTML = `
+        <div class="emptyState" title="Nenhuma sessão administrativa foi encontrada.">
+            Nenhuma sessão encontrada.
+        </div>
+    `;
 }
 
 /* =========================================================
@@ -2341,12 +2606,79 @@ async function carregarUsuarioLogado() {
         if (usuarioPodeGerenciarUsuarios()) {
             await carregarUsuarios();
         }
+
+        if (usuarioLogado && usuarioLogado.role === "superadmin") {
+            await carregarSessoesAtivas();
+        }
+
     } catch (erro) {
         console.error("Erro ao carregar usuário logado:", erro);
 
         usuarioLogado = null;
         definirNomeUsuarioLogado("usuário");
         aplicarClassesDePermissao();
+
+        if (sessionsCard) {
+            sessionsCard.classList.add("hidden");
+        }
+
+    }
+}
+
+/* =========================================================
+   SESSÕES ATIVAS - API
+   ========================================================= */
+
+async function carregarSessoesAtivas() {
+    if (!sessionsList || !sessionsCard) return;
+
+    if (!usuarioLogado || usuarioLogado.role !== "superadmin") {
+        sessionsCard.classList.add("hidden");
+        return;
+    }
+
+    sessionsCard.classList.remove("hidden");
+
+    if (sessionsDropdownCount) {
+        sessionsDropdownCount.textContent = "Carregando sessões...";
+    }
+
+    sessionsList.innerHTML = `
+        <div class="message">
+            Carregando sessões...
+        </div>
+    `;
+
+    if (btnReloadSessions) {
+        btnReloadSessions.disabled = true;
+    }
+
+    try {
+        const resposta = await fetchComSessao("/api/admin/sessoes");
+        const dados = await resposta.json();
+
+        if (!resposta.ok || dados.erro) {
+            throw new Error(dados.mensagem || "Erro ao carregar sessões.");
+        }
+
+        renderizarSessoesAtivas(dados.sessoes || []);
+    } catch (erro) {
+        console.error("Erro ao carregar sessões:", erro);
+
+        sessionsList.innerHTML = `
+            <div class="emptyState">
+                Não foi possível carregar as sessões.
+            </div>
+        `;
+
+        mostrarToast(
+            erro.message || "Erro ao carregar sessões.",
+            "erro"
+        );
+    } finally {
+        if (btnReloadSessions) {
+            btnReloadSessions.disabled = false;
+        }
     }
 }
 
@@ -8577,6 +8909,25 @@ document.addEventListener("keydown", (event) => {
     }
 });
 
+if (btnReloadSessions) {
+    btnReloadSessions.addEventListener("click", () => {
+        carregarSessoesAtivas();
+    });
+}
+
+if (sessionsList) {
+    sessionsList.addEventListener("click", (event) => {
+        const botaoRevogar = event.target.closest(".btnRevokeSession");
+
+        if (!botaoRevogar) return;
+
+        revogarSessaoAdministrativa(
+            botaoRevogar.dataset.sessionId,
+            botaoRevogar.dataset.sessionUser
+        );
+    });
+}
+
 window.addEventListener("resize", () => {
     if (filtroBotaoAtual) {
         posicionarPortalFiltroPremium(filtroBotaoAtual);
@@ -10450,6 +10801,8 @@ async function iniciarAdmin() {
      * Por enquanto:
      * - Auditoria: somente superadmin;
      * - Backups: somente superadmin.
+     * - Diagnóstico operacional: somente superadmin.
+     * - Sessões ativas: somente superadmin.
      *
      * Motivo:
      * essas áreas exibem informações técnicas/sensíveis do sistema
@@ -10459,6 +10812,7 @@ async function iniciarAdmin() {
         const auditCard = document.getElementById("auditCard");
         const backupsCard = document.getElementById("backupsCard");
         const diagnosticCard = document.getElementById("diagnosticCard");
+        const sessionsCard = document.getElementById("sessionsCard");
 
         const ehSuperadmin = usuarioLogado && usuarioLogado.role === "superadmin";
 
@@ -10473,6 +10827,10 @@ async function iniciarAdmin() {
         if (diagnosticCard) {
             diagnosticCard.classList.toggle("hidden", !ehSuperadmin);
         }
+
+        if (sessionsCard) {
+            sessionsCard.classList.toggle("hidden", !ehSuperadmin);
+        }
     }
 
     await carregarResumoAdmin();
@@ -10485,6 +10843,7 @@ async function iniciarAdmin() {
         await carregarDiagnosticoOperacional();
         await carregarBackups();
         await carregarLogsAuditoria();
+        await carregarSessoesAtivas();
     }
 
     limparAlteracoesPendentes();

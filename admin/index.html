@@ -497,11 +497,11 @@
             </details>
         </section>
         <!-- =====================================================
-GERENCIAMENTO DE USUÁRIOS
-=====================================================
-Área administrativa para criar, editar, ativar/desativar
-e resetar senha dos usuários do painel.
-===================================================== -->
+        GERENCIAMENTO DE USUÁRIOS
+        =====================================================
+        Área administrativa para criar, editar, ativar/desativar
+        e resetar senha dos usuários do painel.
+        ===================================================== -->
         <section id="usersCard" class="card usersCard">
             <div class="cardHeader">
                 <div>
@@ -538,11 +538,11 @@ e resetar senha dos usuários do painel.
             <div id="usersMessage" class="uploadMessage hidden"></div>
 
             <!-- =====================================================
-    DROPDOWN - LISTA DE USUÁRIOS
-    =====================================================
-    Começa fechado por padrão, seguindo o padrão adotado
-    para listas grandes do painel.
-    ===================================================== -->
+            DROPDOWN - LISTA DE USUÁRIOS
+            =====================================================
+            Começa fechado por padrão, seguindo o padrão adotado
+            para listas grandes do painel.
+            ===================================================== -->
             <details id="usersDropdown" class="usersDropdown">
                 <summary class="usersDropdownSummary"
                     title="Clique para abrir ou recolher a lista de usuários cadastrados.">
@@ -562,6 +562,61 @@ e resetar senha dos usuários do painel.
                 <div id="usersList" class="usersList"
                     title="Lista de usuários do sistema. As ações disponíveis dependem do seu perfil de acesso.">
                     <div class="message">Carregando usuários...</div>
+                </div>
+            </details>
+        </section>
+
+        <!-- =====================================================
+SESSÕES ATIVAS
+=====================================================
+Área para o superadmin acompanhar e desconectar sessões
+administrativas abertas em outros navegadores/dispositivos.
+===================================================== -->
+        <section id="sessionsCard" class="card usersCard hidden">
+            <div class="cardHeader">
+                <div>
+                    <span class="sectionKicker">Segurança</span>
+                    <h2 class="titleWithHelp">
+                        Sessões ativas
+                        <span class="helpTooltip" tabindex="0"
+                            data-tooltip="Aqui o superadmin pode visualizar sessões administrativas recentes e desconectar sessões abertas em outros navegadores ou dispositivos."
+                            aria-label="Ajuda sobre sessões ativas">
+                            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+                        </span>
+                    </h2>
+                    <p
+                        title="Use esta seção para acompanhar acessos administrativos e desconectar sessões antigas ou suspeitas.">
+                        Acompanhe sessões administrativas abertas e desconecte acessos antigos quando necessário.
+                    </p>
+                </div>
+
+                <div class="usersActions">
+                    <button id="btnReloadSessions" class="secondaryAction" type="button"
+                        title="Atualiza a lista de sessões administrativas.">
+                        <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+                        Atualizar sessões
+                    </button>
+                </div>
+            </div>
+
+            <details id="sessionsDropdown" class="usersDropdown">
+                <summary class="usersDropdownSummary"
+                    title="Clique para abrir ou recolher a lista de sessões administrativas.">
+                    <div>
+                        <strong>Sessões administrativas</strong>
+                        <span id="sessionsDropdownCount"
+                            title="Mostra o total de sessões recentes e quantas ainda estão ativas.">
+                            Carregando sessões...
+                        </span>
+                    </div>
+
+                    <span class="dropdownToggleIcon" aria-hidden="true">
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </span>
+                </summary>
+
+                <div id="sessionsList" class="usersList" title="Lista de sessões administrativas recentes.">
+                    <div class="message">Carregando sessões...</div>
                 </div>
             </details>
         </section>

@@ -2281,6 +2281,22 @@ function atualizarUltimaAtividadeSessao(req) {
     req.session.ultimaAtividadeEm = Date.now();
 }
 
+/**
+ * Garante que apenas superadmin acesse determinada rota.
+ */
+function exigirSuperadmin(req, res, next) {
+    const usuario = obterUsuarioDaSessao(req);
+
+    if (!usuario || usuario.role !== "superadmin") {
+        return res.status(403).json({
+            erro: true,
+            mensagem: "Apenas superadmin pode executar esta ação."
+        });
+    }
+
+    return next();
+}
+
 /* =========================================================
    CONTROLE DE SESSÕES SIMULTÂNEAS
    ========================================================= */
@@ -5016,6 +5032,133 @@ app.put("/api/admin/users/:id", exigirLogin, exigirAdmin, (req, res) => {
         res.status(500).json({
             erro: true,
             mensagem: "Erro ao editar usuário."
+        });
+    }
+});
+
+/* =========================================================
+   API ADMIN: SESSÕES ATIVAS
+   =========================================================
+   Permite ao superadmin visualizar sessões administrativas
+   recentes e desconectar sessões antigas.
+   ========================================================= */
+
+app.get("/api/admin/sessoes", exigirLogin, exigirSuperadmin, (req, res) => {
+    try {
+        const sessoes = db.prepare(`
+            SELECT
+                us.id,
+                us.user_id AS userId,
+                us.session_id AS sessionId,
+                us.ip,
+                us.user_agent AS userAgent,
+                us.created_at AS createdAt,
+                us.last_seen_at AS lastSeenAt,
+                us.revoked_at AS revokedAt,
+                us.revoked_reason AS revokedReason,
+
+                u.nome AS userName,
+                u.email AS userEmail,
+                u.role AS userRole
+            FROM user_sessions us
+            LEFT JOIN users u ON u.id = us.user_id
+            ORDER BY
+                CASE WHEN us.revoked_at IS NULL THEN 0 ELSE 1 END,
+                us.last_seen_at DESC,
+                us.id DESC
+            LIMIT 100
+        `).all();
+
+        const sessoesFormatadas = sessoes.map((sessao) => ({
+            ...sessao,
+            ativa: !sessao.revokedAt,
+            atual: sessao.sessionId === req.sessionID
+        }));
+
+        res.json({
+            sucesso: true,
+            total: sessoesFormatadas.length,
+            sessoes: sessoesFormatadas
+        });
+    } catch (erro) {
+        console.error("Erro ao listar sessões:", erro);
+
+        res.status(500).json({
+            erro: true,
+            mensagem: "Erro ao listar sessões."
+        });
+    }
+});
+
+app.post("/api/admin/sessoes/:id/revogar", exigirLogin, exigirSuperadmin, (req, res) => {
+    try {
+        const id = Number(req.params.id);
+
+        if (!Number.isInteger(id) || id <= 0) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "ID de sessão inválido."
+            });
+        }
+
+        const sessao = db.prepare(`
+            SELECT
+                id,
+                user_id AS userId,
+                session_id AS sessionId,
+                revoked_at AS revokedAt
+            FROM user_sessions
+            WHERE id = ?
+            LIMIT 1
+        `).get(id);
+
+        if (!sessao) {
+            return res.status(404).json({
+                erro: true,
+                mensagem: "Sessão não encontrada."
+            });
+        }
+
+        if (sessao.sessionId === req.sessionID) {
+            return res.status(403).json({
+                erro: true,
+                mensagem: "Você não pode desconectar a própria sessão por aqui. Use o botão Sair."
+            });
+        }
+
+        if (sessao.revokedAt) {
+            return res.json({
+                sucesso: true,
+                mensagem: "Sessão já estava revogada."
+            });
+        }
+
+        db.prepare(`
+            UPDATE user_sessions
+            SET
+                revoked_at = datetime('now', 'localtime'),
+                revoked_reason = 'revogada_por_superadmin'
+            WHERE id = ?
+              AND revoked_at IS NULL
+        `).run(id);
+
+        registrarAuditoria(req, "login.sessao.revogada.admin", {
+            sessaoId: id,
+            usuarioId: sessao.userId,
+            sessionId: sessao.sessionId,
+            motivo: "revogada_por_superadmin"
+        });
+
+        res.json({
+            sucesso: true,
+            mensagem: "Sessão desconectada com sucesso."
+        });
+    } catch (erro) {
+        console.error("Erro ao revogar sessão:", erro);
+
+        res.status(500).json({
+            erro: true,
+            mensagem: "Erro ao desconectar sessão."
         });
     }
 });
