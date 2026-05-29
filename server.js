@@ -2142,6 +2142,22 @@ const uploadChunk = multer({
 */
 app.use(express.json());
 
+/* =========================================================
+   CONFIGURAÇÕES DE SESSÃO / INATIVIDADE
+   ========================================================= */
+
+const SESSION_COOKIE_MAX_AGE_MS = 1000 * 60 * 60 * 8;
+
+const SESSION_INACTIVITY_TIMEOUT_MINUTES = Number(
+    process.env.SESSION_INACTIVITY_TIMEOUT_MINUTES || 30
+);
+
+const SESSION_INACTIVITY_TIMEOUT_MS =
+    Number.isFinite(SESSION_INACTIVITY_TIMEOUT_MINUTES) &&
+        SESSION_INACTIVITY_TIMEOUT_MINUTES > 0
+        ? SESSION_INACTIVITY_TIMEOUT_MINUTES * 60 * 1000
+        : 30 * 60 * 1000;
+
 /*
   Sessão do painel administrativo.
 
@@ -2153,7 +2169,7 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        maxAge: 1000 * 60 * 60 * 8,
+        maxAge: SESSION_COOKIE_MAX_AGE_MS,
         httpOnly: true,
         sameSite: "lax",
         secure: false
@@ -2174,7 +2190,12 @@ app.use(session({
  * para evitar travar testes locais.
  */
 function exigirLogin(req, res, next) {
-    if (req.session && (req.session.user || req.session.adminLogado)) {
+    if (existeSessaoAdministrativa(req)) {
+        if (sessaoExpiradaPorInatividade(req)) {
+            return encerrarSessaoPorInatividade(req, res);
+        }
+
+        atualizarUltimaAtividadeSessao(req);
         return next();
     }
 
@@ -2208,6 +2229,81 @@ function obterUsuarioDaSessao(req) {
     return req.session && req.session.user
         ? req.session.user
         : null;
+}
+
+/**
+ * Retorna true quando existe uma sessão administrativa ativa.
+ */
+function existeSessaoAdministrativa(req) {
+    return !!(
+        req.session &&
+        (req.session.user || req.session.adminLogado)
+    );
+}
+
+/**
+ * Verifica se a sessão passou do tempo máximo de inatividade.
+ */
+function sessaoExpiradaPorInatividade(req) {
+    if (!existeSessaoAdministrativa(req)) {
+        return false;
+    }
+
+    const ultimaAtividadeEm = Number(
+        req.session.ultimaAtividadeEm ||
+        req.session.loginEm ||
+        0
+    );
+
+    if (!ultimaAtividadeEm) {
+        return false;
+    }
+
+    const tempoInativoMs = Date.now() - ultimaAtividadeEm;
+
+    return tempoInativoMs > SESSION_INACTIVITY_TIMEOUT_MS;
+}
+
+/**
+ * Atualiza a última atividade da sessão.
+ */
+function atualizarUltimaAtividadeSessao(req) {
+    if (!existeSessaoAdministrativa(req)) {
+        return;
+    }
+
+    req.session.ultimaAtividadeEm = Date.now();
+}
+
+/**
+ * Encerra a sessão quando expirar por inatividade.
+ */
+function encerrarSessaoPorInatividade(req, res) {
+    const usuario = req.session && req.session.user
+        ? req.session.user
+        : null;
+
+    try {
+        registrarAuditoria(req, "login.expirado.inatividade", {
+            usuario: usuario ? usuario.email : null,
+            usuarioId: usuario ? usuario.id : null,
+            timeoutMinutos: SESSION_INACTIVITY_TIMEOUT_MS / 1000 / 60
+        });
+    } catch (erro) {
+        console.error("Erro ao registrar auditoria de sessão expirada:", erro);
+    }
+
+    req.session.destroy(() => {
+        if (req.path.startsWith("/api")) {
+            return res.status(401).json({
+                erro: true,
+                codigo: "SESSAO_EXPIRADA_INATIVIDADE",
+                mensagem: "Sessão encerrada por inatividade. Faça login novamente."
+            });
+        }
+
+        return res.redirect("/admin/login");
+    });
 }
 
 function obterIpRequisicao(req) {
@@ -2646,6 +2742,9 @@ app.post("/api/login", (req, res) => {
             secretariaId: usuario.secretaria_id || null
         };
 
+        req.session.loginEm = Date.now();
+        req.session.ultimaAtividadeEm = Date.now();
+
         /*
           Mantemos esta flag por compatibilidade temporária.
           Depois podemos remover.
@@ -2838,19 +2937,24 @@ app.get("/admin", exigirLogin, (req, res) => {
    APIs PÚBLICAS DE LEITURA
    ========================================================= */
 
-app.get("/api/status", (req, res) => {
-    const agora = new Date();
+app.get("/api/auth/status", (req, res) => {
+    if (sessaoExpiradaPorInatividade(req)) {
+        return encerrarSessaoPorInatividade(req, res);
+    }
+
+    const usuario = req.session && req.session.user
+        ? req.session.user
+        : null;
+
+    if (existeSessaoAdministrativa(req)) {
+        atualizarUltimaAtividadeSessao(req);
+    }
 
     res.json({
-        online: true,
-        sistema: "Painel TV Prefeitura",
-        ambiente: process.env.NODE_ENV || "development",
-        dataHoraUtc: agora.toISOString(),
-        dataHoraCampoGrande: agora.toLocaleString("pt-BR", {
-            timeZone: "America/Campo_Grande",
-            hour12: false
-        }),
-        timezoneReferencia: "America/Campo_Grande / UTC-04:00"
+        logado: !!usuario || !!(req.session && req.session.adminLogado),
+        usuario,
+        sessionId: req.sessionID || null,
+        inatividadeTimeoutMs: SESSION_INACTIVITY_TIMEOUT_MS
     });
 });
 

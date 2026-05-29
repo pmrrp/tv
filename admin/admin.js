@@ -7619,6 +7619,150 @@ async function sairDoAdmin() {
 }
 
 /* =========================================================
+   LOGOUT AUTOMÁTICO POR INATIVIDADE
+   ========================================================= */
+
+const TEMPO_INATIVIDADE_ADMIN_MS = 30 * 60 * 1000;
+const TEMPO_AVISO_INATIVIDADE_MS = 60 * 1000;
+const INTERVALO_MINIMO_REGISTRO_ATIVIDADE_MS = 1000;
+
+const CHAVE_ULTIMA_ATIVIDADE_ADMIN = "painelRibasAdminUltimaAtividade";
+
+let timerAvisoInatividade = null;
+let timerLogoutInatividade = null;
+let ultimoRegistroAtividadeAdminEm = 0;
+let logoutAutomaticoEmAndamento = false;
+
+/**
+ * Mostra aviso de inatividade sem depender rigidamente do toast.
+ */
+function mostrarAvisoInatividade(texto) {
+    if (typeof mostrarToast === "function") {
+        mostrarToast(texto, "info");
+        return;
+    }
+
+    console.warn(texto);
+}
+
+/**
+ * Registra atividade do usuário no admin.
+ *
+ * Usa localStorage para compartilhar atividade entre abas abertas
+ * do painel administrativo.
+ */
+function registrarAtividadeAdmin(forcar = false) {
+    const agora = Date.now();
+
+    if (
+        !forcar &&
+        agora - ultimoRegistroAtividadeAdminEm < INTERVALO_MINIMO_REGISTRO_ATIVIDADE_MS
+    ) {
+        return;
+    }
+
+    ultimoRegistroAtividadeAdminEm = agora;
+
+    try {
+        localStorage.setItem(CHAVE_ULTIMA_ATIVIDADE_ADMIN, String(agora));
+    } catch (erro) {
+        console.warn("Não foi possível registrar atividade local:", erro);
+    }
+
+    agendarLogoutPorInatividade();
+}
+
+/**
+ * Agenda aviso e logout automático.
+ */
+function agendarLogoutPorInatividade() {
+    clearTimeout(timerAvisoInatividade);
+    clearTimeout(timerLogoutInatividade);
+
+    let ultimaAtividade = Date.now();
+
+    try {
+        ultimaAtividade = Number(
+            localStorage.getItem(CHAVE_ULTIMA_ATIVIDADE_ADMIN) || Date.now()
+        );
+    } catch {
+        ultimaAtividade = Date.now();
+    }
+
+    const tempoInativo = Date.now() - ultimaAtividade;
+    const tempoRestante = TEMPO_INATIVIDADE_ADMIN_MS - tempoInativo;
+
+    if (tempoRestante <= 0) {
+        executarLogoutAutomaticoPorInatividade();
+        return;
+    }
+
+    const tempoAteAviso = tempoRestante - TEMPO_AVISO_INATIVIDADE_MS;
+
+    if (tempoAteAviso > 0) {
+        timerAvisoInatividade = setTimeout(() => {
+            mostrarAvisoInatividade(
+                "Sessão será encerrada em 1 minuto por inatividade."
+            );
+        }, tempoAteAviso);
+    }
+
+    timerLogoutInatividade = setTimeout(() => {
+        executarLogoutAutomaticoPorInatividade();
+    }, tempoRestante);
+}
+
+/**
+ * Encerra a sessão automaticamente por inatividade.
+ */
+async function executarLogoutAutomaticoPorInatividade() {
+    if (logoutAutomaticoEmAndamento) return;
+
+    logoutAutomaticoEmAndamento = true;
+
+    try {
+        await fetch("/api/logout", {
+            method: "POST",
+            credentials: "same-origin"
+        });
+    } catch (erro) {
+        console.warn("Erro ao executar logout automático:", erro);
+    } finally {
+        window.location.href = "/admin/login?motivo=inatividade";
+    }
+}
+
+/**
+ * Inicia o monitoramento de inatividade no painel administrativo.
+ */
+function iniciarMonitoramentoInatividadeAdmin() {
+    const eventosDeAtividade = [
+        "mousemove",
+        "mousedown",
+        "keydown",
+        "scroll",
+        "touchstart",
+        "click"
+    ];
+
+    eventosDeAtividade.forEach((evento) => {
+        window.addEventListener(evento, () => {
+            registrarAtividadeAdmin();
+        }, {
+            passive: true
+        });
+    });
+
+    window.addEventListener("storage", (evento) => {
+        if (evento.key === CHAVE_ULTIMA_ATIVIDADE_ADMIN) {
+            agendarLogoutPorInatividade();
+        }
+    });
+
+    registrarAtividadeAdmin(true);
+}
+
+/* =========================================================
    MODAL - PERÍODO DE EXIBIÇÃO
    ========================================================= */
 
@@ -8660,6 +8804,8 @@ if (btnLogout) {
         executarComConfirmacaoDeSaida(sairDoAdmin);
     });
 }
+
+iniciarMonitoramentoInatividadeAdmin();
 
 /*
   Intercepta atalhos comuns de atualização.
