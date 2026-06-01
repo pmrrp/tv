@@ -3270,6 +3270,87 @@ app.post("/api/auth/reset-password", async (req, res) => {
 });
 
 /* =========================================================
+   API: VALIDAR TOKEN DE RECUPERAÇÃO DE SENHA
+   =========================================================
+   Usada pela tela /admin/reset-password para bloquear links
+   inválidos, expirados ou já utilizados antes do usuário preencher
+   a nova senha.
+   ========================================================= */
+
+app.get("/api/auth/reset-password/validate", (req, res) => {
+    try {
+        const token = String(req.query.token || "").trim();
+
+        if (!token) {
+            return res.status(400).json({
+                valido: false,
+                mensagem: "Link de recuperação inválido ou incompleto."
+            });
+        }
+
+        const tokenHash = gerarHashTokenRecuperacao(token);
+
+        const registro = db.prepare(`
+            SELECT
+                prt.id,
+                prt.expires_at AS expiresAt,
+                prt.used_at AS usedAt,
+
+                u.ativo
+            FROM password_reset_tokens prt
+            JOIN users u ON u.id = prt.user_id
+            WHERE prt.token_hash = ?
+            LIMIT 1
+        `).get(tokenHash);
+
+        if (!registro) {
+            return res.status(400).json({
+                valido: false,
+                mensagem: "Link de recuperação inválido ou expirado."
+            });
+        }
+
+        if (registro.usedAt) {
+            return res.status(400).json({
+                valido: false,
+                mensagem: "Este link de recuperação já foi utilizado. Solicite um novo link."
+            });
+        }
+
+        if (Number(registro.ativo) !== 1) {
+            return res.status(403).json({
+                valido: false,
+                mensagem: "Usuário desativado. Procure o administrador."
+            });
+        }
+
+        const expiraEm = new Date(String(registro.expiresAt).replace(" ", "T"));
+        const tokenExpirado = Number.isNaN(expiraEm.getTime())
+            ? true
+            : Date.now() > expiraEm.getTime();
+
+        if (tokenExpirado) {
+            return res.status(400).json({
+                valido: false,
+                mensagem: "Este link de recuperação expirou. Solicite um novo link."
+            });
+        }
+
+        return res.json({
+            valido: true,
+            mensagem: "Link de recuperação válido."
+        });
+    } catch (erro) {
+        console.error("Erro ao validar token de recuperação:", erro);
+
+        res.status(500).json({
+            valido: false,
+            mensagem: "Erro ao validar link de recuperação."
+        });
+    }
+});
+
+/* =========================================================
    API: LOGIN
    =========================================================
    Autentica usuário usando SQLite + bcrypt.
@@ -3536,6 +3617,19 @@ app.get("/admin", exigirLogin, (req, res) => {
     res.sendFile(path.join(adminFolder, "index.html"));
 });
 
+/* =========================================================
+   PÁGINA: REDEFINIR SENHA
+   =========================================================
+   Página pública usada pelo link de recuperação de senha.
+
+   Observação:
+   Não exige login, porque o usuário justamente pode estar
+   sem acesso à conta.
+   ========================================================= */
+
+app.get("/admin/reset-password", (req, res) => {
+    res.sendFile(path.join(adminFolder, "reset-password.html"));
+});
 
 /* =========================================================
    APIs PÚBLICAS DE LEITURA
