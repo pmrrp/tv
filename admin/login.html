@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
 
     <!-- Estilos da tela de login -->
-    <link rel="stylesheet" href="/admin/login.css" />
+    <link rel="stylesheet" href="/admin/login.css?v=recuperacao-senha-1" />
 </head>
 
 <body>
@@ -48,15 +48,15 @@
             <form id="loginForm" class="loginForm">
                 <label for="email">
                     Usuário
-                    <input id="email" name="email" type="text" autocomplete="username" placeholder="Digite seu usuário"
-                        required />
+                    <input id="email" name="email" type="text" autocomplete="username"
+                        placeholder="Digite seu usuário" />
                 </label>
 
                 <label for="password">
                     Senha de acesso
                     <div class="passwordField">
                         <input id="password" name="password" type="password" autocomplete="current-password"
-                            placeholder="Digite a senha" required />
+                            placeholder="Digite a senha" />
 
                         <button id="btnTogglePassword" class="btnTogglePassword" type="button"
                             aria-label="Mostrar senha" title="Mostrar senha">
@@ -65,8 +65,46 @@
                     </div>
                 </label>
 
+                <div class="loginFormLinks">
+                    <button id="btnShowForgotPassword" class="loginLinkButton" type="button">
+                        Esqueci minha senha
+                    </button>
+                </div>
+
                 <button id="btnLogin" type="submit">
                     Entrar
+                </button>
+            </form>
+
+            <!-- =====================================================
+            RECUPERAÇÃO DE SENHA
+            =====================================================
+            Permite solicitar um link de redefinição de senha.
+
+            Por segurança, a resposta da API não informa se o usuário
+            existe ou não. A mensagem exibida será sempre genérica.
+            ===================================================== -->
+            <form id="forgotPasswordForm" class="loginForm forgotPasswordForm hidden">
+                <div class="forgotPasswordIntro">
+                    <h2>Recuperar senha</h2>
+                    <p>
+                        Informe seu usuário/e-mail de acesso. Se ele estiver cadastrado e ativo,
+                        enviaremos as instruções para redefinir sua senha.
+                    </p>
+                </div>
+
+                <label for="forgotEmail">
+                    Usuário
+                    <input id="forgotEmail" name="forgotEmail" type="text" autocomplete="username"
+                        placeholder="Digite seu usuário" />
+                </label>
+
+                <button id="btnRequestPasswordReset" type="submit">
+                    Enviar instruções
+                </button>
+
+                <button id="btnBackToLogin" class="secondaryLoginButton" type="button">
+                    Voltar ao login
                 </button>
             </form>
 
@@ -80,7 +118,7 @@
     </footer>
 
     <!-- Script da tela de login -->
-    <script src="/admin/login.js"></script>
+    <script src="/admin/login.js?v=recuperacao-senha-1"></script>
 </body>
 
 </html>

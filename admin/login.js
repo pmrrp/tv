@@ -23,6 +23,16 @@ const btnTogglePasswordIcon = btnTogglePassword
     : null;
 
 /* =========================================================
+ELEMENTOS - RECUPERAÇÃO DE SENHA
+========================================================= */
+
+const forgotPasswordForm = document.getElementById("forgotPasswordForm");
+const forgotEmailInput = document.getElementById("forgotEmail");
+const btnShowForgotPassword = document.getElementById("btnShowForgotPassword");
+const btnBackToLogin = document.getElementById("btnBackToLogin");
+const btnRequestPasswordReset = document.getElementById("btnRequestPasswordReset");
+
+/* =========================================================
    FOCO AUTOMÁTICO NO LOGIN
    =========================================================
    Ao abrir a tela de login, posiciona o cursor automaticamente
@@ -78,23 +88,31 @@ if (btnTogglePassword) {
 }
 
 /**
- * Mostra mensagem de erro no login.
+ * Mostra mensagem na tela de login.
+ *
+ * Tipos:
+ * - erro
+ * - sucesso
+ * - info
  */
-function mostrarMensagem(texto) {
+function mostrarMensagem(texto, tipo = "erro") {
     if (!loginMessage) return;
 
     loginMessage.textContent = texto;
-    loginMessage.classList.remove("hidden");
+
+    loginMessage.classList.remove("hidden", "sucesso", "erro", "info");
+    loginMessage.classList.add(tipo);
 }
 
 /**
- * Esconde mensagem de erro.
+ * Esconde mensagem da tela.
  */
 function esconderMensagem() {
     if (!loginMessage) return;
 
     loginMessage.textContent = "";
     loginMessage.classList.add("hidden");
+    loginMessage.classList.remove("sucesso", "erro", "info");
 }
 
 /**
@@ -105,6 +123,72 @@ function definirCarregando(carregando) {
 
     btnLogin.disabled = carregando;
     btnLogin.textContent = carregando ? "Entrando..." : "Entrar";
+}
+
+/* =========================================================
+   RECUPERAÇÃO DE SENHA - INTERFACE
+   ========================================================= */
+
+/**
+ * Alterna para o formulário de recuperação de senha.
+ */
+function mostrarFormularioRecuperacaoSenha() {
+    esconderMensagem();
+
+    if (loginForm) {
+        loginForm.classList.add("hidden");
+    }
+
+    if (forgotPasswordForm) {
+        forgotPasswordForm.classList.remove("hidden");
+    }
+
+    /*
+      Se o usuário já digitou algo no campo de login,
+      reaproveitamos esse valor no campo de recuperação.
+    */
+    if (forgotEmailInput && emailInput) {
+        forgotEmailInput.value = emailInput.value.trim();
+    }
+
+    setTimeout(() => {
+        if (forgotEmailInput) {
+            forgotEmailInput.focus();
+        }
+    }, 100);
+}
+
+/**
+ * Volta para o formulário de login.
+ */
+function mostrarFormularioLogin() {
+    esconderMensagem();
+
+    if (forgotPasswordForm) {
+        forgotPasswordForm.classList.add("hidden");
+    }
+
+    if (loginForm) {
+        loginForm.classList.remove("hidden");
+    }
+
+    setTimeout(() => {
+        if (emailInput) {
+            emailInput.focus();
+        }
+    }, 100);
+}
+
+/**
+ * Controla estado visual do botão de recuperação.
+ */
+function definirCarregandoRecuperacaoSenha(carregando) {
+    if (!btnRequestPasswordReset) return;
+
+    btnRequestPasswordReset.disabled = carregando;
+    btnRequestPasswordReset.textContent = carregando
+        ? "Enviando..."
+        : "Enviar instruções";
 }
 
 /**
@@ -118,8 +202,23 @@ async function realizarLogin(event) {
     const email = emailInput ? emailInput.value.trim() : "";
     const password = passwordInput ? passwordInput.value : "";
 
-    if (!email || !password) {
-        mostrarMensagem("Informe usuário e senha.");
+    if (!email) {
+        mostrarMensagem("Informe seu usuário de acesso.", "erro");
+
+        if (emailInput) {
+            emailInput.focus();
+        }
+
+        return;
+    }
+
+    if (!password) {
+        mostrarMensagem("Informe sua senha de acesso.", "erro");
+
+        if (passwordInput) {
+            passwordInput.focus();
+        }
+
         return;
     }
 
@@ -152,6 +251,98 @@ async function realizarLogin(event) {
     }
 }
 
+/**
+ * Solicita recuperação de senha.
+ *
+ * Por segurança, a API sempre responde com mensagem genérica,
+ * sem confirmar se o usuário existe ou não.
+ */
+async function solicitarRecuperacaoSenha(event) {
+    event.preventDefault();
+
+    esconderMensagem();
+
+    const email = forgotEmailInput
+        ? forgotEmailInput.value.trim()
+        : "";
+
+    if (!email) {
+        mostrarMensagem("Informe seu usuário/e-mail de acesso.", "erro");
+
+        if (forgotEmailInput) {
+            forgotEmailInput.focus();
+        }
+
+        return;
+    }
+
+    definirCarregandoRecuperacaoSenha(true);
+
+    try {
+        const resposta = await fetch("/api/auth/forgot-password", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                email
+            })
+        });
+
+        const dados = await resposta.json();
+
+        if (!resposta.ok || dados.erro) {
+            throw new Error(dados.mensagem || "Não foi possível solicitar recuperação de senha.");
+        }
+
+        mostrarMensagem(
+            dados.mensagem || "Se o usuário informado existir e estiver ativo, enviaremos as instruções de recuperação.",
+            "sucesso"
+        );
+
+        /*
+          Depois de solicitar, voltamos visualmente para o login,
+          mas mantemos a mensagem de sucesso na tela.
+        */
+        if (forgotPasswordForm) {
+            forgotPasswordForm.classList.add("hidden");
+        }
+
+        if (loginForm) {
+            loginForm.classList.remove("hidden");
+        }
+
+        if (emailInput) {
+            emailInput.value = email;
+        }
+
+        if (passwordInput) {
+            passwordInput.value = "";
+        }
+
+    } catch (erro) {
+        mostrarMensagem(
+            erro.message || "Erro ao solicitar recuperação de senha.",
+            "erro"
+        );
+    } finally {
+        definirCarregandoRecuperacaoSenha(false);
+    }
+}
+
 if (loginForm) {
     loginForm.addEventListener("submit", realizarLogin);
+}
+
+if (btnShowForgotPassword) {
+    btnShowForgotPassword.addEventListener("click", mostrarFormularioRecuperacaoSenha);
+}
+
+if (btnBackToLogin) {
+    btnBackToLogin.addEventListener("click", mostrarFormularioLogin);
+}
+
+if (forgotPasswordForm) {
+    forgotPasswordForm.addEventListener("submit", solicitarRecuperacaoSenha);
 }

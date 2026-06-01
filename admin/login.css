@@ -481,3 +481,164 @@ input:focus-visible {
 .btnTogglePassword:focus {
     outline: 3px solid rgba(15, 112, 196, 0.25);
 }
+
+/* =========================================================
+   RECUPERAÇÃO DE SENHA
+   ========================================================= */
+
+.loginFormLinks {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -4px;
+}
+
+.loginLinkButton {
+    border: 0;
+    background: transparent;
+    color: #0f6fb8;
+    font-size: 0.88rem;
+    font-weight: 800;
+    cursor: pointer;
+    padding: 4px 2px;
+}
+
+.loginLinkButton:hover,
+.loginLinkButton:focus-visible {
+    color: #084f86;
+    text-decoration: underline;
+}
+
+.forgotPasswordForm {
+    margin-top: 18px;
+}
+
+.forgotPasswordIntro {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.forgotPasswordIntro h2 {
+    margin: 0;
+    color: #0b2f4f;
+    font-size: 1.15rem;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+}
+
+.forgotPasswordIntro p {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+.secondaryLoginButton {
+    width: 100%;
+    min-height: 48px;
+
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    border-radius: 16px;
+
+    background: rgba(248, 250, 252, 0.9);
+    color: #0b2f4f;
+
+    font-weight: 900;
+    cursor: pointer;
+
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        border-color 0.18s ease,
+        background 0.18s ease;
+}
+
+.secondaryLoginButton:hover {
+    transform: translateY(-1px);
+    border-color: rgba(15, 111, 184, 0.35);
+    background: #ffffff;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
+}
+
+/* =========================================================
+   VARIAÇÕES DA MENSAGEM DE LOGIN
+   ========================================================= */
+
+.loginMessage.erro {
+    border-color: rgba(220, 38, 38, 0.22);
+    background: rgba(254, 242, 242, 0.96);
+    color: #991b1b;
+}
+
+.loginMessage.sucesso {
+    border-color: rgba(22, 163, 74, 0.22);
+    background: rgba(240, 253, 244, 0.96);
+    color: #166534;
+}
+
+.loginMessage.info {
+    border-color: rgba(37, 99, 235, 0.22);
+    background: rgba(239, 246, 255, 0.96);
+    color: #1d4ed8;
+}
+
+/* =========================================================
+   UTILITÁRIO GLOBAL
+   ========================================================= */
+
+.hidden {
+    display: none !important;
+}
+
+.forgotPasswordForm button[type="submit"] {
+    width: 100%;
+    min-height: 50px;
+
+    border: 0;
+    border-radius: 16px;
+
+    background: linear-gradient(135deg, #0f73b7, #073b66);
+    color: #ffffff;
+
+    font-weight: 900;
+    cursor: pointer;
+
+    box-shadow: 0 16px 34px rgba(15, 111, 184, 0.22);
+
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        filter 0.18s ease;
+}
+
+.forgotPasswordForm button[type="submit"]:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
+    box-shadow: 0 20px 42px rgba(15, 111, 184, 0.28);
+}
+
+.forgotPasswordForm button[type="submit"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+    transform: none;
+    filter: none;
+}
+
+.loginLinkButton {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: #0f6fb8;
+    font-size: 0.88rem;
+    font-weight: 900;
+    cursor: pointer;
+    padding: 4px 2px;
+    border-radius: 8px;
+}
+
+.loginLinkButton:hover,
+.loginLinkButton:focus-visible {
+    color: #084f86;
+    text-decoration: underline;
+    outline: none;
+}
