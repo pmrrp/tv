@@ -2450,33 +2450,19 @@ function revogarSessaoAtual(req, motivo = "manual") {
  * Encerra requisições feitas por sessão revogada.
  */
 function encerrarSessaoRevogada(req, res) {
-    const usuario = req.session && req.session.user
-        ? req.session.user
-        : null;
-
-    try {
-        registrarAuditoria(req, "login.sessao.revogada", {
-            usuarioId: usuario ? usuario.id : null,
-            usuario: usuario ? usuario.email : null,
-            sessionId: req.sessionID || null,
-            motivo: "sessao_revogada_ou_novo_login"
-        });
-    } catch (erro) {
-        console.error("Erro ao registrar auditoria de sessão revogada:", erro);
-    }
-
     req.session.destroy(() => {
         if (req.path.startsWith("/api")) {
             return res.status(401).json({
                 erro: true,
                 codigo: "SESSAO_REVOGADA",
-                mensagem: "Esta sessão foi encerrada porque houve um novo login deste usuário."
+                mensagem: "Esta sessão foi encerrada porque houve um novo login ou porque foi desconectada por um superadmin."
             });
         }
 
         return res.redirect("/admin/login");
     });
 }
+
 
 /**
  * Encerra a sessão quando expirar por inatividade.
@@ -3030,22 +3016,6 @@ app.post("/api/logout", (req, res) => {
 });
 
 /* =========================================================
-   API: STATUS DA AUTENTICAÇÃO
-   ========================================================= */
-
-app.get("/api/auth/status", (req, res) => {
-    const usuario = req.session && req.session.user
-        ? req.session.user
-        : null;
-
-    res.json({
-        logado: !!usuario || !!(req.session && req.session.adminLogado),
-        usuario,
-        sessionId: req.sessionID || null
-    });
-});
-
-/* =========================================================
    API: USUÁRIO LOGADO
    =========================================================
    Retorna os dados básicos do usuário da sessão.
@@ -3168,6 +3138,11 @@ app.get("/admin", exigirLogin, (req, res) => {
    ========================================================= */
 
 app.get("/api/auth/status", (req, res) => {
+
+    if (sessaoAtualFoiRevogada(req)) {
+        return encerrarSessaoRevogada(req, res);
+    }
+
     if (sessaoExpiradaPorInatividade(req)) {
         return encerrarSessaoPorInatividade(req, res);
     }
