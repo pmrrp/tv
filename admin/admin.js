@@ -8125,6 +8125,103 @@ async function executarLogoutAutomaticoPorInatividade() {
     }
 }
 
+
+/* =========================================================
+   VERIFICAÇÃO PERIÓDICA DE SESSÃO
+   ========================================================= */
+
+const INTERVALO_VERIFICACAO_SESSAO_MS = 30 * 1000;
+
+let verificacaoSessaoEmAndamento = false;
+
+/**
+ * Verifica periodicamente se a sessão administrativa ainda é válida.
+ *
+ * Isso permite detectar automaticamente quando:
+ * - a sessão foi revogada por novo login;
+ * - a sessão foi desconectada por superadmin;
+ * - a sessão expirou no backend.
+ */
+async function verificarSessaoAdministrativa() {
+    if (verificacaoSessaoEmAndamento) return;
+
+    verificacaoSessaoEmAndamento = true;
+
+    try {
+        const resposta = await fetch("/api/auth/status", {
+            credentials: "same-origin"
+        });
+
+        if (resposta.status === 401) {
+            let mensagem = "Sessão encerrada. Faça login novamente.";
+            let codigo = "SESSAO_ENCERRADA";
+
+            try {
+                const dados = await resposta.json();
+
+                mensagem = dados.mensagem || mensagem;
+                codigo = dados.codigo || codigo;
+            } catch {
+                // Mantém mensagem padrão.
+            }
+
+            try {
+                localStorage.setItem("painelRibasMotivoLogout", codigo);
+                localStorage.setItem("painelRibasMensagemLogout", mensagem);
+            } catch {
+                // localStorage pode falhar em modo privado.
+            }
+
+            window.location.href = "/admin/login";
+            return;
+        }
+
+        if (!resposta.ok) {
+            return;
+        }
+
+        const dados = await resposta.json();
+
+        if (!dados.logado) {
+            window.location.href = "/admin/login";
+        }
+    } catch (erro) {
+        /*
+          Falha temporária de rede não deve derrubar o usuário imediatamente.
+          Se a sessão estiver realmente inválida, a próxima chamada de API
+          protegida também tratará isso.
+        */
+        console.warn("Não foi possível verificar a sessão agora:", erro);
+    } finally {
+        verificacaoSessaoEmAndamento = false;
+    }
+}
+
+/**
+ * Inicia o monitoramento periódico da sessão.
+ */
+let timerVerificacaoSessao = null;
+
+function iniciarVerificacaoPeriodicaSessao() {
+    if (timerVerificacaoSessao) {
+        clearInterval(timerVerificacaoSessao);
+    }
+
+    /*
+      Faz uma primeira verificação alguns segundos após abrir o admin.
+      Depois continua verificando periodicamente.
+    */
+    setTimeout(() => {
+        verificarSessaoAdministrativa();
+    }, 3000);
+
+    timerVerificacaoSessao = setInterval(() => {
+        verificarSessaoAdministrativa();
+    }, INTERVALO_VERIFICACAO_SESSAO_MS);
+
+    console.log("Verificação periódica de sessão iniciada.");
+}
+
 /**
  * Inicia o monitoramento de inatividade no painel administrativo.
  */
@@ -10849,6 +10946,8 @@ async function iniciarAdmin() {
     limparAlteracoesPendentes();
     configurarScrollAoAbrirDropdowns();
     configurarDetailsControlados();
+
+    iniciarVerificacaoPeriodicaSessao();
 }
 
 iniciarAdmin();
