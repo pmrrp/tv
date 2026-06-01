@@ -35,6 +35,8 @@ const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
 const session = require("express-session");
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
 const bcrypt = require("bcryptjs");
 const db = require("./database/db");
 const initDatabase = require("./database/initDatabase");
@@ -2143,6 +2145,24 @@ const uploadChunk = multer({
 app.use(express.json());
 
 /* =========================================================
+   CONFIGURAÇÕES DE RECUPERAÇÃO DE SENHA
+   ========================================================= */
+
+const APP_BASE_URL = String(
+    process.env.APP_BASE_URL || "http://localhost:3000"
+).replace(/\/+$/, "");
+
+const PASSWORD_RESET_TOKEN_MINUTES = Number(
+    process.env.PASSWORD_RESET_TOKEN_MINUTES || 30
+);
+
+const PASSWORD_RESET_TOKEN_TTL_MS =
+    Number.isFinite(PASSWORD_RESET_TOKEN_MINUTES) &&
+        PASSWORD_RESET_TOKEN_MINUTES > 0
+        ? PASSWORD_RESET_TOKEN_MINUTES * 60 * 1000
+        : 30 * 60 * 1000;
+
+/* =========================================================
    CONFIGURAÇÕES DE SESSÃO / INATIVIDADE
    ========================================================= */
 
@@ -2863,6 +2883,390 @@ app.get("/admin/login", (req, res) => {
     }
 
     res.sendFile(path.join(adminFolder, "login.html"));
+});
+
+/* =========================================================
+   RECUPERAÇÃO DE SENHA - HELPERS
+   ========================================================= */
+
+/**
+ * Gera token seguro para recuperação de senha.
+ */
+function gerarTokenRecuperacaoSenha() {
+    return crypto.randomBytes(32).toString("hex");
+}
+
+/**
+ * Gera hash do token.
+ *
+ * Importante:
+ * Nunca salvamos o token puro no banco.
+ */
+function gerarHashTokenRecuperacao(token) {
+    return crypto
+        .createHash("sha256")
+        .update(String(token || ""))
+        .digest("hex");
+}
+
+/**
+ * Retorna data/hora SQLite local com base em um timestamp JS.
+ */
+function formatarDataSqliteLocal(data) {
+    const d = data instanceof Date ? data : new Date(data);
+
+    const ano = d.getFullYear();
+    const mes = String(d.getMonth() + 1).padStart(2, "0");
+    const dia = String(d.getDate()).padStart(2, "0");
+    const hora = String(d.getHours()).padStart(2, "0");
+    const minuto = String(d.getMinutes()).padStart(2, "0");
+    const segundo = String(d.getSeconds()).padStart(2, "0");
+
+    return `${ano}-${mes}-${dia} ${hora}:${minuto}:${segundo}`;
+}
+
+/**
+ * Retorna true se o SMTP aparenta estar configurado.
+ */
+function emailEstaConfigurado() {
+    return !!(
+        process.env.SMTP_HOST &&
+        process.env.SMTP_PORT &&
+        process.env.MAIL_FROM
+    );
+}
+
+/**
+ * Cria transporter SMTP do Nodemailer.
+ */
+function criarTransporterEmail() {
+    if (!emailEstaConfigurado()) {
+        return null;
+    }
+
+    return nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: String(process.env.SMTP_SECURE || "false").toLowerCase() === "true",
+        auth: process.env.SMTP_USER || process.env.SMTP_PASS
+            ? {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
+            }
+            : undefined
+    });
+}
+
+/**
+ * Envia e-mail de recuperação de senha.
+ *
+ * Em ambiente sem SMTP configurado, não envia e apenas registra no console.
+ * Isso ajuda no desenvolvimento local sem travar o fluxo.
+ */
+async function enviarEmailRecuperacaoSenha({ para, nome, link }) {
+    const assunto = "Recuperação de senha — Painel Ribas";
+
+    const texto = `
+Olá, ${nome || "usuário"}.
+
+Recebemos uma solicitação para redefinir sua senha do Painel Ribas.
+
+Acesse o link abaixo para criar uma nova senha:
+${link}
+
+Este link expira em ${PASSWORD_RESET_TOKEN_MINUTES} minuto(s).
+
+Se você não solicitou esta recuperação, ignore esta mensagem.
+
+Painel Ribas
+`.trim();
+
+    const html = `
+        <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #111827;">
+            <h2 style="margin: 0 0 12px;">Recuperação de senha — Painel Ribas</h2>
+
+            <p>Olá, <strong>${nome || "usuário"}</strong>.</p>
+
+            <p>Recebemos uma solicitação para redefinir sua senha do Painel Ribas.</p>
+
+            <p>
+                <a href="${link}"
+                   style="display:inline-block;padding:12px 16px;border-radius:10px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:700;">
+                    Redefinir minha senha
+                </a>
+            </p>
+
+            <p>Este link expira em <strong>${PASSWORD_RESET_TOKEN_MINUTES} minuto(s)</strong>.</p>
+
+            <p>Se você não solicitou esta recuperação, ignore esta mensagem.</p>
+
+            <hr style="border:none;border-top:1px solid #e5e7eb;margin:18px 0;" />
+
+            <p style="font-size:12px;color:#6b7280;">
+                Caso o botão não funcione, copie e cole este link no navegador:<br />
+                ${link}
+            </p>
+        </div>
+    `.trim();
+
+    const transporter = criarTransporterEmail();
+
+    if (!transporter) {
+        console.warn("SMTP não configurado. Link de recuperação gerado apenas no console:");
+        console.warn(link);
+        return {
+            enviado: false,
+            motivo: "smtp_nao_configurado"
+        };
+    }
+
+    await transporter.sendMail({
+        from: process.env.MAIL_FROM,
+        to: para,
+        subject: assunto,
+        text: texto,
+        html
+    });
+
+    return {
+        enviado: true
+    };
+}
+
+/* =========================================================
+   API: SOLICITAR RECUPERAÇÃO DE SENHA
+   ========================================================= */
+
+app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+        const email = String(req.body.email || req.body.login || "")
+            .trim()
+            .toLowerCase();
+
+        /*
+          Resposta genérica para não revelar se o usuário existe.
+          Isso evita enumeração de usuários.
+        */
+        const respostaGenerica = {
+            sucesso: true,
+            mensagem: "Se o usuário informado existir e estiver ativo, enviaremos as instruções de recuperação."
+        };
+
+        if (!email) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Informe o e-mail/login de acesso."
+            });
+        }
+
+        const usuario = db.prepare(`
+            SELECT
+                id,
+                nome,
+                email,
+                ativo
+            FROM users
+            WHERE LOWER(email) = ?
+            LIMIT 1
+        `).get(email);
+
+        if (!usuario || Number(usuario.ativo) !== 1) {
+            registrarAuditoriaSistema("login.recuperacao.solicitada.usuario_inexistente", {
+                email,
+                ip: obterIpRequisicao(req),
+                userAgent: req.headers["user-agent"] || ""
+            });
+
+            return res.json(respostaGenerica);
+        }
+
+        /*
+          Invalida tokens anteriores ainda não usados para este usuário.
+        */
+        db.prepare(`
+            UPDATE password_reset_tokens
+            SET used_at = datetime('now', 'localtime')
+            WHERE user_id = ?
+              AND used_at IS NULL
+        `).run(usuario.id);
+
+        const token = gerarTokenRecuperacaoSenha();
+        const tokenHash = gerarHashTokenRecuperacao(token);
+
+        const expiraEm = new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MS);
+        const expiresAt = formatarDataSqliteLocal(expiraEm);
+
+        db.prepare(`
+            INSERT INTO password_reset_tokens (
+                user_id,
+                token_hash,
+                ip,
+                user_agent,
+                created_at,
+                expires_at
+            )
+            VALUES (?, ?, ?, ?, datetime('now', 'localtime'), ?)
+        `).run(
+            usuario.id,
+            tokenHash,
+            obterIpRequisicao(req),
+            req.headers["user-agent"] || "",
+            expiresAt
+        );
+
+        const link = `${APP_BASE_URL}/admin/reset-password?token=${encodeURIComponent(token)}`;
+
+        const resultadoEmail = await enviarEmailRecuperacaoSenha({
+            para: usuario.email,
+            nome: usuario.nome,
+            link
+        });
+
+        registrarAuditoriaSistema("login.recuperacao.solicitada", {
+            usuarioId: usuario.id,
+            email: usuario.email,
+            emailEnviado: resultadoEmail.enviado,
+            motivoEmail: resultadoEmail.motivo || null,
+            expiresAt
+        });
+
+        return res.json(respostaGenerica);
+    } catch (erro) {
+        console.error("Erro ao solicitar recuperação de senha:", erro);
+
+        res.status(500).json({
+            erro: true,
+            mensagem: "Erro ao solicitar recuperação de senha."
+        });
+    }
+});
+
+/* =========================================================
+   API: REDEFINIR SENHA COM TOKEN
+   ========================================================= */
+
+app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+        const token = String(req.body.token || "").trim();
+        const novaSenha = String(req.body.password || req.body.novaSenha || "");
+
+        if (!token) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Token de recuperação não informado."
+            });
+        }
+
+        if (!novaSenha || novaSenha.length < 6) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "A nova senha deve ter pelo menos 6 caracteres."
+            });
+        }
+
+        const tokenHash = gerarHashTokenRecuperacao(token);
+
+        const registro = db.prepare(`
+            SELECT
+                prt.id,
+                prt.user_id AS userId,
+                prt.expires_at AS expiresAt,
+                prt.used_at AS usedAt,
+
+                u.nome,
+                u.email,
+                u.ativo
+            FROM password_reset_tokens prt
+            JOIN users u ON u.id = prt.user_id
+            WHERE prt.token_hash = ?
+            LIMIT 1
+        `).get(tokenHash);
+
+        if (!registro) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Link de recuperação inválido ou expirado."
+            });
+        }
+
+        if (registro.usedAt) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Este link de recuperação já foi utilizado."
+            });
+        }
+
+        if (Number(registro.ativo) !== 1) {
+            return res.status(403).json({
+                erro: true,
+                mensagem: "Usuário desativado. Procure o administrador."
+            });
+        }
+
+        const expiraEm = new Date(String(registro.expiresAt).replace(" ", "T"));
+        const tokenExpirado = Number.isNaN(expiraEm.getTime())
+            ? true
+            : Date.now() > expiraEm.getTime();
+
+        if (tokenExpirado) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Este link de recuperação expirou. Solicite um novo link."
+            });
+        }
+
+        const novoHash = bcrypt.hashSync(novaSenha, 10);
+
+        const transacao = db.transaction(() => {
+            db.prepare(`
+                UPDATE users
+                SET
+                    senha_hash = ?,
+                    atualizado_em = datetime('now', 'localtime')
+                WHERE id = ?
+            `).run(novoHash, registro.userId);
+
+            db.prepare(`
+                UPDATE password_reset_tokens
+                SET used_at = datetime('now', 'localtime')
+                WHERE id = ?
+            `).run(registro.id);
+
+            /*
+              Revoga sessões abertas desse usuário após troca de senha.
+              Isso evita que uma sessão antiga continue logada.
+            */
+            db.prepare(`
+                UPDATE user_sessions
+                SET
+                    revoked_at = datetime('now', 'localtime'),
+                    revoked_reason = 'senha_redefinida'
+                WHERE user_id = ?
+                  AND revoked_at IS NULL
+            `).run(registro.userId);
+        });
+
+        transacao();
+
+        registrarAuditoriaSistema("login.recuperacao.senha_redefinida", {
+            usuarioId: registro.userId,
+            email: registro.email,
+            ip: obterIpRequisicao(req),
+            userAgent: req.headers["user-agent"] || ""
+        });
+
+        res.json({
+            sucesso: true,
+            mensagem: "Senha redefinida com sucesso. Faça login novamente."
+        });
+    } catch (erro) {
+        console.error("Erro ao redefinir senha:", erro);
+
+        res.status(500).json({
+            erro: true,
+            mensagem: "Erro ao redefinir senha."
+        });
+    }
 });
 
 /* =========================================================
