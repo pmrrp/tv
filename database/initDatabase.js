@@ -129,6 +129,35 @@ function initDatabase() {
     `).run();
 
     /*
+  Tabela de tokens de recuperação de senha.
+
+  Segurança:
+  - nunca salvamos o token puro no banco;
+  - salvamos apenas o hash do token;
+  - o token tem validade curta;
+  - ao usar, marcamos como utilizado.
+*/
+    db.prepare(`
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            user_id INTEGER NOT NULL,
+            token_hash TEXT NOT NULL UNIQUE,
+
+            ip TEXT,
+            user_agent TEXT,
+
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            expires_at TEXT NOT NULL,
+            used_at TEXT,
+
+            FOREIGN KEY (user_id)
+                REFERENCES users (id)
+                ON DELETE CASCADE
+        )
+    `).run();
+
+    /*
       Índices simples para acelerar buscas futuras.
     */
     db.prepare(`
@@ -159,6 +188,26 @@ function initDatabase() {
     db.prepare(`
         CREATE INDEX IF NOT EXISTS idx_user_sessions_revoked_at
         ON user_sessions (revoked_at)
+    `).run();
+
+    db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id
+        ON password_reset_tokens (user_id)
+    `).run();
+
+    db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token_hash
+        ON password_reset_tokens (token_hash)
+    `).run();
+
+    db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at
+        ON password_reset_tokens (expires_at)
+    `).run();
+
+    db.prepare(`
+        CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_used_at
+        ON password_reset_tokens (used_at)
     `).run();
 
     console.log("Banco de dados inicializado com sucesso.");
