@@ -7,6 +7,8 @@ const newPasswordInput = document.getElementById("newPassword");
 const confirmPasswordInput = document.getElementById("confirmPassword");
 const btnResetPassword = document.getElementById("btnResetPassword");
 const resetPasswordMessage = document.getElementById("resetPasswordMessage");
+const resetPasswordFormArea = document.getElementById("resetPasswordFormArea");
+const resetPasswordInvalidActions = document.getElementById("resetPasswordInvalidActions");
 
 const btnToggleNewPassword = document.getElementById("btnToggleNewPassword");
 const btnToggleConfirmPassword = document.getElementById("btnToggleConfirmPassword");
@@ -267,6 +269,7 @@ async function validarTokenInicial(token) {
             throw new Error(dados.mensagem || "Link de recuperação inválido.");
         }
 
+        mostrarFormularioReset();
         definirFormularioResetBloqueado(false);
         esconderMensagemReset();
 
@@ -277,11 +280,38 @@ async function validarTokenInicial(token) {
         }, 120);
     } catch (erro) {
         definirFormularioResetBloqueado(true);
+        esconderFormularioResetInvalido();
 
         mostrarMensagemReset(
             erro.message || "Link de recuperação inválido ou expirado.",
             "erro"
         );
+    }
+}
+
+/**
+ * Mostra a área normal de redefinição de senha.
+ */
+function mostrarFormularioReset() {
+    if (resetPasswordFormArea) {
+        resetPasswordFormArea.classList.remove("hidden");
+    }
+
+    if (resetPasswordInvalidActions) {
+        resetPasswordInvalidActions.classList.add("hidden");
+    }
+}
+
+/**
+ * Esconde o formulário quando o link não pode mais ser usado.
+ */
+function esconderFormularioResetInvalido() {
+    if (resetPasswordFormArea) {
+        resetPasswordFormArea.classList.add("hidden");
+    }
+
+    if (resetPasswordInvalidActions) {
+        resetPasswordInvalidActions.classList.remove("hidden");
     }
 }
 
@@ -293,6 +323,7 @@ function iniciarResetPassword() {
 
     if (!token) {
         definirFormularioResetBloqueado(true);
+        esconderFormularioResetInvalido();
 
         mostrarMensagemReset(
             "Link de recuperação inválido ou incompleto. Solicite uma nova recuperação de senha.",
