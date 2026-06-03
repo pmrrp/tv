@@ -2162,6 +2162,12 @@ const PASSWORD_RESET_TOKEN_TTL_MS =
         ? PASSWORD_RESET_TOKEN_MINUTES * 60 * 1000
         : 30 * 60 * 1000;
 
+const PASSWORD_RESET_TOKEN_RETENTION_DAYS = Number(
+    process.env.PASSWORD_RESET_TOKEN_RETENTION_DAYS || 7
+);
+
+const PASSWORD_RESET_TOKEN_CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
 /* =========================================================
    CONFIGURAÇÕES DE SESSÃO / INATIVIDADE
    ========================================================= */
@@ -3031,6 +3037,62 @@ Painel Ribas
     return {
         enviado: true
     };
+}
+
+/* =========================================================
+   RECUPERAÇÃO DE SENHA - MANUTENÇÃO
+   ========================================================= */
+
+/**
+ * Remove tokens antigos de recuperação de senha.
+ *
+ * Política:
+ * - remove tokens usados há mais de X dias;
+ * - remove tokens expirados há mais de X dias;
+ * - mantém tokens recentes para auditoria operacional curta.
+ */
+function limparTokensRecuperacaoSenhaAntigos() {
+    try {
+        const diasRetencao = Number.isFinite(PASSWORD_RESET_TOKEN_RETENTION_DAYS) &&
+            PASSWORD_RESET_TOKEN_RETENTION_DAYS > 0
+            ? PASSWORD_RESET_TOKEN_RETENTION_DAYS
+            : 7;
+
+        const resultado = db.prepare(`
+            DELETE FROM password_reset_tokens
+            WHERE
+                (
+                    used_at IS NOT NULL
+                    AND used_at <= datetime('now', 'localtime', ?)
+                )
+                OR
+                (
+                    expires_at <= datetime('now', 'localtime', ?)
+                )
+        `).run(
+            `-${diasRetencao} days`,
+            `-${diasRetencao} days`
+        );
+
+        const totalRemovido = resultado.changes || 0;
+
+        if (totalRemovido > 0) {
+            registrarAuditoriaSistema("sistema.tokens_recuperacao.limpeza", {
+                totalRemovido,
+                retencaoDias: diasRetencao,
+                politica: "Remove tokens usados ou expirados antigos."
+            });
+
+            console.log(
+                `[${new Date().toLocaleString("pt-BR")}] Tokens antigos de recuperação removidos: ${totalRemovido}`
+            );
+        }
+
+        return totalRemovido;
+    } catch (erro) {
+        console.error("Erro ao limpar tokens antigos de recuperação:", erro);
+        return 0;
+    }
 }
 
 /* =========================================================
@@ -6033,6 +6095,17 @@ app.post("/api/admin/users/:id/reset-password", exigirLogin, exigirAdmin, (req, 
   Isso evita acúmulo de restos de uploads interrompidos.
 */
 iniciarRotinaLimpezaChunks();
+
+/*
+  Limpeza automática de tokens antigos de recuperação de senha.
+
+  Executa uma vez na inicialização e depois periodicamente.
+*/
+limparTokensRecuperacaoSenhaAntigos();
+
+setInterval(() => {
+    limparTokensRecuperacaoSenhaAntigos();
+}, PASSWORD_RESET_TOKEN_CLEANUP_INTERVAL_MS);
 
 app.listen(PORT, () => {
     console.log("==============================================");

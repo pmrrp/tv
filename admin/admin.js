@@ -1451,6 +1451,8 @@ function formatarAcaoAuditoria(acao) {
         "login.recuperacao.solicitada.usuario_inexistente": "Tentativa de recuperação sem usuário ativo",
         "login.recuperacao.senha_redefinida": "Senha redefinida por recuperação",
 
+        "sistema.tokens_recuperacao.limpeza": "Limpeza de tokens de recuperação",
+
         "midia.upload": "Upload de mídia",
         "midia.upload.bloqueado": "Upload bloqueado",
         "midia.excluir": "Exclusão de mídia",
@@ -1499,6 +1501,10 @@ function obterClasseAcaoAuditoria(acao) {
         return "auditWarning";
     }
 
+    if (valor === "sistema.tokens_recuperacao.limpeza") {
+        return "auditInfo";
+    }
+
     if (valor.includes("bloqueado") || valor.includes("erro") || valor.includes("falha")) {
         return "auditActionWarning";
     }
@@ -1538,6 +1544,8 @@ function obterIconeAcaoAuditoria(acao) {
     if (valor === "login.recuperacao.solicitada") return "fa-envelope-circle-check";
     if (valor === "login.recuperacao.solicitada.usuario_inexistente") return "fa-user-slash";
     if (valor === "login.recuperacao.senha_redefinida") return "fa-key";
+
+    if (valor === "sistema.tokens_recuperacao.limpeza") return "fa-broom";
 
     if (valor.includes("bloqueado")) return "fa-triangle-exclamation";
     if (valor.includes("limpeza") || valor.includes("chunks")) return "fa-screwdriver-wrench";
@@ -1621,6 +1629,14 @@ function resumirDetalhesAuditoria(details, acao = "") {
         return email
             ? `Senha redefinida por recuperação para ${email}.`
             : "Senha redefinida por meio do fluxo de recuperação.";
+    }
+
+    if (acaoNormalizada === "sistema.tokens_recuperacao.limpeza") {
+        if (details && details.totalRemovido !== undefined) {
+            return `${formatarNumero(details.totalRemovido)} token(s) antigo(s) de recuperação removido(s).`;
+        }
+
+        return "Rotina automática de limpeza de tokens de recuperação executada.";
     }
 
     if (acaoNormalizada === "sistema.chunks.limpeza") {
