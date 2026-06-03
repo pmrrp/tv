@@ -1447,6 +1447,9 @@ function formatarAcaoAuditoria(acao) {
         "login.expirado.inatividade": "Sessão expirada por inatividade",
         "login.sessao.revogada.admin": "Sessão desconectada por superadmin",
 
+        "login.recuperacao.solicitada": "Recuperação de senha solicitada",
+        "login.recuperacao.solicitada.usuario_inexistente": "Tentativa de recuperação sem usuário ativo",
+        "login.recuperacao.senha_redefinida": "Senha redefinida por recuperação",
 
         "midia.upload": "Upload de mídia",
         "midia.upload.bloqueado": "Upload bloqueado",
@@ -1532,6 +1535,9 @@ function obterIconeAcaoAuditoria(acao) {
     if (valor === "login.sessao.revogada") return "fa-right-from-bracket";
     if (valor === "login.expirado.inatividade") return "fa-clock";
     if (valor === "login.sessao.revogada.admin") return "fa-user-lock";
+    if (valor === "login.recuperacao.solicitada") return "fa-envelope-circle-check";
+    if (valor === "login.recuperacao.solicitada.usuario_inexistente") return "fa-user-slash";
+    if (valor === "login.recuperacao.senha_redefinida") return "fa-key";
 
     if (valor.includes("bloqueado")) return "fa-triangle-exclamation";
     if (valor.includes("limpeza") || valor.includes("chunks")) return "fa-screwdriver-wrench";
@@ -1590,6 +1596,31 @@ function resumirDetalhesAuditoria(details, acao = "") {
         }
 
         return "Sessão encerrada automaticamente por inatividade.";
+    }
+
+    if (acaoNormalizada === "login.recuperacao.solicitada") {
+        const email = details && details.email;
+        const emailEnviado = details && details.emailEnviado;
+
+        if (emailEnviado) {
+            return email
+                ? `Link de recuperação de senha enviado para ${email}.`
+                : "Link de recuperação de senha enviado ao usuário.";
+        }
+
+        return "Recuperação de senha solicitada. O link foi gerado, mas o SMTP ainda não está configurado.";
+    }
+
+    if (acaoNormalizada === "login.recuperacao.solicitada.usuario_inexistente") {
+        return "Foi solicitada recuperação de senha para um usuário inexistente, inativo ou não encontrado.";
+    }
+
+    if (acaoNormalizada === "login.recuperacao.senha_redefinida") {
+        const email = details && details.email;
+
+        return email
+            ? `Senha redefinida por recuperação para ${email}.`
+            : "Senha redefinida por meio do fluxo de recuperação.";
     }
 
     if (acaoNormalizada === "sistema.chunks.limpeza") {
