@@ -1453,6 +1453,9 @@ function formatarAcaoAuditoria(acao) {
 
         "sistema.tokens_recuperacao.limpeza": "Limpeza de tokens de recuperação",
 
+        "sistema.email.teste": "Teste de e-mail enviado",
+        "sistema.email.teste.falha": "Falha no teste de e-mail",
+
         "midia.upload": "Upload de mídia",
         "midia.upload.bloqueado": "Upload bloqueado",
         "midia.excluir": "Exclusão de mídia",
@@ -1501,6 +1504,14 @@ function obterClasseAcaoAuditoria(acao) {
         return "auditWarning";
     }
 
+    if (valor === "sistema.email.teste") {
+        return "auditSuccess";
+    }
+
+    if (valor === "sistema.email.teste.falha") {
+        return "auditWarning";
+    }
+
     if (valor === "sistema.tokens_recuperacao.limpeza") {
         return "auditInfo";
     }
@@ -1544,6 +1555,8 @@ function obterIconeAcaoAuditoria(acao) {
     if (valor === "login.recuperacao.solicitada") return "fa-envelope-circle-check";
     if (valor === "login.recuperacao.solicitada.usuario_inexistente") return "fa-user-slash";
     if (valor === "login.recuperacao.senha_redefinida") return "fa-key";
+    if (valor === "sistema.email.teste") return "fa-envelope-circle-check";
+    if (valor === "sistema.email.teste.falha") return "fa-envelope-circle-xmark";
 
     if (valor === "sistema.tokens_recuperacao.limpeza") return "fa-broom";
 
@@ -1629,6 +1642,22 @@ function resumirDetalhesAuditoria(details, acao = "") {
         return email
             ? `Senha redefinida por recuperação para ${email}.`
             : "Senha redefinida por meio do fluxo de recuperação.";
+    }
+
+    if (acaoNormalizada === "sistema.email.teste") {
+        const destinatario = details && details.destinatario;
+
+        return destinatario
+            ? `E-mail de teste enviado para ${destinatario}.`
+            : "E-mail de teste enviado pelo sistema.";
+    }
+
+    if (acaoNormalizada === "sistema.email.teste.falha") {
+        if (details && details.erro) {
+            return `Falha no envio de e-mail de teste: ${details.erro}`;
+        }
+
+        return "Falha no envio de e-mail de teste.";
     }
 
     if (acaoNormalizada === "sistema.tokens_recuperacao.limpeza") {

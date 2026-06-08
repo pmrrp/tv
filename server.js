@@ -3039,6 +3039,34 @@ Painel Ribas
     };
 }
 
+/**
+ * Envia um e-mail genérico do sistema.
+ *
+ * Usado para testes administrativos de SMTP e futuras notificações.
+ */
+async function enviarEmailSistema({ para, assunto, texto, html }) {
+    const transporter = criarTransporterEmail();
+
+    if (!transporter) {
+        return {
+            enviado: false,
+            motivo: "smtp_nao_configurado"
+        };
+    }
+
+    await transporter.sendMail({
+        from: process.env.MAIL_FROM,
+        to: para,
+        subject: assunto,
+        text: texto,
+        html
+    });
+
+    return {
+        enviado: true
+    };
+}
+
 /* =========================================================
    RECUPERAÇÃO DE SENHA - MANUTENÇÃO
    ========================================================= */
@@ -3199,6 +3227,116 @@ app.post("/api/auth/forgot-password", async (req, res) => {
         res.status(500).json({
             erro: true,
             mensagem: "Erro ao solicitar recuperação de senha."
+        });
+    }
+});
+
+/* =========================================================
+   API ADMIN: TESTE DE E-MAIL / SMTP
+   =========================================================
+   Permite ao superadmin testar se o envio de e-mails do sistema
+   está funcionando com as variáveis SMTP configuradas no .env.
+   ========================================================= */
+
+app.post("/api/admin/email/teste", exigirLogin, exigirSuperadmin, async (req, res) => {
+    try {
+        const usuario = obterUsuarioDaSessao(req);
+
+        const destinatarioTeste = String(
+            req.body.destinatario ||
+            req.body.email ||
+            (usuario ? usuario.email : "") ||
+            ""
+        ).trim();
+
+        if (!destinatarioTeste || !destinatarioTeste.includes("@")) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "Informe um e-mail válido para receber o teste SMTP."
+            });
+        }
+
+        if (!emailEstaConfigurado()) {
+            return res.status(400).json({
+                erro: true,
+                codigo: "SMTP_NAO_CONFIGURADO",
+                mensagem: "SMTP ainda não configurado. Preencha SMTP_HOST, SMTP_PORT e MAIL_FROM no .env."
+            });
+        }
+
+        const agora = new Date().toLocaleString("pt-BR");
+
+        const assunto = "Teste de e-mail — Painel TV Ribas";
+
+        const texto = `
+                        Olá, ${usuario.nome || "usuário"}.
+
+                        Este é um e-mail de teste do Painel TV Ribas.
+
+                        Se você recebeu esta mensagem, o envio SMTP do sistema está funcionando.
+
+                        Data/hora do teste: ${agora}
+
+                        Painel TV Ribas
+        `.trim();
+
+        const html = `
+            <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #111827;">
+                <h2 style="margin: 0 0 12px;">Teste de e-mail — Painel TV Ribas</h2>
+
+                <p>Olá, <strong>${usuario.nome || "usuário"}</strong>.</p>
+
+                <p>Este é um e-mail de teste do <strong>Painel TV Ribas</strong>.</p>
+
+                <p>Se você recebeu esta mensagem, o envio SMTP do sistema está funcionando.</p>
+
+                <p>
+                    <strong>Data/hora do teste:</strong><br />
+                    ${agora}
+                </p>
+
+                <hr style="border:none;border-top:1px solid #e5e7eb;margin:18px 0;" />
+
+                <p style="font-size:12px;color:#6b7280;">
+                    Esta mensagem foi enviada automaticamente pelo sistema.
+                </p>
+            </div>
+        `.trim();
+
+        const resultado = await enviarEmailSistema({
+            para: destinatarioTeste,
+            assunto,
+            texto,
+            html
+        });
+
+        registrarAuditoria(req, "sistema.email.teste", {
+            destinatario: destinatarioTeste,
+            enviado: resultado.enviado,
+            motivo: resultado.motivo || null
+        });
+
+        if (!resultado.enviado) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "E-mail de teste não enviado. Verifique a configuração SMTP."
+            });
+        }
+
+        res.json({
+            sucesso: true,
+            mensagem: `E-mail de teste enviado para ${destinatarioTeste}.`
+        });
+    } catch (erro) {
+        console.error("Erro ao enviar e-mail de teste:", erro);
+
+        registrarAuditoria(req, "sistema.email.teste.falha", {
+            erro: erro.message || String(erro)
+        });
+
+        res.status(500).json({
+            erro: true,
+            mensagem: "Erro ao enviar e-mail de teste. Verifique as configurações SMTP."
         });
     }
 });
