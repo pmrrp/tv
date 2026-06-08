@@ -672,6 +672,60 @@ O sistema passou a ter melhor proteção operacional, rastreabilidade, diagnóst
 
 ---
 
+---
+
+# 2026-06 — Fase 3: Segurança de acesso, sessões e recuperação de senha
+
+## Adicionado
+
+- Implementado logout automático por inatividade no painel administrativo.
+- Adicionado controle de sessões simultâneas por usuário.
+- Implementada revogação automática de sessão antiga ao realizar novo login com o mesmo usuário.
+- Criada tabela de controle de sessões administrativas.
+- Criado painel visual de sessões ativas no admin, visível apenas para superadmin.
+- Adicionada possibilidade de o superadmin desconectar sessões administrativas antigas.
+- Implementada verificação periódica de sessão no frontend administrativo.
+- Sessões revogadas agora redirecionam automaticamente para a tela de login.
+- Implementada recuperação de senha por e-mail.
+- Criada tabela de tokens de recuperação de senha.
+- Tokens de recuperação são salvos apenas como hash no banco.
+- Links de recuperação possuem validade configurável.
+- Links de recuperação são de uso único.
+- Criada tela visual “Esqueci minha senha” no login.
+- Criada tela `/admin/reset-password` para redefinição de senha.
+- Adicionada validação inicial do token antes de liberar o formulário de redefinição.
+- Formulário de redefinição é ocultado quando o token está ausente, inválido, expirado ou já utilizado.
+- Após redefinir senha, sessões abertas do usuário são revogadas.
+- Implementada limpeza automática de tokens antigos de recuperação de senha.
+- Criada auditoria visual para eventos de recuperação de senha.
+- Criada rota administrativa de teste de envio SMTP.
+- Testado envio SMTP em ambiente local usando Gmail e senha de app.
+- Ajustada interface para orientar recuperação usando o e-mail cadastrado.
+
+## Alterado
+
+- A rota `/api/auth/status` passou a validar sessão revogada e inatividade.
+- Removida rota duplicada de status de autenticação.
+- A auditoria de sessão revogada foi ajustada para evitar logs duplicados ou enganosos.
+- O `.env.example` passou a documentar variáveis de URL pública, recuperação de senha, retenção de tokens e SMTP.
+- A tela de login passou a tratar validações visualmente, sem depender das mensagens nativas do navegador.
+- O fluxo de recuperação passou a responder mensagem genérica, sem revelar se o usuário existe ou não.
+
+## Segurança
+
+- O sistema não envia senha por e-mail.
+- O token puro de recuperação nunca é salvo no banco.
+- O token é invalidado após o uso.
+- Tokens antigos são removidos automaticamente.
+- Sessões antigas são revogadas após redefinição de senha.
+- O envio SMTP institucional definitivo ficou preparado para configuração futura via `.env`.
+
+## Pendências relacionadas
+
+- Configurar conta institucional exclusiva para o Painel TV.
+- Validar SMTP institucional em produção.
+- Avaliar fluxo futuro de confirmação de e-mail para novos usuários.
+
 # Próximos registros esperados
 
 Próximas entradas deste changelog deverão registrar:

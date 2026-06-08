@@ -422,9 +422,9 @@ Alta.
 
 ### Objetivo
 
-Reforçar proteções básicas antes de ampliar o uso do sistema.
+Reforçar proteções básicas antes de ampliar o uso do sistema, garantindo controle de acesso, rastreabilidade, recuperação segura de conta e proteção contra arquivos indevidos.
 
-### Itens
+### Itens concluídos
 
 - [x] Revisar variáveis sensíveis no `.env`.
 - [x] Garantir que senhas não fiquem hardcoded.
@@ -433,16 +433,50 @@ Reforçar proteções básicas antes de ampliar o uso do sistema.
 - [x] Validar extensão dos arquivos enviados.
 - [x] Limitar tamanho máximo de upload.
 - [x] Bloquear uploads que ameacem armazenamento.
-- [ ] Revisar timeout de sessão.
-- [ ] Avaliar logout automático por inatividade.
-- [ ] Avaliar limite de sessões simultâneas.
+- [x] Implementar logout automático por inatividade.
+- [x] Implementar controle de sessões simultâneas por usuário.
+- [x] Revogar sessão antiga ao realizar novo login com o mesmo usuário.
+- [x] Criar painel administrativo de sessões ativas para superadmin.
+- [x] Permitir revogação manual de sessões pelo superadmin.
+- [x] Detectar sessão revogada automaticamente via verificação periódica no admin.
+- [x] Corrigir rota duplicada de status de autenticação.
+- [x] Implementar recuperação de senha por e-mail.
+- [x] Criar tela visual de solicitação de recuperação de senha.
+- [x] Criar tela visual de redefinição de senha por token.
+- [x] Validar token de recuperação antes de liberar formulário.
+- [x] Bloquear formulário quando token estiver ausente, expirado, inválido ou já utilizado.
+- [x] Remover token da URL após redefinição bem-sucedida.
+- [x] Revogar sessões abertas do usuário após redefinição de senha.
+- [x] Criar limpeza automática de tokens antigos de recuperação de senha.
+- [x] Registrar auditoria visual das ações de recuperação de senha.
+- [x] Criar rota administrativa de teste de envio SMTP.
+- [x] Testar envio SMTP com conta Gmail em ambiente local.
+- [x] Ajustar recuperação de senha para orientar uso do e-mail cadastrado.
+
+### Itens pendentes
+
+- [ ] Configurar SMTP institucional definitivo com conta exclusiva do Painel TV.
+- [ ] Validar envio real com `painel-tv@ribasdoriopardo.ms.gov.br`.
 - [ ] Validar MIME type dos arquivos enviados.
 - [ ] Bloquear arquivos potencialmente perigosos.
 - [ ] Revisar proteções de rotas administrativas restantes.
+- [ ] Avaliar confirmação de e-mail de usuário antes de liberar login.
+- [ ] Avaliar política futura de múltiplas sessões permitidas por usuário, se necessário.
 
-### Prioridade
+### Itens futuros / não prioritários agora
+
+- [ ] Criar fluxo de confirmação de e-mail para novos usuários.
+- [ ] Permitir reenvio de confirmação de e-mail pelo superadmin.
+- [ ] Exibir badge de e-mail verificado/pendente na lista de usuários.
+- [ ] Exigir confirmação de e-mail antes de liberar login, se a regra for adotada futuramente.
+
+### Prioridade atual
 
 Alta.
+
+### Próximo foco recomendado
+
+O próximo foco de código deve ser a validação de MIME type e bloqueio de arquivos potencialmente perigosos no upload, antes de avançar para melhorias visuais ou refatorações maiores.
 
 ---
 
@@ -1043,13 +1077,24 @@ Status: concluída em grande parte.
 
 ## Sprint 3 — Segurança e manutenção
 
+- [x] Implementar logout automático por inatividade.
+- [x] Implementar controle de sessões simultâneas por usuário.
+- [x] Criar painel de sessões ativas para superadmin.
+- [x] Permitir revogação manual de sessões administrativas.
+- [x] Detectar sessão revogada automaticamente no admin.
+- [x] Implementar recuperação de senha por e-mail.
+- [x] Criar tela de redefinição de senha por token.
+- [x] Validar token de recuperação antes de liberar formulário.
+- [x] Criar limpeza automática de tokens antigos de recuperação.
+- [x] Criar rota administrativa de teste SMTP.
+- [x] Testar SMTP em ambiente local com Gmail.
+- [ ] Configurar SMTP institucional definitivo.
 - [ ] Revisar upload.
 - [ ] Validar extensão e MIME type.
+- [ ] Bloquear arquivos potencialmente perigosos.
 - [ ] Limitar tamanho máximo, se necessário.
 - [ ] Melhorar mensagens de erro.
 - [ ] Font Awesome local.
-- [ ] Avaliar timeout de sessão.
-- [ ] Avaliar logout automático por inatividade.
 
 ---
 
