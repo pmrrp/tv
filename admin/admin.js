@@ -3093,14 +3093,41 @@ function renderizarPreviewMidia(midia) {
 
 /**
  * Mostra mensagem na área de upload.
+ *
+ * Também dispara toast, mas mantém a mensagem visível por alguns segundos
+ * no card para que o operador consiga ler com calma.
  */
-function mostrarMensagemUpload(texto, tipo = "info") {
-    mostrarToast(texto, tipo);
+function mostrarMensagemUpload(texto, tipo = "info", tempoMs = 7000) {
+    const mensagem = String(texto || "").trim();
+
+    window.clearTimeout(uploadMessageTimer);
+
+    if (mensagem) {
+        mostrarToast(mensagem, tipo);
+    }
 
     if (!uploadMessage) return;
 
-    uploadMessage.textContent = texto;
-    uploadMessage.className = `uploadMessage ${tipo} hidden`;
+    uploadMessage.textContent = mensagem;
+
+    if (!mensagem) {
+        uploadMessage.className = "uploadMessage hidden";
+        return;
+    }
+
+    uploadMessage.className = `uploadMessage ${tipo}`;
+
+    /*
+      Mensagens de erro ficam um pouco mais tempo.
+      Mensagens de sucesso/info somem mais rápido.
+    */
+    const tempoVisivel = tipo === "erro"
+        ? tempoMs
+        : 4500;
+
+    uploadMessageTimer = window.setTimeout(() => {
+        esconderMensagemUpload();
+    }, tempoVisivel);
 }
 
 /**
@@ -3110,6 +3137,8 @@ function esconderMensagemUpload() {
     if (!uploadMessage) return;
 
     window.clearTimeout(uploadMessageTimer);
+    uploadMessageTimer = null;
+
     uploadMessage.className = "uploadMessage hidden";
     uploadMessage.textContent = "";
 }
@@ -6126,23 +6155,47 @@ function enviarChunkComProgresso(formData, aoProgredir) {
     });
 }
 
-async function lerRespostaJsonSegura(resposta, mensagemPadrao) {
-    const textoResposta = await resposta.text();
-
-    let dados = {};
+/**
+ * Lê uma resposta HTTP tentando extrair JSON com segurança.
+ *
+ * Se a API retornar erro com campo "mensagem", essa mensagem
+ * vira o erro principal exibido ao usuário.
+ */
+async function lerRespostaJsonSegura(resposta, mensagemPadrao = "Erro na requisição.") {
+    let textoResposta = "";
 
     try {
-        dados = textoResposta ? JSON.parse(textoResposta) : {};
+        textoResposta = await resposta.text();
     } catch {
-        dados = {};
+        textoResposta = "";
     }
 
-    if (!resposta.ok || dados.erro) {
-        const mensagemErro = dados.mensagem || dados.error || mensagemPadrao || "Não foi possível concluir a operação.";
-        throw new Error(mensagemErro);
+    let dados = null;
+
+    if (textoResposta) {
+        try {
+            dados = JSON.parse(textoResposta);
+        } catch {
+            dados = null;
+        }
     }
 
-    return dados;
+    if (!resposta.ok || (dados && dados.erro)) {
+        const mensagemApi =
+            dados && dados.mensagem
+                ? dados.mensagem
+                : textoResposta || mensagemPadrao;
+
+        const erro = new Error(mensagemApi);
+
+        erro.status = resposta.status;
+        erro.dados = dados;
+        erro.respostaTexto = textoResposta;
+
+        throw erro;
+    }
+
+    return dados || {};
 }
 
 async function finalizarUploadEmChunks({ uploadId, nomeOriginal, totalChunks }) {
@@ -6248,6 +6301,100 @@ async function validarArmazenamentoAntesDoUpload(arquivo) {
     };
 }
 
+/* =========================================================
+   UPLOAD - MENSAGENS DE ERRO AMIGÁVEIS
+   ========================================================= */
+
+/**
+ * Tenta identificar se uma mensagem de erro do backend está ligada
+ * a validação de segurança/tipo de arquivo.
+ */
+function erroUploadEhSeguranca(mensagem) {
+    const texto = String(mensagem || "").toLowerCase();
+
+    return (
+        texto.includes("bloqueado por segurança") ||
+        texto.includes("tipo de arquivo") ||
+        texto.includes("não permitido") ||
+        texto.includes("nao permitido") ||
+        texto.includes("não corresponde") ||
+        texto.includes("nao corresponde") ||
+        texto.includes("conteúdo do arquivo") ||
+        texto.includes("conteudo do arquivo") ||
+        texto.includes("mime") ||
+        texto.includes("assinatura")
+    );
+}
+
+/**
+ * Tenta identificar erro relacionado a armazenamento.
+ */
+function erroUploadEhArmazenamento(mensagem) {
+    const texto = String(mensagem || "").toLowerCase();
+
+    return (
+        texto.includes("limite operacional") ||
+        texto.includes("reserva mínima") ||
+        texto.includes("reserva minima") ||
+        texto.includes("armazenamento") ||
+        texto.includes("espaço livre") ||
+        texto.includes("espaco livre") ||
+        texto.includes("disco")
+    );
+}
+
+/**
+ * Tenta identificar erro de conexão/rede.
+ */
+function erroUploadEhConexao(mensagem) {
+    const texto = String(mensagem || "").toLowerCase();
+
+    return (
+        texto.includes("failed to fetch") ||
+        texto.includes("networkerror") ||
+        texto.includes("network error") ||
+        texto.includes("conexão foi interrompida") ||
+        texto.includes("conexao foi interrompida") ||
+        texto.includes("conexão") ||
+        texto.includes("conexao")
+    );
+}
+
+/**
+ * Monta uma mensagem mais clara para erros de upload.
+ */
+function montarMensagemErroUpload(erro, arquivo = null) {
+    const mensagemOriginal = String(
+        erro && erro.message
+            ? erro.message
+            : "Não foi possível enviar a mídia."
+    ).trim();
+
+    const nomeArquivo = arquivo && arquivo.name
+        ? arquivo.name
+        : null;
+
+    if (erroUploadEhSeguranca(mensagemOriginal)) {
+        return nomeArquivo
+            ? `Arquivo bloqueado: ${nomeArquivo}\n${mensagemOriginal}`
+            : mensagemOriginal;
+    }
+
+    if (erroUploadEhArmazenamento(mensagemOriginal)) {
+        return nomeArquivo
+            ? `Upload bloqueado: ${nomeArquivo}\n${mensagemOriginal}`
+            : mensagemOriginal;
+    }
+
+    if (erroUploadEhConexao(mensagemOriginal)) {
+        return "Não foi possível concluir o envio.\nA conexão foi interrompida ou está instável.";
+    }
+
+    return nomeArquivo
+        ? `Não foi possível enviar ${nomeArquivo}.\n${mensagemOriginal}`
+        : mensagemOriginal;
+}
+
 /**
  * Envia o arquivo selecionado para a API.
  *
@@ -6325,7 +6472,7 @@ async function enviarArquivo(event) {
 
     btnUpload.disabled = true;
     definirBotaoComIcone(btnUpload, "fa-solid fa-spinner fa-spin", "Enviando...");
-    mostrarMensagemUpload("Enviando mídia...", "info");
+    mostrarMensagemUpload(`Enviando mídia: ${arquivo.name}`, "info");
     atualizarProgressoUpload(0);
 
     try {
@@ -6355,7 +6502,7 @@ async function enviarArquivo(event) {
             );
         }
 
-        mostrarMensagemUpload("Finalizando envio da mídia...", "info");
+        mostrarMensagemUpload(`Finalizando envio da mídia: ${arquivo.name}`, "info");
         atualizarProgressoUpload(100);
 
         const dados = await finalizarUploadEmChunks({
@@ -6387,29 +6534,15 @@ async function enviarArquivo(event) {
 
         await carregarResumoAdmin();
     } catch (erro) {
-        let mensagemErro = erro.message || "Não foi possível enviar a mídia.";
-        const mensagemNormalizada = mensagemErro.toLowerCase();
+        const mensagemErro = montarMensagemErroUpload(erro, arquivo);
 
-        if (
-            mensagemNormalizada.includes("failed to fetch") ||
-            mensagemNormalizada.includes("networkerror") ||
-            mensagemNormalizada.includes("network error") ||
-            mensagemNormalizada.includes("conexão foi interrompida")
-        ) {
-            mensagemErro = "Não foi possível concluir o envio. A conexão foi interrompida ou instável.";
-        }
-
-        if (
-            mensagemNormalizada.includes("limite operacional") ||
-            mensagemNormalizada.includes("reserva mínima") ||
-            mensagemNormalizada.includes("armazenamento") ||
-            mensagemNormalizada.includes("espaço livre")
-        ) {
+        if (erroUploadEhArmazenamento(mensagemErro)) {
             await carregarResumoAdmin();
         }
 
         mostrarMensagemUpload(mensagemErro, "erro");
-        console.error(erro);
+        console.error("Erro ao enviar mídia:", erro);
+
     } finally {
         btnUpload.disabled = false;
         definirBotaoComIcone(btnUpload, "fa-solid fa-upload", "Enviar mídia");

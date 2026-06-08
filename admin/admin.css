@@ -11256,3 +11256,7 @@ body.modalAberto {
         font-size: 11px;
     }
 }
+
+.uploadMessage {
+    white-space: pre-line;
+}
