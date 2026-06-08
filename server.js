@@ -1033,6 +1033,217 @@ function obterTipoPorExtensao(extensao) {
     return "outro";
 }
 
+/* =========================================================
+   UPLOAD - VALIDAÇÃO DE TIPO / MIME / ASSINATURA
+   =========================================================
+   Protege o sistema contra arquivos perigosos ou incompatíveis.
+
+   Camadas:
+   - extensão permitida;
+   - MIME type esperado;
+   - assinatura básica do arquivo após salvar/montar.
+   ========================================================= */
+
+const EXTENSOES_MIDIA_PERMITIDAS = new Set([
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+    ".gif",
+    ".mp4",
+    ".webm",
+    ".ogg",
+    ".mov"
+]);
+
+const MIME_TYPES_PERMITIDOS_POR_EXTENSAO = {
+    ".jpg": ["image/jpeg"],
+    ".jpeg": ["image/jpeg"],
+    ".png": ["image/png"],
+    ".webp": ["image/webp"],
+    ".gif": ["image/gif"],
+
+    ".mp4": ["video/mp4", "application/mp4"],
+    ".webm": ["video/webm"],
+    ".ogg": ["video/ogg", "application/ogg"],
+    ".mov": ["video/quicktime", "video/mp4"]
+};
+
+const EXTENSOES_PERIGOSAS_BLOQUEADAS = new Set([
+    ".exe",
+    ".bat",
+    ".cmd",
+    ".com",
+    ".scr",
+    ".ps1",
+    ".vbs",
+    ".js",
+    ".mjs",
+    ".html",
+    ".htm",
+    ".php",
+    ".asp",
+    ".aspx",
+    ".jsp",
+    ".sh",
+    ".jar",
+    ".msi",
+    ".dll",
+    ".reg",
+    ".lnk",
+    ".zip",
+    ".rar",
+    ".7z"
+]);
+
+function obterExtensaoNormalizada(nomeArquivo) {
+    return path.extname(String(nomeArquivo || "")).toLowerCase();
+}
+
+/**
+ * Validação básica feita antes de aceitar o arquivo pelo multer.
+ */
+function validarNomeEMimeArquivoMidia(nomeOriginal, mimeType) {
+    const extensao = obterExtensaoNormalizada(nomeOriginal);
+    const mime = String(mimeType || "").toLowerCase();
+
+    if (!extensao) {
+        return {
+            permitido: false,
+            motivo: "sem_extensao",
+            mensagem: "Arquivo sem extensão. Envie apenas imagens ou vídeos permitidos."
+        };
+    }
+
+    if (EXTENSOES_PERIGOSAS_BLOQUEADAS.has(extensao)) {
+        return {
+            permitido: false,
+            motivo: "extensao_perigosa",
+            mensagem: "Arquivo bloqueado por segurança. Este tipo de arquivo não é permitido."
+        };
+    }
+
+    if (!EXTENSOES_MIDIA_PERMITIDAS.has(extensao)) {
+        return {
+            permitido: false,
+            motivo: "extensao_nao_permitida",
+            mensagem: "Tipo de arquivo não permitido. Envie apenas imagens ou vídeos compatíveis."
+        };
+    }
+
+    const mimesPermitidos = MIME_TYPES_PERMITIDOS_POR_EXTENSAO[extensao] || [];
+
+    /*
+      Alguns navegadores ou ambientes podem enviar MIME vazio.
+      Para upload simples, quando vier preenchido, validamos.
+      Para casos vazios, a assinatura do arquivo ainda será checada depois.
+    */
+    if (mime && mimesPermitidos.length && !mimesPermitidos.includes(mime)) {
+        return {
+            permitido: false,
+            motivo: "mime_incompativel",
+            mensagem: "O conteúdo do arquivo não corresponde ao tipo informado."
+        };
+    }
+
+    return {
+        permitido: true,
+        motivo: null,
+        mensagem: "Arquivo permitido."
+    };
+}
+
+/**
+ * Lê poucos bytes do arquivo para validar assinatura básica.
+ */
+function lerCabecalhoArquivo(caminhoArquivo, quantidadeBytes = 64) {
+    const buffer = Buffer.alloc(quantidadeBytes);
+    const fd = fs.openSync(caminhoArquivo, "r");
+
+    try {
+        const bytesLidos = fs.readSync(fd, buffer, 0, quantidadeBytes, 0);
+        return buffer.subarray(0, bytesLidos);
+    } finally {
+        fs.closeSync(fd);
+    }
+}
+
+/**
+ * Valida assinatura/magic bytes básica da mídia.
+ *
+ * Não é um antivírus e nem parser completo.
+ * O objetivo é barrar arquivos claramente incompatíveis.
+ */
+function assinaturaArquivoPareceMidia(caminhoArquivo, extensao) {
+    if (!fs.existsSync(caminhoArquivo)) return false;
+
+    const header = lerCabecalhoArquivo(caminhoArquivo, 64);
+    const hex = header.toString("hex").toLowerCase();
+    const ascii = header.toString("ascii");
+
+    if (extensao === ".jpg" || extensao === ".jpeg") {
+        return hex.startsWith("ffd8ff");
+    }
+
+    if (extensao === ".png") {
+        return hex.startsWith("89504e470d0a1a0a");
+    }
+
+    if (extensao === ".gif") {
+        return ascii.startsWith("GIF87a") || ascii.startsWith("GIF89a");
+    }
+
+    if (extensao === ".webp") {
+        return ascii.startsWith("RIFF") && ascii.substring(8, 12) === "WEBP";
+    }
+
+    if (extensao === ".mp4" || extensao === ".mov") {
+        /*
+          MP4/MOV normalmente possuem "ftyp" no offset 4.
+        */
+        return ascii.substring(4, 8) === "ftyp";
+    }
+
+    if (extensao === ".webm") {
+        /*
+          WebM usa EBML: 1A 45 DF A3.
+        */
+        return hex.startsWith("1a45dfa3");
+    }
+
+    if (extensao === ".ogg") {
+        return ascii.startsWith("OggS");
+    }
+
+    return false;
+}
+
+/**
+ * Validação completa após o arquivo já existir no disco.
+ */
+function validarArquivoMidiaSalvo({ caminhoArquivo, nomeOriginal, mimeType }) {
+    const validacaoBasica = validarNomeEMimeArquivoMidia(nomeOriginal, mimeType);
+
+    if (!validacaoBasica.permitido) {
+        return validacaoBasica;
+    }
+
+    const extensao = obterExtensaoNormalizada(nomeOriginal);
+
+    if (!assinaturaArquivoPareceMidia(caminhoArquivo, extensao)) {
+        return {
+            permitido: false,
+            motivo: "assinatura_invalida",
+            mensagem: "Arquivo bloqueado por segurança. O conteúdo não parece corresponder ao tipo enviado."
+        };
+    }
+
+    return {
+        permitido: true,
+        motivo: null,
+        mensagem: "Arquivo validado com sucesso."
+    };
+}
 
 /* =========================================================
    FUNÇÕES UTILITÁRIAS - DATA/HORA
@@ -2079,8 +2290,20 @@ const upload = multer({
     storage,
 
     fileFilter: (req, file, cb) => {
-        if (!extensaoPermitida(file.originalname)) {
-            return cb(new Error("Tipo de arquivo não permitido."));
+        const validacao = validarNomeEMimeArquivoMidia(
+            file.originalname,
+            file.mimetype
+        );
+
+        if (!validacao.permitido) {
+            const erroUpload = new Error(validacao.mensagem);
+
+            erroUpload.codigo = "ARQUIVO_INVALIDO";
+            erroUpload.motivo = validacao.motivo;
+            erroUpload.nomeOriginal = file.originalname;
+            erroUpload.mimeType = file.mimetype;
+
+            return cb(erroUpload);
         }
 
         cb(null, true);
@@ -2094,6 +2317,40 @@ const upload = multer({
         fileSize: 2 * 1024 * 1024 * 1024
     }
 });
+
+/**
+ * Executa upload simples com tratamento JSON de erro.
+ *
+ * Sem isso, erros do multer/fileFilter podem cair como erro genérico.
+ */
+function uploadSimplesComTratamento(req, res, next) {
+    upload.array("arquivo", 30)(req, res, (erro) => {
+        if (!erro) {
+            return next();
+        }
+
+        const mensagem = erro.message || "Arquivo não permitido.";
+
+        registrarAuditoriaUploadBloqueado(req, {
+            tipoUpload: "simples-validacao-inicial",
+            motivo: erro.motivo || erro.code || "erro_multer",
+            mensagem,
+            nomeOriginal: erro.nomeOriginal || null,
+            tamanhoAvaliadoBytes: 0,
+            arquivos: erro.nomeOriginal
+                ? [{
+                    nomeOriginal: erro.nomeOriginal,
+                    mimeType: erro.mimeType || null
+                }]
+                : []
+        });
+
+        return res.status(400).json({
+            erro: true,
+            mensagem
+        });
+    });
+}
 
 /* =========================================================
    UPLOAD EM PARTES / CHUNKS
@@ -4416,10 +4673,22 @@ app.post("/api/upload/finalizar", exigirLogin, exigirEditor, (req, res) => {
             });
         }
 
-        if (!extensaoPermitida(nomeOriginal)) {
+        const validacaoTipoInicial = validarNomeEMimeArquivoMidia(nomeOriginal, "");
+
+        if (!validacaoTipoInicial.permitido) {
+            registrarAuditoriaUploadBloqueado(req, {
+                tipoUpload: "chunks-validacao-inicial",
+                motivo: validacaoTipoInicial.motivo,
+                mensagem: validacaoTipoInicial.mensagem,
+                nomeOriginal,
+                uploadId,
+                totalChunks,
+                tamanhoAvaliadoBytes: 0
+            });
+
             return res.status(400).json({
                 erro: true,
-                mensagem: "Tipo de arquivo não permitido."
+                mensagem: validacaoTipoInicial.mensagem
             });
         }
 
@@ -4492,6 +4761,40 @@ app.post("/api/upload/finalizar", exigirLogin, exigirEditor, (req, res) => {
         escrita.on("finish", () => {
             try {
                 const tamanho = fs.statSync(caminhoFinal).size;
+
+                const validacaoArquivoFinal = validarArquivoMidiaSalvo({
+                    caminhoArquivo: caminhoFinal,
+                    nomeOriginal,
+                    mimeType: ""
+                });
+
+                if (!validacaoArquivoFinal.permitido) {
+                    registrarAuditoriaUploadBloqueado(req, {
+                        tipoUpload: "chunks-validacao-assinatura",
+                        motivo: validacaoArquivoFinal.motivo,
+                        mensagem: validacaoArquivoFinal.mensagem,
+                        nomeOriginal,
+                        nomeSalvo,
+                        uploadId,
+                        totalChunks,
+                        tamanhoAvaliadoBytes: tamanho
+                    });
+
+                    if (fs.existsSync(caminhoFinal)) {
+                        fs.unlinkSync(caminhoFinal);
+                    }
+
+                    fs.rmSync(pastaUpload, {
+                        recursive: true,
+                        force: true
+                    });
+
+                    return res.status(400).json({
+                        erro: true,
+                        mensagem: validacaoArquivoFinal.mensagem
+                    });
+                }
+
                 fs.rmSync(pastaUpload, { recursive: true, force: true });
 
                 const resultado = registrarMidiaEnviada(nomeSalvo, nomeOriginal, tamanho);
@@ -4534,7 +4837,7 @@ app.post("/api/upload/finalizar", exigirLogin, exigirEditor, (req, res) => {
     }
 });
 
-app.post("/api/upload", exigirLogin, exigirEditor, validarEspacoAntesDoUploadSimples, upload.array("arquivo", 30), (req, res) => {
+app.post("/api/upload", exigirLogin, exigirEditor, validarEspacoAntesDoUploadSimples, uploadSimplesComTratamento, (req, res) => {
     try {
         const arquivos = Array.isArray(req.files) ? req.files : [];
 
@@ -4542,6 +4845,47 @@ app.post("/api/upload", exigirLogin, exigirEditor, validarEspacoAntesDoUploadSim
             return res.status(400).json({
                 erro: true,
                 mensagem: "Nenhum arquivo enviado."
+            });
+        }
+
+        const arquivoInvalido = arquivos.find((arquivo) => {
+            const validacao = validarArquivoMidiaSalvo({
+                caminhoArquivo: arquivo.path,
+                nomeOriginal: arquivo.originalname,
+                mimeType: arquivo.mimetype
+            });
+
+            arquivo.validacaoMidia = validacao;
+
+            return !validacao.permitido;
+        });
+
+        if (arquivoInvalido) {
+            const validacao = arquivoInvalido.validacaoMidia || {
+                motivo: "arquivo_invalido",
+                mensagem: "Arquivo inválido."
+            };
+
+            registrarAuditoriaUploadBloqueado(req, {
+                tipoUpload: "simples-validacao-assinatura",
+                motivo: validacao.motivo,
+                mensagem: validacao.mensagem,
+                nomeOriginal: corrigirEncodingTextoUpload(arquivoInvalido.originalname),
+                tamanhoAvaliadoBytes: Number(arquivoInvalido.size || 0),
+                arquivos: arquivos.map((arquivo) => ({
+                    nomeOriginal: corrigirEncodingTextoUpload(arquivo.originalname),
+                    nomeSalvo: arquivo.filename,
+                    mimeType: arquivo.mimetype,
+                    tamanho: arquivo.size,
+                    tamanhoFormatado: formatarBytes(arquivo.size)
+                }))
+            });
+
+            removerArquivosEnviadosComFalha(arquivos);
+
+            return res.status(400).json({
+                erro: true,
+                mensagem: validacao.mensagem
             });
         }
 
