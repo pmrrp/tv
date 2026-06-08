@@ -203,8 +203,7 @@ async function realizarLogin(event) {
     const password = passwordInput ? passwordInput.value : "";
 
     if (!email) {
-        mostrarMensagem("Informe seu usuário de acesso.", "erro");
-
+        mostrarMensagem("Informe o e-mail cadastrado no usuário.", "erro");
         if (emailInput) {
             emailInput.focus();
         }
