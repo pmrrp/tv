@@ -1088,8 +1088,14 @@ button:disabled {
 }
 
 .uploadProgress {
+    grid-column: 1 / 2;
+    grid-row: 2;
+
     display: grid;
     gap: 7px;
+    align-self: end;
+
+    width: 100%;
     margin-top: 12px;
 }
 
@@ -1120,6 +1126,10 @@ button:disabled {
 }
 
 .uploadMessage {
+    grid-column: 1 / -1;
+    white-space: pre-line;
+    line-height: 1.45;
+
     margin-top: 12px;
     padding: 12px 14px;
     border-radius: var(--radius);
@@ -1133,6 +1143,12 @@ button:disabled {
     border-color: rgba(10, 111, 181, 0.16);
     background: var(--blue-100);
     color: var(--blue-900);
+}
+
+.uploadMessage.aviso {
+    border-color: rgba(245, 158, 11, 0.28);
+    background: var(--yellow-100);
+    color: var(--orange-700);
 }
 
 .uploadMessage.sucesso {
@@ -11259,4 +11275,29 @@ body.modalAberto {
 
 .uploadMessage {
     white-space: pre-line;
+}
+
+.uploadCancelAction.hidden {
+    display: none;
+}
+
+.uploadCancelAction {
+    grid-column: 2 / 3;
+    grid-row: 2;
+
+    align-self: end;
+    justify-self: stretch;
+
+    width: 100%;
+    min-height: 42px;
+    height: 42px;
+    padding: 0 14px;
+
+    border-radius: 14px;
+    font-size: 0.86rem;
+    gap: 8px;
+}
+
+.uploadCancelAction i {
+    font-size: 0.92rem;
 }

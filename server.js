@@ -3207,16 +3207,24 @@ function criarTransporterEmail() {
         return null;
     }
 
+    const smtpSecure = String(process.env.SMTP_SECURE || "false")
+        .toLowerCase() === "true";
+
     return nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: Number(process.env.SMTP_PORT || 587),
-        secure: String(process.env.SMTP_SECURE || "false").toLowerCase() === "true",
-        auth: process.env.SMTP_USER || process.env.SMTP_PASS
-            ? {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS
-            }
-            : undefined
+        secure: smtpSecure,
+
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+        },
+
+        /*
+          Alguns servidores Zimbra/SMTP aceitam melhor AUTH LOGIN
+          do que AUTH PLAIN. Deixamos configurável por .env.
+        */
+        authMethod: process.env.SMTP_AUTH_METHOD || undefined
     });
 }
 
@@ -4996,6 +5004,60 @@ app.post("/api/upload", exigirLogin, exigirEditor, validarEspacoAntesDoUploadSim
         res.status(500).json({
             erro: true,
             mensagem: "Erro ao enviar arquivo."
+        });
+    }
+});
+
+/* =========================================================
+   API: CANCELAR UPLOAD EM PARTES
+   =========================================================
+   Remove chunks temporários de um upload cancelado pelo usuário.
+   ========================================================= */
+
+app.post("/api/upload/cancelar", exigirLogin, exigirEditor, (req, res) => {
+    try {
+        const uploadId = String(req.body.uploadId || "").replace(/[^a-zA-Z0-9_-]/g, "");
+
+        if (!uploadId) {
+            return res.status(400).json({
+                erro: true,
+                mensagem: "ID de upload inválido."
+            });
+        }
+
+        const pastaUpload = path.join(chunksFolder, uploadId);
+        const existia = fs.existsSync(pastaUpload);
+
+        let tamanhoRemovidoBytes = 0;
+
+        if (existia) {
+            tamanhoRemovidoBytes = calcularTamanhoPastaBytes(pastaUpload);
+
+            fs.rmSync(pastaUpload, {
+                recursive: true,
+                force: true
+            });
+        }
+
+        registrarAuditoria(req, "midia.upload.cancelado", {
+            uploadId,
+            chunksRemovidos: existia,
+            tamanhoRemovidoBytes,
+            tamanhoRemovidoFormatado: formatarBytes(tamanhoRemovidoBytes)
+        });
+
+        res.json({
+            sucesso: true,
+            mensagem: existia
+                ? "Upload cancelado e arquivos temporários removidos."
+                : "Upload cancelado. Nenhum arquivo temporário encontrado."
+        });
+    } catch (erro) {
+        console.error("Erro ao cancelar upload:", erro);
+
+        res.status(500).json({
+            erro: true,
+            mensagem: "Erro ao cancelar upload."
         });
     }
 });

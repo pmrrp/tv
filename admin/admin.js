@@ -39,6 +39,7 @@ const inputArquivo = document.getElementById("arquivo");
 const selectedFileName = document.getElementById("selectedFileName");
 const uploadMessage = document.getElementById("uploadMessage");
 const btnUpload = document.getElementById("btnUpload");
+const btnCancelUpload = document.getElementById("btnCancelUpload");
 
 const btnGerarPlaylist = document.getElementById("btnGerarPlaylist");
 const playlistMessage = document.getElementById("playlistMessage");
@@ -1458,6 +1459,7 @@ function formatarAcaoAuditoria(acao) {
 
         "midia.upload": "Upload de mídia",
         "midia.upload.bloqueado": "Upload bloqueado",
+        "midia.upload.cancelado": "Upload cancelado",
         "midia.excluir": "Exclusão de mídia",
         "midia.excluir_lote": "Exclusão em lote",
         "midia.editar": "Edição de mídia",
@@ -1532,6 +1534,10 @@ function obterClasseAcaoAuditoria(acao) {
         return "auditActionSuccess";
     }
 
+    if (valor === "midia.upload.cancelado") {
+        return "auditWarning";
+    }
+
     if (valor.includes("editar") || valor.includes("alterar") || valor.includes("mover")) {
         return "auditActionInfo";
     }
@@ -1559,6 +1565,8 @@ function obterIconeAcaoAuditoria(acao) {
     if (valor === "sistema.email.teste.falha") return "fa-envelope-circle-xmark";
 
     if (valor === "sistema.tokens_recuperacao.limpeza") return "fa-broom";
+
+    if (valor === "midia.upload.cancelado") return "fa-ban";
 
     if (valor.includes("bloqueado")) return "fa-triangle-exclamation";
     if (valor.includes("limpeza") || valor.includes("chunks")) return "fa-screwdriver-wrench";
@@ -1698,6 +1706,14 @@ function resumirDetalhesAuditoria(details, acao = "") {
         }
 
         return "Nova mídia enviada para o painel.";
+    }
+
+    if (acaoNormalizada === "midia.upload.cancelado") {
+        if (details && details.tamanhoRemovidoFormatado) {
+            return `Upload em andamento cancelado. Temporários removidos: ${details.tamanhoRemovidoFormatado}.`;
+        }
+
+        return "Upload em andamento cancelado pelo usuário.";
     }
 
     if (acaoNormalizada === "midia.excluir") {
@@ -3094,15 +3110,24 @@ function renderizarPreviewMidia(midia) {
 /**
  * Mostra mensagem na área de upload.
  *
- * Também dispara toast, mas mantém a mensagem visível por alguns segundos
- * no card para que o operador consiga ler com calma.
+ * Mensagens finais como erro, sucesso e aviso geram toast.
+ * Mensagens informativas intermediárias ficam apenas no card
+ * para evitar empilhamento.
  */
 function mostrarMensagemUpload(texto, tipo = "info", tempoMs = 7000) {
     const mensagem = String(texto || "").trim();
 
     window.clearTimeout(uploadMessageTimer);
 
-    if (mensagem) {
+    /*
+      Evita empilhar toast para etapas intermediárias:
+      - verificando espaço;
+      - enviando;
+      - cancelando;
+      - finalizando.
+      Mas mantém toast para erro, sucesso e aviso.
+    */
+    if (mensagem && ["erro", "sucesso"].includes(tipo)) {
         mostrarToast(mensagem, tipo);
     }
 
@@ -3117,13 +3142,11 @@ function mostrarMensagemUpload(texto, tipo = "info", tempoMs = 7000) {
 
     uploadMessage.className = `uploadMessage ${tipo}`;
 
-    /*
-      Mensagens de erro ficam um pouco mais tempo.
-      Mensagens de sucesso/info somem mais rápido.
-    */
     const tempoVisivel = tipo === "erro"
         ? tempoMs
-        : 4500;
+        : tipo === "aviso"
+            ? 5500
+            : 4500;
 
     uploadMessageTimer = window.setTimeout(() => {
         esconderMensagemUpload();
@@ -6000,6 +6023,91 @@ function confirmarAcaoModal({
 let uploadProgressBox = null;
 let uploadProgressBar = null;
 let uploadProgressText = null;
+let uploadAtualXhr = null;
+let uploadAbortController = null;
+let uploadCanceladoPeloUsuario = false;
+let uploadAtualId = null;
+
+/* =========================================================
+   UPLOAD - CANCELAMENTO
+   ========================================================= */
+
+/**
+ * Ajusta visualmente a interface quando há upload em andamento.
+ */
+function definirUploadEmAndamento(emAndamento) {
+    if (btnUpload) {
+        btnUpload.disabled = emAndamento;
+
+        if (emAndamento) {
+            definirBotaoComIcone(btnUpload, "fa-solid fa-spinner fa-spin", "Enviando...");
+        } else {
+            definirBotaoComIcone(btnUpload, "fa-solid fa-upload", "Enviar mídia");
+        }
+    }
+
+    if (btnCancelUpload) {
+        btnCancelUpload.classList.toggle("hidden", !emAndamento);
+        btnCancelUpload.disabled = false;
+
+        /*
+          Sempre restaura o texto padrão ao voltar do estado de cancelamento.
+        */
+        definirBotaoComIcone(btnCancelUpload, "fa-solid fa-ban", "Cancelar envio");
+    }
+
+    if (inputArquivo) {
+        inputArquivo.disabled = emAndamento;
+    }
+}
+
+/**
+ * Solicita ao backend a remoção dos chunks temporários de um upload cancelado.
+ *
+ * Mesmo que essa limpeza falhe, a rotina automática de limpeza de chunks
+ * antigos ainda atua como segunda camada de segurança.
+ */
+async function cancelarUploadNoServidor(uploadId) {
+    if (!uploadId) return;
+
+    try {
+        await fetchComSessao("/api/upload/cancelar", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                uploadId
+            })
+        });
+    } catch (erro) {
+        console.warn("Não foi possível limpar upload cancelado no servidor:", erro);
+    }
+}
+
+/**
+ * Cancela o upload atualmente em andamento.
+ */
+function cancelarUploadEmAndamento() {
+    if (uploadCanceladoPeloUsuario) return;
+
+    uploadCanceladoPeloUsuario = true;
+
+    if (btnCancelUpload) {
+        btnCancelUpload.disabled = true;
+        definirBotaoComIcone(btnCancelUpload, "fa-solid fa-spinner fa-spin", "Cancelando...");
+    }
+
+    if (uploadAtualXhr) {
+        uploadAtualXhr.abort();
+    }
+
+    if (uploadAbortController) {
+        uploadAbortController.abort();
+    }
+
+    mostrarMensagemUpload("Cancelando envio da mídia...", "info", 3000);
+}
 
 /**
  * Registra no backend quando o frontend bloqueia um upload antes
@@ -6127,6 +6235,8 @@ function enviarChunkComProgresso(formData, aoProgredir) {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
 
+        uploadAtualXhr = xhr;
+
         xhr.open("POST", "/api/upload/chunk", true);
         xhr.withCredentials = true;
 
@@ -6136,6 +6246,10 @@ function enviarChunkComProgresso(formData, aoProgredir) {
         };
 
         xhr.onload = () => {
+            if (uploadAtualXhr === xhr) {
+                uploadAtualXhr = null;
+            }
+
             resolve({
                 ok: xhr.status >= 200 && xhr.status < 300,
                 status: xhr.status,
@@ -6144,11 +6258,19 @@ function enviarChunkComProgresso(formData, aoProgredir) {
         };
 
         xhr.onerror = () => {
+            if (uploadAtualXhr === xhr) {
+                uploadAtualXhr = null;
+            }
+
             reject(new Error("Não foi possível enviar uma parte do arquivo. A conexão foi interrompida."));
         };
 
         xhr.onabort = () => {
-            reject(new Error("Envio cancelado."));
+            if (uploadAtualXhr === xhr) {
+                uploadAtualXhr = null;
+            }
+
+            reject(new Error("Envio cancelado pelo usuário."));
         };
 
         xhr.send(formData);
@@ -6199,19 +6321,26 @@ async function lerRespostaJsonSegura(resposta, mensagemPadrao = "Erro na requisi
 }
 
 async function finalizarUploadEmChunks({ uploadId, nomeOriginal, totalChunks }) {
-    const resposta = await fetchComSessao("/api/upload/finalizar", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            uploadId,
-            nomeOriginal,
-            totalChunks
-        })
-    });
+    uploadAbortController = new AbortController();
 
-    return lerRespostaJsonSegura(resposta, "Não foi possível finalizar o upload.");
+    try {
+        const resposta = await fetchComSessao("/api/upload/finalizar", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            signal: uploadAbortController.signal,
+            body: JSON.stringify({
+                uploadId,
+                nomeOriginal,
+                totalChunks
+            })
+        });
+
+        return lerRespostaJsonSegura(resposta, "Não foi possível finalizar o upload.");
+    } finally {
+        uploadAbortController = null;
+    }
 }
 
 /**
@@ -6470,13 +6599,19 @@ async function enviarArquivo(event) {
     const totalChunks = Math.ceil(arquivo.size / tamanhoChunk);
     const uploadId = gerarUploadId();
 
-    btnUpload.disabled = true;
-    definirBotaoComIcone(btnUpload, "fa-solid fa-spinner fa-spin", "Enviando...");
+    uploadAtualId = uploadId;
+    uploadCanceladoPeloUsuario = false;
+
+    definirUploadEmAndamento(true);
     mostrarMensagemUpload(`Enviando mídia: ${arquivo.name}`, "info");
     atualizarProgressoUpload(0);
 
     try {
         for (let indice = 0; indice < totalChunks; indice++) {
+            if (uploadCanceladoPeloUsuario) {
+                throw new Error("Envio cancelado pelo usuário.");
+            }
+
             const inicio = indice * tamanhoChunk;
             const fim = Math.min(inicio + tamanhoChunk, arquivo.size);
             const chunk = arquivo.slice(inicio, fim);
@@ -6500,6 +6635,10 @@ async function enviarArquivo(event) {
                 resposta,
                 `Não foi possível enviar a parte ${indice + 1} de ${totalChunks}.`
             );
+        }
+
+        if (uploadCanceladoPeloUsuario) {
+            throw new Error("Envio cancelado pelo usuário.");
         }
 
         mostrarMensagemUpload(`Finalizando envio da mídia: ${arquivo.name}`, "info");
@@ -6534,6 +6673,19 @@ async function enviarArquivo(event) {
 
         await carregarResumoAdmin();
     } catch (erro) {
+        if (uploadCanceladoPeloUsuario) {
+            await cancelarUploadNoServidor(uploadAtualId);
+
+            mostrarMensagemUpload(
+                `Envio cancelado: ${arquivo.name}`,
+                "aviso",
+                5500
+            );
+
+            console.warn("Upload cancelado pelo usuário:", arquivo.name);
+            return;
+        }
+
         const mensagemErro = montarMensagemErroUpload(erro, arquivo);
 
         if (erroUploadEhArmazenamento(mensagemErro)) {
@@ -6542,10 +6694,14 @@ async function enviarArquivo(event) {
 
         mostrarMensagemUpload(mensagemErro, "erro");
         console.error("Erro ao enviar mídia:", erro);
-
     } finally {
-        btnUpload.disabled = false;
-        definirBotaoComIcone(btnUpload, "fa-solid fa-upload", "Enviar mídia");
+        uploadAtualXhr = null;
+        uploadAbortController = null;
+        uploadAtualId = null;
+        uploadCanceladoPeloUsuario = false;
+
+        definirUploadEmAndamento(false);
+
         setTimeout(esconderProgressoUpload, 900);
     }
 }
@@ -9479,6 +9635,10 @@ if (uploadForm) {
 
 if (inputArquivo) {
     inputArquivo.addEventListener("change", atualizarNomeSelecionado);
+}
+
+if (btnCancelUpload) {
+    btnCancelUpload.addEventListener("click", cancelarUploadEmAndamento);
 }
 
 if (uploadForm) {

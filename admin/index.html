@@ -250,10 +250,10 @@
                     </label>
 
                     <!--
-                Input real do arquivo.
-                Sem atributo "multiple" para ficar compatível com
-                a rota atual /api/upload do backend.
-            -->
+                        Input real do arquivo.
+                        Sem atributo "multiple" para ficar compatível com
+                        a rota atual /api/upload do backend.
+                        -->
                     <input id="arquivo" name="arquivo" type="file"
                         accept=".mp4,.webm,.ogg,.mov,.jpg,.jpeg,.png,.webp,.gif"
                         title="Selecione uma imagem ou vídeo compatível para enviar ao painel." />
@@ -262,6 +262,12 @@
                         title="Envia a mídia selecionada para a biblioteca. Após o envio, a playlist será atualizada conforme as regras do sistema.">
                         <i class="fa-solid fa-upload" aria-hidden="true"></i>
                         Enviar mídia
+                    </button>
+
+                    <button id="btnCancelUpload" class="secondaryAction uploadCancelAction hidden" type="button"
+                        title="Cancela o envio da mídia em andamento. Partes temporárias serão descartadas pelo sistema.">
+                        <i class="fa-solid fa-ban" aria-hidden="true"></i>
+                        Cancelar envio
                     </button>
                 </form>
 
