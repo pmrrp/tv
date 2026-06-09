@@ -13,6 +13,14 @@ const imagePlayer = document.getElementById("imagePlayer");
 // Caixa de status / mensagens rápidas
 const statusBox = document.getElementById("status");
 
+// Tela de fallback operacional do player
+const playerFallback = document.getElementById("playerFallback");
+const playerFallbackIcon = document.getElementById("playerFallbackIcon");
+const playerFallbackTitle = document.getElementById("playerFallbackTitle");
+const playerFallbackMessage = document.getElementById("playerFallbackMessage");
+const playerFallbackHint = document.getElementById("playerFallbackHint");
+const btnRetryPlayer = document.getElementById("btnRetryPlayer");
+
 // Splash inicial
 const splashScreen = document.getElementById("splashScreen");
 const splashWallpaper = document.getElementById("splashWallpaper");
@@ -105,6 +113,10 @@ let somHabilitadoPeloUsuario = false;
 
 // Controle do overlay de rotação
 let rotateNoticeDismissed = false;
+
+// Controle de nova tentativa automática após falha operacional grave
+let timerRetryFallbackPlayer = null;
+let tentativaRecuperacaoPlayerEmAndamento = false;
 
 /* =========================================================
    DIAGNÓSTICO / DEBUG
@@ -334,6 +346,138 @@ function esconderIndicadorConexao() {
 }
 
 /* =========================================================
+   FALLBACK OPERACIONAL VISUAL DO PLAYER
+   =========================================================
+   Exibe uma tela amigável quando o player não consegue
+   carregar playlist ou mídia válida.
+   ========================================================= */
+
+/**
+ * Exibe tela de fallback operacional.
+ */
+function mostrarFallbackOperacionalPlayer({
+  icone = "fa-triangle-exclamation",
+  titulo = "Conteúdo indisponível",
+  mensagem = "O player não conseguiu carregar conteúdo para exibição.",
+  dica = "O sistema tentará novamente automaticamente em instantes.",
+  estado = "erro"
+} = {}) {
+  if (!playerFallback) return;
+
+  playerFallback.classList.remove(
+    "hidden",
+    "playerFallbackWarning",
+    "playerFallbackError",
+    "playerFallbackOffline"
+  );
+
+  if (estado === "offline") {
+    playerFallback.classList.add("playerFallbackOffline");
+  } else if (estado === "aviso") {
+    playerFallback.classList.add("playerFallbackWarning");
+  } else {
+    playerFallback.classList.add("playerFallbackError");
+  }
+
+  if (playerFallbackIcon) {
+    playerFallbackIcon.className = `fa-solid ${icone}`;
+  }
+
+  if (playerFallbackTitle) {
+    playerFallbackTitle.textContent = titulo;
+  }
+
+  if (playerFallbackMessage) {
+    playerFallbackMessage.textContent = mensagem;
+  }
+
+  if (playerFallbackHint) {
+    playerFallbackHint.textContent = dica;
+  }
+
+  mostrarCursor();
+
+  if (config && config.mostrarControles) {
+    mostrarControlesTemporariamente();
+  }
+}
+
+/**
+ * Esconde tela de fallback operacional.
+ */
+function esconderFallbackOperacionalPlayer() {
+  if (!playerFallback) return;
+
+  playerFallback.classList.add("hidden");
+}
+
+/**
+ * Agenda uma nova tentativa de recuperação do player.
+ */
+function agendarRetryFallbackPlayer(tempoMs = 30000) {
+  if (timerRetryFallbackPlayer) {
+    clearTimeout(timerRetryFallbackPlayer);
+  }
+
+  timerRetryFallbackPlayer = setTimeout(() => {
+    tentarRecuperarPlayerAposFalha();
+  }, tempoMs);
+}
+
+/**
+ * Tenta recuperar o player após uma falha grave.
+ *
+ * Não chama iniciarSistema() de novo para evitar duplicar eventos,
+ * timers e intervalos. Apenas tenta recarregar playlist e tocar.
+ */
+async function tentarRecuperarPlayerAposFalha() {
+  if (tentativaRecuperacaoPlayerEmAndamento) return;
+
+  tentativaRecuperacaoPlayerEmAndamento = true;
+
+  try {
+    atualizarStatus("Tentando carregar conteúdo novamente...");
+    debugMensagem("Tentando recuperar player após fallback operacional...");
+
+    await carregarPlaylist();
+
+    if (!playlistEhValida(playlist)) {
+      throw new Error("Playlist continua vazia ou inválida.");
+    }
+
+    esconderFallbackOperacionalPlayer();
+    esconderSplash();
+    splashScreen.classList.add("hidden");
+
+    falhasSequenciaisDeMidia = 0;
+    indiceAtual = 0;
+    emTransicao = false;
+
+    await prepararPrimeiraMidiaDoCiclo();
+
+    tocarItemAtual();
+
+    atualizarIndicadorConexao("online", "Conteúdo carregado novamente.");
+    debugMensagem("Player recuperado com sucesso após fallback.");
+  } catch (erro) {
+    console.warn("Ainda não foi possível recuperar o player:", erro);
+    debugMensagem(`Falha ao recuperar player: ${erro.message || erro}`);
+
+    mostrarFallbackOperacionalPlayer({
+      icone: navigator.onLine === false ? "fa-wifi-slash" : "fa-triangle-exclamation",
+      titulo: "Aguardando conteúdo",
+      mensagem: "Ainda não foi possível carregar uma playlist ou mídia válida.",
+      dica: "Verifique a conexão, o servidor e se há mídias ativas na playlist.",
+      estado: navigator.onLine === false ? "offline" : "erro"
+    });
+
+    agendarRetryFallbackPlayer(30000);
+  } finally {
+    tentativaRecuperacaoPlayerEmAndamento = false;
+  }
+}
+
+/* =========================================================
    CONFIGURAÇÃO
    ========================================================= */
 
@@ -433,6 +577,21 @@ const PLAYLIST_CACHE_KEY = "painelRibasUltimaPlaylistValida";
 const PLAYLIST_CACHE_DATA_KEY = "painelRibasUltimaPlaylistValidaEm";
 
 /**
+ * Cria erro operacional do player com código interno.
+ *
+ * Isso permite diferenciar:
+ * - playlist vazia;
+ * - falha de rede;
+ * - JSON inválido;
+ * - ausência de cache local.
+ */
+function criarErroPlayer(mensagem, codigo) {
+  const erro = new Error(mensagem);
+  erro.codigo = codigo;
+  return erro;
+}
+
+/**
  * Valida se uma playlist possui formato mínimo aceitável.
  */
 function playlistEhValida(lista) {
@@ -493,8 +652,18 @@ async function buscarPlaylistRemota() {
 
   const dados = await resposta.json();
 
-  if (!playlistEhValida(dados)) {
-    throw new Error("A playlist está vazia ou inválida.");
+  if (!Array.isArray(dados)) {
+    throw criarErroPlayer(
+      "O arquivo playlist.json foi carregado, mas possui formato inválido.",
+      "PLAYLIST_FORMATO_INVALIDO"
+    );
+  }
+
+  if (!dados.length) {
+    throw criarErroPlayer(
+      "Nenhuma mídia ativa encontrada na playlist.",
+      "PLAYLIST_VAZIA"
+    );
   }
 
   salvarPlaylistLocal(dados);
@@ -529,6 +698,54 @@ async function carregarPlaylist() {
     return;
   } catch (erro) {
     console.warn("Falha ao carregar playlist remota:", erro);
+
+    /*
+      Se o servidor respondeu corretamente, mas a playlist veio vazia,
+      isso não é queda de rede.
+  
+      Exemplo real:
+      - todas as mídias foram inativadas no admin;
+      - playlist.json foi regenerada vazia;
+      - o player não deve usar playlist antiga salva localmente.
+    */
+    if (erro && erro.codigo === "PLAYLIST_VAZIA") {
+      playlist = [];
+      indiceAtual = 0;
+
+      atualizarIndicadorConexao("erro", "Nenhuma mídia ativa.");
+
+      mostrarFallbackOperacionalPlayer({
+        icone: "fa-photo-film",
+        titulo: "Nenhuma mídia ativa",
+        mensagem: "A playlist foi carregada, mas não há mídias ativas para exibição.",
+        dica: "Ative pelo menos uma mídia no painel administrativo e sincronize a playlist.",
+        estado: "aviso"
+      });
+
+      throw erro;
+    }
+
+    /*
+      Formato inválido também não deve usar cache antigo automaticamente,
+      porque pode indicar arquivo corrompido ou problema de geração.
+    */
+    if (erro && erro.codigo === "PLAYLIST_FORMATO_INVALIDO") {
+      playlist = [];
+      indiceAtual = 0;
+
+      atualizarIndicadorConexao("erro", "Playlist inválida.");
+
+      mostrarFallbackOperacionalPlayer({
+        icone: "fa-file-circle-xmark",
+        titulo: "Playlist inválida",
+        mensagem: "O arquivo da playlist foi encontrado, mas o formato não é válido.",
+        dica: "Gere/sincronize a playlist novamente pelo painel administrativo.",
+        estado: "erro"
+      });
+
+      throw erro;
+    }
+
     debugMensagem("Falha ao carregar playlist remota. Tentando fallback local...");
   }
 
@@ -883,6 +1100,12 @@ let falhasSequenciaisDeMidia = 0;
  */
 function registrarMidiaExecutadaComSucesso() {
   falhasSequenciaisDeMidia = 0;
+  esconderFallbackOperacionalPlayer();
+
+  if (timerRetryFallbackPlayer) {
+    clearTimeout(timerRetryFallbackPlayer);
+    timerRetryFallbackPlayer = null;
+  }
 }
 
 /**
@@ -909,12 +1132,21 @@ function tratarFalhaMidiaAtual(motivo = "Falha ao abrir mídia.") {
     atualizarIndicadorConexao("erro", "Nenhuma mídia carregou.");
     atualizarStatus("Nenhuma mídia carregou. Tentando novamente em instantes...");
 
+    mostrarFallbackOperacionalPlayer({
+      icone: "fa-photo-film",
+      titulo: "Nenhuma mídia carregou",
+      mensagem: "Todas as mídias da playlist falharam ou estão indisponíveis no momento.",
+      dica: "O player tentará novamente automaticamente. Verifique se os arquivos existem e se a rede está estável.",
+      estado: "erro"
+    });
+
     debugMensagem(
       "Todas as mídias da playlist falharam em sequência. Aguardando antes de tentar novamente."
     );
 
     setTimeout(() => {
       falhasSequenciaisDeMidia = 0;
+      esconderFallbackOperacionalPlayer();
       proximoItem();
     }, TEMPO_RETENTAR_APOS_TODAS_FALHAREM_MS);
 
@@ -1490,6 +1722,37 @@ async function iniciarSistema() {
     console.error(erro);
     debugMensagem(`Erro ao iniciar o painel: ${erro.message || erro}`);
     atualizarStatus("Erro ao iniciar o painel.");
+
+    /*
+      Se a inicialização falhar, escondemos a splash para evitar
+      a sensação de travamento eterno e mostramos uma tela operacional.
+    */
+    esconderSplash();
+
+    setTimeout(() => {
+      if (splashScreen) {
+        splashScreen.classList.add("hidden");
+      }
+    }, 900);
+
+    atualizarIndicadorConexao(
+      navigator.onLine === false ? "offline" : "erro",
+      navigator.onLine === false
+        ? "Sem conexão. Aguardando conteúdo local."
+        : "Não foi possível iniciar o player."
+    );
+
+    mostrarFallbackOperacionalPlayer({
+      icone: navigator.onLine === false ? "fa-wifi-slash" : "fa-triangle-exclamation",
+      titulo: "Player aguardando conteúdo",
+      mensagem: erro && erro.message
+        ? erro.message
+        : "Não foi possível carregar a playlist ou a primeira mídia.",
+      dica: "O sistema tentará novamente automaticamente. Verifique servidor, rede e playlist.",
+      estado: navigator.onLine === false ? "offline" : "erro"
+    });
+
+    agendarRetryFallbackPlayer(30000);
   }
 }
 
@@ -1500,13 +1763,24 @@ async function iniciarSistema() {
 videoPlayer.addEventListener("ended", proximoItem);
 
 videoPlayer.addEventListener("error", () => {
-  atualizarStatus("Falha ao carregar mídia, avançando...");
-  setTimeout(proximoItem, 1000);
+  /*
+    Durante a transição, o erro já é tratado pelos listeners
+    específicos criados dentro de tocarItemAtual().
+    Evitamos avançar duas vezes.
+  */
+  if (emTransicao) return;
+
+  tratarFalhaMidiaAtual("Falha inesperada ao carregar vídeo.");
 });
 
 videoPlayer.addEventListener("stalled", () => {
-  atualizarStatus("Conteúdo indisponível no momento, avançando...");
-  setTimeout(proximoItem, 1000);
+  /*
+    stalled pode acontecer quando a rede oscila no meio do vídeo.
+    Se não estamos em transição, tratamos como mídia indisponível.
+  */
+  if (emTransicao) return;
+
+  tratarFalhaMidiaAtual("Vídeo travou ou ficou indisponível.");
 });
 
 videoPlayer.addEventListener("waiting", () => {
@@ -1613,6 +1887,13 @@ btnDismissRotate.addEventListener("click", () => {
   rotateNoticeDismissed = true;
   rotateNotice.classList.add("hidden");
 });
+
+if (btnRetryPlayer) {
+  btnRetryPlayer.addEventListener("click", () => {
+    aplicarFeedbackNoBotao(btnRetryPlayer);
+    tentarRecuperarPlayerAposFalha();
+  });
+}
 
 /* =========================================================
    EVENTOS DE FULLSCREEN / ORIENTAÇÃO

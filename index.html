@@ -137,6 +137,41 @@
     </div>
 
     <!--
+  =======================================================
+  FALLBACK OPERACIONAL DO PLAYER
+  =======================================================
+  Tela exibida quando o player não consegue carregar
+  playlist, mídia válida ou conteúdo local salvo.
+
+  Objetivo:
+  - evitar tela preta/splash presa;
+  - orientar operador/suporte;
+  - manter visual institucional mesmo em falha.
+-->
+    <section id="playerFallback" class="playerFallback hidden" aria-live="polite">
+      <div class="playerFallbackCard">
+        <div class="playerFallbackIcon">
+          <i id="playerFallbackIcon" class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        </div>
+
+        <div class="playerFallbackText">
+          <strong id="playerFallbackTitle">Conteúdo indisponível</strong>
+          <span id="playerFallbackMessage">
+            O player não conseguiu carregar conteúdo para exibição.
+          </span>
+          <small id="playerFallbackHint">
+            O sistema tentará novamente automaticamente em instantes.
+          </small>
+        </div>
+
+        <button id="btnRetryPlayer" type="button">
+          <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+          Tentar novamente
+        </button>
+      </div>
+    </section>
+
+    <!--
       =======================================================
       PAINEL DE DIAGNÓSTICO
       =======================================================
