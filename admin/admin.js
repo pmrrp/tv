@@ -830,6 +830,15 @@ function formatarDataBackup(valor) {
 }
 
 /**
+ * Monta URL segura para download de backup.
+ *
+ * O nome é codificado para evitar problemas com caracteres especiais.
+ */
+function montarUrlDownloadBackup(nomeBackup) {
+    return `/api/admin/backups/download/${encodeURIComponent(nomeBackup)}`;
+}
+
+/**
  * Renderiza a lista de backups retornada pela API.
  */
 function renderizarBackups(backups) {
@@ -855,6 +864,7 @@ function renderizarBackups(backups) {
         const tamanho = backup.tamanhoFormatado || formatarTamanho(backup.tamanho);
         const modificadoEm = formatarDataBackup(backup.modificadoEm);
         const criadoEm = formatarDataBackup(backup.criadoEm);
+        const urlDownload = montarUrlDownloadBackup(backup.nome || "");
 
         return `
             <article
@@ -897,6 +907,18 @@ function renderizarBackups(backups) {
                         <i class="fa-solid fa-calendar-plus" aria-hidden="true"></i>
                         Criado: ${escaparHtml(criadoEm)}
                     </span>
+                </div>
+
+                <div class="backupItemActions">
+                    <a
+                        class="secondaryAction backupDownloadAction"
+                        href="${escaparHtml(urlDownload)}"
+                        download
+                        title="Baixa este arquivo de backup para o computador."
+                    >
+                        <i class="fa-solid fa-download" aria-hidden="true"></i>
+                        Baixar
+                    </a>
                 </div>
             </article>
         `;
@@ -1486,6 +1508,7 @@ function formatarAcaoAuditoria(acao) {
         "sistema.backup.json": "Backup automático de arquivo JSON",
         "sistema.backup.database": "Backup do banco SQLite",
         "sistema.backup.database.falha": "Falha no backup do banco SQLite",
+        "sistema.backup.download": "Download de backup",
         "sistema.chunks.limpeza": "Limpeza automática de uploads temporários"
     };
 
@@ -1879,6 +1902,14 @@ function resumirDetalhesAuditoria(details, acao = "") {
         }
 
         return "Falha ao criar backup do banco SQLite.";
+    }
+
+    if (acaoNormalizada === "sistema.backup.download") {
+        if (details && details.nome) {
+            return `Backup baixado pelo painel: ${details.nome}.`;
+        }
+
+        return "Backup baixado pelo painel administrativo.";
     }
 
     if (acaoNormalizada.includes("backup")) {

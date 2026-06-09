@@ -1491,6 +1491,93 @@ function limparBackupsAntigos(prefixo, limite = MAX_BACKUPS_POR_TIPO) {
 }
 
 /**
+ * Valida e resolve com segurança o caminho de um arquivo de backup.
+ *
+ * Proteções:
+ * - não aceita caminhos com barras;
+ * - não aceita path traversal;
+ * - só permite arquivos .json ou .db;
+ * - garante que o arquivo final esteja dentro da pasta backups/;
+ * - garante que o arquivo exista.
+ */
+function resolverBackupParaDownload(nomeArquivo) {
+    const nome = String(nomeArquivo || "").trim();
+
+    if (!nome) {
+        return {
+            valido: false,
+            status: 400,
+            mensagem: "Nome do backup não informado."
+        };
+    }
+
+    /*
+      path.basename remove qualquer tentativa de pasta.
+      Se o nome recebido for diferente do basename, alguém tentou
+      mandar caminho como ../../arquivo.db ou backups/arquivo.db.
+    */
+    if (nome !== path.basename(nome)) {
+        return {
+            valido: false,
+            status: 400,
+            mensagem: "Nome de backup inválido."
+        };
+    }
+
+    const extensao = path.extname(nome).toLowerCase();
+
+    if (![".json", ".db"].includes(extensao)) {
+        return {
+            valido: false,
+            status: 400,
+            mensagem: "Tipo de backup não permitido para download."
+        };
+    }
+
+    const caminhoBackup = path.resolve(backupFolder, nome);
+    const pastaBackupsResolvida = path.resolve(backupFolder);
+
+    /*
+      Garante que o caminho final continua dentro da pasta backups.
+      Essa é uma proteção extra contra path traversal.
+    */
+    if (!caminhoBackup.startsWith(pastaBackupsResolvida + path.sep)) {
+        return {
+            valido: false,
+            status: 400,
+            mensagem: "Caminho de backup inválido."
+        };
+    }
+
+    if (!fs.existsSync(caminhoBackup)) {
+        return {
+            valido: false,
+            status: 404,
+            mensagem: "Backup não encontrado."
+        };
+    }
+
+    const stats = fs.statSync(caminhoBackup);
+
+    if (!stats.isFile()) {
+        return {
+            valido: false,
+            status: 400,
+            mensagem: "O item solicitado não é um arquivo de backup válido."
+        };
+    }
+
+    return {
+        valido: true,
+        nome,
+        caminho: caminhoBackup,
+        tamanhoBytes: stats.size,
+        tamanhoFormatado: formatarBytes(stats.size),
+        modificadoEm: stats.mtime.toISOString()
+    };
+}
+
+/**
  * Salva JSON com backup automático.
  *
  * Importante:
@@ -4097,8 +4184,8 @@ app.get("/admin/reset-password", (req, res) => {
 });
 
 /* =========================================================
-   APIs PÚBLICAS DE LEITURA
-   ========================================================= */
+    APIs PÚBLICAS DE LEITURA
+    ========================================================= */
 
 app.get("/api/auth/status", (req, res) => {
 
@@ -4127,22 +4214,22 @@ app.get("/api/auth/status", (req, res) => {
 });
 
 /* =========================================================
-   API ADMIN: DIAGNÓSTICO OPERACIONAL
-   =========================================================
-   Retorna uma visão protegida da saúde operacional do sistema.
+    API ADMIN: DIAGNÓSTICO OPERACIONAL
+    =========================================================
+    Retorna uma visão protegida da saúde operacional do sistema.
 
-   Diferença para /api/health:
-   - /api/health é simples e público;
-   - /api/admin/diagnostico é protegido e mais completo.
+    Diferença para /api/health:
+    - /api/health é simples e público;
+    - /api/admin/diagnostico é protegido e mais completo.
 
-   Verifica:
-   - pastas principais;
-   - arquivos essenciais;
-   - banco SQLite;
-   - armazenamento;
-   - backups;
-   - playlist/configurações.
-   ========================================================= */
+    Verifica:
+    - pastas principais;
+    - arquivos essenciais;
+    - banco SQLite;
+    - armazenamento;
+    - backups;
+    - playlist/configurações.
+========================================================= */
 app.get("/api/admin/diagnostico", exigirLogin, exigirRole("superadmin"), (req, res) => {
     try {
         const agora = new Date();
@@ -4365,7 +4452,7 @@ app.get("/api/admin/resumo", exigirLogin, (req, res) => {
     }
 });
 
-app.get("/api/admin/backups", exigirLogin, (req, res) => {
+app.get("/api/admin/backups", exigirLogin, exigirRole("superadmin"), (req, res) => {
     try {
         if (!fs.existsSync(backupFolder)) {
             return res.json({
@@ -4421,6 +4508,64 @@ app.get("/api/admin/backups", exigirLogin, (req, res) => {
         res.status(500).json({
             erro: true,
             mensagem: "Erro ao listar backups."
+        });
+    }
+});
+
+/* =========================================================
+   API ADMIN: DOWNLOAD DE BACKUP
+   =========================================================
+   Permite baixar arquivos de backup pelo painel administrativo.
+
+   Segurança:
+   - exige login;
+   - exige perfil superadmin;
+   - valida nome do arquivo;
+   - impede path traversal;
+   - permite apenas .json e .db;
+   - limita o download à pasta backups/.
+   ========================================================= */
+app.get("/api/admin/backups/download/:nomeArquivo", exigirLogin, exigirRole("superadmin"), (req, res) => {
+    try {
+        const resultado = resolverBackupParaDownload(req.params.nomeArquivo);
+
+        if (!resultado.valido) {
+            return res.status(resultado.status || 400).json({
+                erro: true,
+                mensagem: resultado.mensagem || "Backup inválido."
+            });
+        }
+
+        registrarAuditoriaSistema("sistema.backup.download", {
+            nome: resultado.nome,
+            caminho: resultado.caminho,
+            tamanhoBytes: resultado.tamanhoBytes,
+            tamanhoFormatado: resultado.tamanhoFormatado,
+            modificadoEm: resultado.modificadoEm
+        });
+
+        return res.download(resultado.caminho, resultado.nome, (erro) => {
+            if (erro) {
+                console.error("Erro ao enviar backup para download:", erro);
+
+                /*
+                  Se os headers ainda não foram enviados, conseguimos
+                  devolver JSON. Se já foram, apenas registramos no console.
+                */
+                if (!res.headersSent) {
+                    return res.status(500).json({
+                        erro: true,
+                        mensagem: "Erro ao baixar backup."
+                    });
+                }
+            }
+        });
+    } catch (erro) {
+        console.error("Erro na rota de download de backup:", erro);
+
+        return res.status(500).json({
+            erro: true,
+            mensagem: "Erro ao baixar backup."
         });
     }
 });

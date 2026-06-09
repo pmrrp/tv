@@ -10632,6 +10632,44 @@ body.modalAberto {
     font-weight: 800;
 }
 
+.backupItemActions {
+    margin-top: 12px;
+
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.backupDownloadAction {
+    min-height: 36px;
+    padding: 0 14px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    border-radius: 999px !important;
+
+    font-size: 12px;
+    font-weight: 900;
+    text-decoration: none;
+}
+
+.backupDownloadAction:hover {
+    text-decoration: none;
+}
+
+@media (max-width: 760px) {
+    .backupItemActions {
+        justify-content: stretch;
+    }
+
+    .backupDownloadAction {
+        width: 100%;
+    }
+}
+
 /* Tipos de backup */
 
 .backupItem.backupTypeDatabase::before {
