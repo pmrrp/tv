@@ -145,6 +145,9 @@ const diagnosticSummaryTitle = document.getElementById("diagnosticSummaryTitle")
 const diagnosticSummaryText = document.getElementById("diagnosticSummaryText");
 const diagnosticList = document.getElementById("diagnosticList");
 const btnReloadDiagnostic = document.getElementById("btnReloadDiagnostic");
+const btnCopyDiagnostic = document.getElementById("btnCopyDiagnostic");
+
+let ultimoDiagnosticoOperacional = null;
 
 /* =========================================================
    ELEMENTOS - RESET DE SENHA
@@ -9264,6 +9267,10 @@ if (btnReloadDiagnostic) {
     btnReloadDiagnostic.addEventListener("click", carregarDiagnosticoOperacional);
 }
 
+if (btnCopyDiagnostic) {
+    btnCopyDiagnostic.addEventListener("click", copiarDiagnosticoOperacional);
+}
+
 /* =========================================================
    EVENTOS - BACKUPS DO SISTEMA
    ========================================================= */
@@ -11052,6 +11059,8 @@ function criarItemDiagnostico({ icone, titulo, texto, status }) {
 function renderizarDiagnostico(dados) {
     if (!diagnosticList) return;
 
+    ultimoDiagnosticoOperacional = dados;
+
     const status = dados.status || "indisponivel";
     const avisos = Array.isArray(dados.avisos) ? dados.avisos : [];
     const problemasCriticos = Array.isArray(dados.problemasCriticos)
@@ -11193,6 +11202,168 @@ function renderizarDiagnostico(dados) {
     }
 
     diagnosticList.innerHTML = itens.join("");
+}
+
+/**
+ * Formata status curto para texto técnico copiável.
+ */
+function formatarStatusCurtoDiagnostico(status) {
+    const valor = String(status || "").toLowerCase();
+
+    if (valor === "ok") return "OK";
+    if (valor === "aviso") return "AVISO";
+    if (valor === "critico") return "CRÍTICO";
+    if (valor === "indisponivel") return "INDISPONÍVEL";
+
+    return "INDISPONÍVEL";
+}
+
+/**
+ * Monta uma lista simples para texto copiável.
+ */
+function montarListaTextoDiagnostico(titulo, itens) {
+    if (!Array.isArray(itens) || !itens.length) {
+        return `${titulo}:\n- Nenhum.`;
+    }
+
+    return `${titulo}:\n${itens.map((item) => `- ${item}`).join("\n")}`;
+}
+
+/**
+ * Monta um resumo técnico do diagnóstico operacional
+ * para colar em chamado, WhatsApp, e-mail ou suporte.
+ */
+function montarTextoDiagnosticoOperacional(dados) {
+    const agora = new Date();
+
+    const banco = dados.banco || {};
+    const armazenamento = dados.armazenamento || {};
+    const backups = dados.backups || {};
+    const arquivos = dados.arquivos || {};
+    const midias = dados.midias || {};
+
+    const avisos = Array.isArray(dados.avisos) ? dados.avisos : [];
+    const problemasCriticos = Array.isArray(dados.problemasCriticos)
+        ? dados.problemasCriticos
+        : [];
+
+    const bancoStatus = banco.ok ? "OK" : "CRÍTICO";
+
+    const usoMidiasPercentual = Number(armazenamento.midiasUsoPercentual || 0);
+    const midiasDentroDoLimite = armazenamento.midiasDentroDoLimite !== false;
+
+    let armazenamentoStatus = "OK";
+
+    if (!armazenamento.limiteMidiasBytes) {
+        armazenamentoStatus = "INDISPONÍVEL";
+    } else if (!midiasDentroDoLimite || usoMidiasPercentual >= 100) {
+        armazenamentoStatus = "CRÍTICO";
+    } else if (usoMidiasPercentual >= 85) {
+        armazenamentoStatus = "AVISO";
+    }
+
+    const backupStatus = backups.ultimos && backups.ultimos.database
+        ? "OK"
+        : "AVISO";
+
+    const arquivosEssenciaisOk = arquivos.midiaConfigFile?.existe && arquivos.databaseFile?.existe;
+    const arquivosStatus = arquivosEssenciaisOk ? "OK" : "CRÍTICO";
+
+    const linhas = [
+        "Painel Ribas — Diagnóstico Operacional",
+        `Data/hora local: ${agora.toLocaleString("pt-BR")}`,
+        `URL atual: ${window.location.href}`,
+        `Navegador: ${navigator.userAgent}`,
+        "",
+        `Status geral: ${formatarStatusCurtoDiagnostico(dados.status)}`,
+        `Mensagem: ${dados.mensagem || "Sem mensagem adicional."}`,
+        "",
+        "Resumo dos itens:",
+        `- Banco SQLite: ${bancoStatus}`,
+        `  Usuários: ${formatarNumero(banco.usuarios || 0)}`,
+        `  Logs de auditoria: ${formatarNumero(banco.logsAuditoria || 0)}`,
+        "",
+        `- Armazenamento de mídias: ${armazenamentoStatus}`,
+        `  Usado em mídias: ${armazenamento.midiasFormatado || "Indisponível"}`,
+        `  Limite de mídias: ${armazenamento.limiteMidiasFormatado || "Indisponível"}`,
+        `  Uso do limite: ${Number.isFinite(usoMidiasPercentual) ? `${usoMidiasPercentual.toFixed(2)}%` : "Indisponível"}`,
+        "",
+        `- Backups: ${backupStatus}`,
+        `  Total: ${formatarNumero(backups.total || 0)}`,
+        `  Bancos SQLite: ${formatarNumero(backups.porTipo?.database || 0)}`,
+        `  Configs/midia-config: ${formatarNumero(backups.porTipo?.midiaConfig || 0)}`,
+        `  Playlists: ${formatarNumero(backups.porTipo?.playlist || 0)}`,
+        "",
+        "- Mídias:",
+        `  Total: ${formatarNumero(midias.total || 0)}`,
+        `  Ativas: ${formatarNumero(midias.ativas || 0)}`,
+        "",
+        `- Arquivos essenciais: ${arquivosStatus}`,
+        `  midia-config.json: ${arquivos.midiaConfigFile?.existe ? "Encontrado" : "Não encontrado"}`,
+        `  banco SQLite: ${arquivos.databaseFile?.existe ? "Encontrado" : "Não encontrado"}`,
+        "",
+        montarListaTextoDiagnostico("Avisos", avisos),
+        "",
+        montarListaTextoDiagnostico("Problemas críticos", problemasCriticos)
+    ];
+
+    return linhas.join("\n");
+}
+
+/**
+ * Copia texto para a área de transferência.
+ *
+ * Usa navigator.clipboard quando disponível e faz fallback
+ * com textarea temporário para navegadores mais restritivos.
+ */
+async function copiarTextoParaAreaTransferencia(texto) {
+    if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(texto);
+        return;
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = texto;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    textarea.style.top = "-9999px";
+
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    const copiou = document.execCommand("copy");
+
+    document.body.removeChild(textarea);
+
+    if (!copiou) {
+        throw new Error("Não foi possível copiar o texto.");
+    }
+}
+
+/**
+ * Copia o diagnóstico operacional atualmente carregado.
+ */
+async function copiarDiagnosticoOperacional() {
+    try {
+        if (!ultimoDiagnosticoOperacional) {
+            mostrarToast("Carregue o diagnóstico antes de copiar.", "info");
+            await carregarDiagnosticoOperacional();
+        }
+
+        if (!ultimoDiagnosticoOperacional) {
+            throw new Error("Diagnóstico indisponível para cópia.");
+        }
+
+        const texto = montarTextoDiagnosticoOperacional(ultimoDiagnosticoOperacional);
+
+        await copiarTextoParaAreaTransferencia(texto);
+
+        mostrarToast("Diagnóstico copiado para a área de transferência.", "sucesso");
+    } catch (erro) {
+        console.error(erro);
+        mostrarToast("Não foi possível copiar o diagnóstico.", "erro");
+    }
 }
 
 /**
