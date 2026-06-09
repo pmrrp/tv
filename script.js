@@ -103,6 +103,8 @@ let alternanciaParaAgenteLocalEmAndamento = false;
 const INTERVALO_MONITOR_SERVIDOR_MS = 5000;
 const TIMEOUT_MONITOR_SERVIDOR_MS = 3000;
 
+let retornoParaServidorRemotoEmAndamento = false;
+
 // Tipo da mídia atual ("video" ou "imagem")
 let tipoAtual = null;
 
@@ -829,19 +831,93 @@ async function alternarParaAgenteLocalSePossivel(motivo = "Servidor principal in
 }
 
 /**
- * Verifica se o servidor principal ainda está acessível.
+ * Alterna o player de volta para a playlist remota quando
+ * o servidor principal fica disponível novamente.
  *
  * Importante:
- * - se o servidor responder, não faz nada;
- * - se o servidor cair, alterna para o agente local;
- * - não trata playlist vazia como queda de rede;
- * - não interrompe a mídia atual, apenas troca a origem para os próximos itens.
+ * - não interrompe imediatamente a mídia atual;
+ * - atualiza a playlist e a origem;
+ * - tenta manter o índice equivalente pelo nome do arquivo;
+ * - os próximos itens voltam a usar as URLs remotas.
  */
-async function verificarServidorPrincipalParaFallback() {
-  if (origemPlaylistAtual !== "remota") {
-    return;
+async function alternarParaServidorRemotoSePossivel(motivo = "Servidor principal voltou.") {
+  if (retornoParaServidorRemotoEmAndamento) {
+    return false;
   }
 
+  if (origemPlaylistAtual === "remota") {
+    return true;
+  }
+
+  retornoParaServidorRemotoEmAndamento = true;
+
+  try {
+    debugMensagem(`Tentando voltar para servidor remoto. Motivo: ${motivo}`);
+
+    const itemAtualAnterior = playlist[indiceAtual];
+    const playlistRemota = await buscarPlaylistRemota();
+
+    if (!playlistEhValida(playlistRemota)) {
+      throw new Error("Playlist remota vazia ou inválida.");
+    }
+
+    playlist = playlistRemota;
+    origemPlaylistAtual = "remota";
+    indiceAtual = encontrarIndiceMidiaEquivalente(playlistRemota, itemAtualAnterior);
+
+    preCarregarImagensDaPlaylist(playlist);
+
+    atualizarIndicadorConexao("online", "Servidor principal restabelecido.");
+    atualizarStatus("Servidor principal restabelecido.");
+
+    esconderFallbackOperacionalPlayer();
+
+    debugMensagem(
+      `Player voltou para servidor remoto. Índice atual: ${indiceAtual}. Total: ${playlist.length}.`
+    );
+
+    return true;
+  } catch (erro) {
+    console.warn("Não foi possível voltar para o servidor remoto:", erro);
+    debugMensagem(`Falha ao voltar para servidor remoto: ${erro.message || erro}`);
+
+    /*
+      Se o servidor voltou, mas a playlist está vazia por decisão administrativa,
+      não devemos continuar fingindo que está tudo normal.
+    */
+    if (erro && erro.codigo === "PLAYLIST_VAZIA") {
+      playlist = [];
+      origemPlaylistAtual = "remota";
+      indiceAtual = 0;
+
+      atualizarIndicadorConexao("erro", "Nenhuma mídia ativa.");
+
+      mostrarFallbackOperacionalPlayer({
+        icone: "fa-photo-film",
+        titulo: "Nenhuma mídia ativa",
+        mensagem: "O servidor principal voltou, mas a playlist não possui mídias ativas.",
+        dica: "Ative pelo menos uma mídia no painel administrativo e sincronize a playlist.",
+        estado: "aviso"
+      });
+    }
+
+    return false;
+  } finally {
+    retornoParaServidorRemotoEmAndamento = false;
+  }
+}
+
+/**
+ * Verifica se o servidor principal está acessível e alterna
+ * automaticamente entre servidor remoto e agente local.
+ *
+ * Regras:
+ * - se está usando remoto e o servidor cai, troca para agente local;
+ * - se está usando agente local e o servidor volta, troca para remoto;
+ * - se o servidor responde playlist vazia, isso não é queda de rede;
+ * - não interrompe a mídia atual à força, apenas muda a origem dos próximos itens.
+ */
+async function verificarServidorPrincipalParaFallback() {
   try {
     const resposta = await fetchComTimeout(
       `playlist.json?v=${Date.now()}`,
@@ -852,18 +928,59 @@ async function verificarServidorPrincipalParaFallback() {
     );
 
     /*
-      Se respondeu, mesmo com playlist vazia, o servidor está vivo.
-      Playlist vazia é decisão administrativa, não falha de rede.
+      Servidor respondeu.
+      Agora precisamos diferenciar:
+      - voltou de fato com playlist válida;
+      - voltou com playlist vazia;
+      - respondeu erro HTTP.
     */
     if (resposta.ok) {
+      /*
+        Se já estamos no remoto, não precisa fazer nada.
+        O player continua usando a origem principal.
+      */
+      if (origemPlaylistAtual === "remota") {
+        return;
+      }
+
+      /*
+        Se estávamos usando agente/localStorage e o servidor voltou,
+        tentamos voltar para a playlist remota oficial.
+      */
+      await alternarParaServidorRemotoSePossivel(
+        "Monitor detectou que o servidor principal voltou."
+      );
+
       return;
     }
 
     throw new Error(`Servidor respondeu HTTP ${resposta.status}`);
   } catch (erro) {
+    /*
+      Se já estamos no agente local, apenas permanecemos nele.
+      Não precisa ficar alternando nem exibindo erro repetido.
+    */
+    if (origemPlaylistAtual === "agente-local") {
+      debugMensagem(`Servidor principal ainda indisponível: ${erro.message || erro}`);
+      return;
+    }
+
+    /*
+      Se está usando localStorage, tentamos preferir agente local
+      quando o servidor remoto segue indisponível.
+    */
+    if (origemPlaylistAtual === "localStorage") {
+      await alternarParaAgenteLocalSePossivel(
+        "Servidor principal indisponível enquanto usava localStorage."
+      );
+      return;
+    }
+
     debugMensagem(`Servidor principal indisponível no monitor: ${erro.message || erro}`);
 
-    await alternarParaAgenteLocalSePossivel("Monitor detectou queda do servidor principal.");
+    await alternarParaAgenteLocalSePossivel(
+      "Monitor detectou queda do servidor principal."
+    );
   }
 }
 
