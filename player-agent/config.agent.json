@@ -4,5 +4,7 @@
     "syncIntervalSeconds": 30,
     "cacheFolder": "cache",
     "mediaCacheFolder": "cache/midia",
-    "logsFolder": "logs"
+    "logsFolder": "logs",
+    "removeOldMedia": true,
+    "oldMediaRetentionHours": 24
 }

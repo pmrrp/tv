@@ -102,6 +102,17 @@ function carregarConfigAgent() {
         config.logsFolder = "logs";
     }
 
+    if (config.removeOldMedia !== false) {
+        config.removeOldMedia = true;
+    }
+
+    if (
+        config.oldMediaRetentionHours === undefined ||
+        Number(config.oldMediaRetentionHours) < 0
+    ) {
+        config.oldMediaRetentionHours = 24;
+    }
+
     return config;
 }
 
@@ -302,6 +313,131 @@ async function sincronizarMidiasDaPlaylist(lista) {
 }
 
 /* =========================================================
+   LIMPEZA SEGURA DO CACHE LOCAL
+   ========================================================= */
+
+/**
+ * Retorna um Set com os nomes de arquivos que ainda fazem parte
+ * da playlist atual.
+ */
+function obterNomesMidiasAtuaisDaPlaylist(lista) {
+    const midias = obterMidiasDaPlaylist(lista);
+
+    return new Set(
+        midias.map((item) => obterNomeArquivoMidia(item.arquivo))
+    );
+}
+
+/**
+ * Lista arquivos físicos existentes no cache local de mídias.
+ */
+function listarArquivosCacheMidia() {
+    if (!fs.existsSync(mediaCacheFolder)) {
+        return [];
+    }
+
+    return fs.readdirSync(mediaCacheFolder)
+        .map((arquivo) => {
+            const caminho = path.join(mediaCacheFolder, arquivo);
+            const stats = fs.statSync(caminho);
+
+            return {
+                nome: arquivo,
+                caminho,
+                tamanhoBytes: stats.size,
+                modificadoEmMs: stats.mtimeMs,
+                modificadoEm: stats.mtime.toISOString(),
+                ehArquivo: stats.isFile()
+            };
+        })
+        .filter((item) => item.ehArquivo);
+}
+
+/**
+ * Verifica se um arquivo antigo já passou da margem segura
+ * para remoção.
+ */
+function arquivoPassouDaRetencao(item) {
+    const retencaoMs = Number(config.oldMediaRetentionHours) * 60 * 60 * 1000;
+
+    if (retencaoMs <= 0) {
+        return true;
+    }
+
+    const idadeMs = Date.now() - item.modificadoEmMs;
+
+    return idadeMs >= retencaoMs;
+}
+
+/**
+ * Remove do cache local mídias que não aparecem mais na playlist.
+ *
+ * Segurança:
+ * - só remove arquivos dentro de cache/midia;
+ * - só remove arquivos que não estão na playlist atual;
+ * - respeita margem de retenção configurada;
+ * - não remove pastas;
+ * - não mexe na playlist.json.
+ */
+function limparMidiasAntigasDoCache(lista) {
+    const resultado = {
+        ativo: config.removeOldMedia === true,
+        totalArquivosCache: 0,
+        totalMantidos: 0,
+        totalIgnoradosPorRetencao: 0,
+        totalRemovidos: 0,
+        removidos: []
+    };
+
+    if (!resultado.ativo) {
+        log("Limpeza de mídias antigas desativada por configuração.");
+        return resultado;
+    }
+
+    garantirPasta(mediaCacheFolder);
+
+    const nomesAtuais = obterNomesMidiasAtuaisDaPlaylist(lista);
+    const arquivosCache = listarArquivosCacheMidia();
+
+    resultado.totalArquivosCache = arquivosCache.length;
+
+    arquivosCache.forEach((item) => {
+        if (nomesAtuais.has(item.nome)) {
+            resultado.totalMantidos++;
+            return;
+        }
+
+        if (!arquivoPassouDaRetencao(item)) {
+            resultado.totalIgnoradosPorRetencao++;
+            log(`Mídia fora da playlist mantida por retenção: ${item.nome}`);
+            return;
+        }
+
+        try {
+            fs.unlinkSync(item.caminho);
+
+            resultado.totalRemovidos++;
+            resultado.removidos.push({
+                nome: item.nome,
+                tamanhoBytes: item.tamanhoBytes,
+                modificadoEm: item.modificadoEm
+            });
+
+            log(`Mídia antiga removida do cache: ${item.nome}`, "OK");
+        } catch (erro) {
+            log(`Falha ao remover mídia antiga ${item.nome}: ${erro.message || erro}`, "ERRO");
+        }
+    });
+
+    log(
+        `Limpeza do cache: ${resultado.totalMantidos} mantida(s), ${resultado.totalIgnoradosPorRetencao} em retenção, ${resultado.totalRemovidos} removida(s).`,
+        "OK"
+    );
+
+    return resultado;
+}
+
+/* =========================================================
    PLAYLIST
    ========================================================= */
 
@@ -369,7 +505,9 @@ async function sincronizarPlaylist() {
 
         await sincronizarMidiasDaPlaylist(playlist);
 
-        log("Sincronização da playlist e mídias concluída com sucesso.", "OK");
+        limparMidiasAntigasDoCache(playlist);
+
+        log("Sincronização da playlist, mídias e limpeza concluída com sucesso.", "OK");
     } catch (erro) {
         log(`Falha ao sincronizar playlist: ${erro.message || erro}`, "ERRO");
     }
@@ -390,6 +528,8 @@ async function iniciarAgent() {
     log(`Intervalo de sincronização: ${config.syncIntervalSeconds}s`);
     log(`Pasta de cache: ${cacheFolder}`);
     log(`Pasta de mídias em cache: ${mediaCacheFolder}`);
+    log(`Limpeza de mídias antigas: ${config.removeOldMedia ? "ativada" : "desativada"}`);
+    log(`Retenção de mídias antigas: ${config.oldMediaRetentionHours}h`);
     log(`Pasta de logs: ${logsFolder}`);
     log("==================================================");
 
