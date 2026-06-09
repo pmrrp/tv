@@ -2,30 +2,50 @@
 
 ## 1. Objetivo deste documento
 
-Este documento organiza o backlog das próximas etapas do Painel Ribas após o fechamento funcional da Fase 2.
+Este documento organiza o backlog atualizado do Painel Ribas após a consolidação da Fase 2 e o avanço significativo da Fase 3.
 
 Ele serve para:
 
-- registrar melhorias futuras;
-- separar prioridades técnicas, operacionais e comerciais;
-- orientar o desenvolvimento da Fase 3 e da Fase 4;
-- evitar perda de ideias levantadas durante testes reais;
-- apoiar a evolução do sistema para uso contínuo na Prefeitura;
-- preparar uma possível versão comercial/whitelabel no futuro.
+- registrar o que já foi concluído;
+- separar o que ainda falta para fechar a Fase 3;
+- evitar retrabalho e sensação de patinação;
+- remover da pressão imediata itens que são importantes, mas não bloqueiam a entrega;
+- orientar a evolução para uma versão comercial/whitelabel;
+- manter uma visão clara do caminho entre o sistema institucional atual e um produto vendável.
 
 ---
 
 ## 2. Estado atual do sistema
 
-O Painel Ribas encontra-se com a Fase 2 funcionalmente consolidada e com o primeiro bloco da Fase 3 já implementado em produção/VM.
+O Painel Ribas está com a Fase 2 funcionalmente consolidada e com grande parte da Fase 3 já implementada, testada, commitada e enviada para a branch principal de desenvolvimento.
 
 O sistema já possui:
 
 - player institucional funcional;
 - dashboard administrativa;
-- login e controle de sessão;
+- login;
+- controle de sessão;
+- logout automático por inatividade;
+- controle de sessões simultâneas por usuário;
+- revogação automática de sessão antiga ao realizar novo login;
+- painel de sessões ativas para superadmin;
+- revogação manual de sessões pelo superadmin;
+- recuperação de senha por e-mail;
+- tela de solicitação de recuperação de senha;
+- tela de redefinição de senha por token;
+- limpeza automática de tokens antigos;
+- auditoria visual das ações de recuperação de senha;
 - upload de imagens e vídeos;
 - upload em partes/chunks;
+- validação de extensão;
+- validação de MIME type;
+- validação básica de assinatura/magic bytes;
+- bloqueio de arquivos perigosos;
+- bloqueio de arquivos renomeados indevidamente;
+- mensagens de upload mais amigáveis;
+- cancelamento manual de upload em andamento;
+- remoção de chunks após cancelamento;
+- auditoria de uploads bloqueados e cancelados;
 - biblioteca de mídias;
 - filtros avançados;
 - agendamento por período;
@@ -41,65 +61,56 @@ O sistema já possui:
 - painel visual de backups;
 - diagnóstico operacional protegido;
 - painel visual de diagnóstico;
+- exportação do diagnóstico operacional em `.txt`;
 - controle de armazenamento;
+- limite operacional da pasta `midia/` via `.env`;
+- reserva mínima de disco livre via `.env`;
 - bloqueio preventivo de uploads por limite operacional;
 - limpeza automática de chunks antigos;
 - deploy em VM;
 - acesso via domínio;
 - player com visual premium;
 - modo quiosque com áudio em mini PC;
-- documentação técnica e executiva inicial.
+- documentação técnica, executiva e operacional inicial;
+- documentos de preparação/configuração dos pontos de TV.
 
 ---
 
 ## 3. Direção geral das próximas fases
 
-### Fase 3 — Robustez, operação real e manutenção
+### Fase 3 — Fechamento da robustez operacional
 
-A Fase 3 prioriza a estabilidade do sistema em uso real.
+A Fase 3 deve ser encerrada com foco em estabilidade, operação real e manutenção.
 
-O foco principal é garantir que o Painel Ribas funcione de forma previsível, fácil de manter, fácil de diagnosticar e seguro para operação contínua.
+Neste momento, a Fase 3 não deve crescer indefinidamente com novas ideias. O foco passa a ser finalizar apenas o que realmente fecha o ciclo operacional.
 
-Temas principais:
+Prioridades reais para fechamento:
 
-- implantação assistida;
-- operação em mini PCs;
-- diagnóstico de rede;
-- otimização de vídeos;
-- limpeza de arquivos temporários;
-- validação de espaço em disco;
-- backups;
-- logs;
-- segurança;
-- melhorias de upload;
-- responsividade;
-- usabilidade do operador;
-- documentação operacional.
-
----
+1. permitir download seguro de backups pelo admin;
+2. melhorar fallback básico do player para cenários sem playlist, sem mídia válida ou falha de mídia;
+3. implementar a cereja do bolo da Fase 3: Fallback Local do Player com agente local em Node.js nos PCs das TVs;
+4. tratar SMTP institucional como pendência externa documentada, sem travar o fechamento;
+5. revisar documentação essencial;
+6. validar em produção/VM;
+7. fechar a Fase 3.
 
 ### Fase 4 — Produto comercial / whitelabel
 
-A Fase 4 deve preparar o sistema para uma possível versão comercial ou personalizada para outros clientes.
+A Fase 4 deve preparar o sistema para uma possível versão comercial, personalizada e vendável para clientes externos.
 
-O foco principal é transformar o sistema em um produto vendável, personalizável e replicável.
+O foco principal será transformar a base atual em um produto:
 
-Temas principais:
-
-- identidade visual por cliente;
-- modo comercial sem identidade da Prefeitura;
-- configuração de marca;
-- templates de conteúdo;
-- planos comerciais;
-- suporte;
-- múltiplas telas;
-- status online/offline;
-- relatórios;
-- futura arquitetura multiempresa.
+- estável;
+- bonito;
+- personalizável;
+- fácil de instalar;
+- fácil de explicar;
+- fácil de manter;
+- vendável para pequenos negócios locais.
 
 ---
 
-# FASE 3 — OPERAÇÃO REAL, ROBUSTEZ E MANUTENÇÃO
+# FASE 3 — STATUS ATUALIZADO
 
 ## 4. Bloco de robustez operacional — concluído
 
@@ -125,25 +136,26 @@ Fortalecer a base operacional do sistema para uso contínuo em produção.
 - [x] Criar painel visual de Backups no admin.
 - [x] Criar rota protegida de diagnóstico operacional.
 - [x] Criar painel visual de Diagnóstico no admin.
+- [x] Exportar diagnóstico operacional em `.txt`.
 - [x] Validar deploy em produção/VM após merge.
 - [x] Gerar primeiro backup SQLite no ambiente real da VM.
 - [x] Revalidar diagnóstico operacional em produção.
 - [x] Adicionar dicas nativas/hover nos principais controles do painel administrativo.
 - [x] Padronizar estratégia de ajuda contextual, usando `title` nativo em microcontroles e ícone de ajuda apenas em seções principais.
 
-### Observação
+### Status
 
-Este bloco já foi implementado, testado localmente, integrado na branch `fix-admin-funcionalidades`, publicado na VM e validado em produção.
+Concluído.
 
 ---
 
-## 5. Implantação assistida dos pontos de exibição
+## 5. Implantação assistida dos pontos de exibição — concluída/documentada
 
 ### Objetivo
 
 Padronizar o processo de instalação e configuração dos computadores conectados às TVs.
 
-### Itens
+### Itens concluídos/documentados
 
 - [x] Documentar configuração inicial do mini PC.
 - [x] Documentar criação de conta local do Windows.
@@ -154,18 +166,22 @@ Padronizar o processo de instalação e configuração dos computadores conectad
 - [x] Documentar acesso remoto não supervisionado.
 - [x] Documentar configurações de energia.
 - [x] Documentar BIOS para ligar após queda de energia.
-- [ ] Criar checklist oficial de implantação por ponto.
-- [ ] Documentar teste de resolução e escala da TV.
-- [ ] Documentar teste de saída de áudio HDMI.
-- [ ] Criar ficha técnica por ponto instalado.
+- [x] Criar guia/checklist de preparação do PC da TV.
+- [x] Criar documento/guia de configuração do mini PC do Painel Ribas.
 
-### Prioridade
+### Itens que podem ser refinados depois, sem travar Fase 3
 
-Alta.
+- [ ] Criar ficha técnica individual por ponto instalado, se a Prefeitura desejar controle formal por local.
+- [ ] Documentar medições reais de resolução/escala por TV instalada, se necessário.
+- [ ] Documentar teste de saída de áudio HDMI por ponto instalado, se necessário.
+
+### Status
+
+Suficiente para fechamento da Fase 3.
 
 ---
 
-## 6. Diagnóstico de rede e travamentos
+## 6. Diagnóstico de rede e travamentos — documentação operacional
 
 ### Objetivo
 
@@ -173,34 +189,38 @@ Evitar que problemas de rede local sejam confundidos com falha do sistema.
 
 ### Contexto
 
-Durante testes reais, foi observado que a qualidade da internet influencia diretamente a fluidez do player, especialmente em vídeos maiores.
+Durante testes reais, foi observado que a qualidade da internet/rede local influencia diretamente a fluidez do player, especialmente em vídeos maiores.
 
-Em um teste real, o player rodou corretamente no 4G, enquanto a rede local apresentou travamentos até em serviços simples, indicando gargalo de conexão.
+Em teste real, o player rodou corretamente no 4G, enquanto a rede local apresentou travamentos até em serviços simples, indicando gargalo de conexão.
 
-### Itens
+### Itens essenciais para fechamento
 
-- [ ] Documentar recomendação de rede cabeada sempre que possível.
-- [ ] Criar checklist de diagnóstico de travamentos.
-- [ ] Orientar teste comparativo com 4G/5G.
-- [ ] Orientar teste de download de arquivo pesado.
-- [ ] Orientar verificação de estabilidade da rede local.
-- [ ] Documentar que vídeos grandes dependem de boa conexão.
-- [ ] Criar seção “Problemas comuns e possíveis causas” no manual.
-- [ ] Criar mensagem interna indicando possível instabilidade de rede.
+- [x] Registrar em documentação que a qualidade da rede influencia o player.
+- [x] Documentar recomendação de conexão estável, preferencialmente cabeada.
+- [x] Documentar que vídeos grandes dependem de boa conexão.
+- [ ] Revisar se essa orientação já aparece nos documentos operacionais finais.
+- [ ] Complementar o manual, se necessário, com seção curta de problemas comuns.
 
-### Prioridade
+### Itens futuros
 
-Alta.
+- [ ] Criar diagnóstico automático de rede no admin.
+- [ ] Criar alerta interno indicando possível instabilidade de rede.
+- [ ] Registrar falhas de rede no backend.
+- [ ] Criar teste automático de download/latência.
+
+### Status
+
+Não deve travar a Fase 3 se a recomendação operacional já estiver documentada.
 
 ---
 
-## 7. Otimização de vídeos
+## 7. Otimização de vídeos — orientação operacional
 
 ### Objetivo
 
 Reduzir travamentos causados por vídeos muito pesados ou exportados em formato inadequado.
 
-### Padrão recomendado inicial
+### Padrão recomendado
 
 - Formato: MP4.
 - Codec de vídeo: H.264.
@@ -209,87 +229,122 @@ Reduzir travamentos causados por vídeos muito pesados ou exportados em formato 
 - FPS recomendado: 30.
 - Tamanho ideal: manter vídeos o mais otimizados possível.
 
-### Itens
+### Itens essenciais para fechamento
 
-- [ ] Criar guia de exportação de vídeos.
-- [ ] Definir tamanho máximo recomendado por arquivo.
-- [ ] Alertar quando o vídeo for muito pesado.
-- [ ] Alertar quando o formato não for ideal.
+- [ ] Criar ou revisar guia curto de exportação de vídeos.
+- [ ] Documentar formato recomendado: MP4, H.264, AAC, 1080p, 30fps.
+- [ ] Definir recomendação prática de tamanho/peso por vídeo.
+- [ ] Documentar que vídeos grandes podem exigir rede melhor.
+
+### Itens futuros
+
+- [ ] Alertar automaticamente quando o vídeo for muito pesado.
+- [ ] Alertar automaticamente quando o formato não for ideal.
 - [ ] Avaliar compressão manual orientada.
 - [ ] Avaliar compressão automática futura.
-- [ ] Documentar boas práticas para vídeos institucionais.
 
-### Prioridade
+### Status
 
-Alta.
+Importante, mas preferencialmente tratado como documentação simples, não como nova grande funcionalidade.
 
 ---
 
-## 8. Melhorias no player
+## 8. Melhorias no player — pendente para fechamento da Fase 3
 
 ### Objetivo
 
 Tornar o player mais resiliente em uso contínuo.
 
-### Itens
+### Itens essenciais para fechar Fase 3
 
-- [ ] Melhorar fallback visual quando uma mídia falhar.
 - [ ] Exibir mensagem amigável quando não houver playlist.
 - [ ] Exibir mensagem amigável quando não houver mídia válida.
+- [ ] Melhorar fallback visual quando uma mídia falhar.
 - [ ] Melhorar tratamento de vídeo indisponível.
-- [ ] Criar tentativa automática de recarregar a playlist.
-- [ ] Criar reconexão automática em caso de falha temporária.
-- [ ] Criar modo “sem conexão” informativo.
-- [ ] Registrar falhas de reprodução no console/debug.
-- [ ] Avaliar registro de falhas no backend.
-- [ ] Avaliar cache local/offline.
+- [ ] Criar tentativa automática simples de recarregar a playlist.
+- [ ] Criar modo “sem conexão” informativo básico.
+
+### Itens futuros
+
+- [ ] Registrar falhas de reprodução no backend.
+- [ ] Criar reconexão avançada.
+- [ ] Criar painel de debug do player.
+- [ ] Criar status online/offline das telas.
 
 ### Prioridade
 
-Média/Alta.
+Alta para fechamento da Fase 3.
 
 ---
 
-## 9. Cache/offline do player
+## 9. Cache/offline do player — reclassificado
 
 ### Objetivo
 
-Permitir que o player continue exibindo o último conteúdo válido mesmo com instabilidade temporária de internet.
+Permitir que o player continue exibindo conteúdo em caso de instabilidade ou queda da rede.
 
-### Ideia inicial
+### Decisão atual
 
-O player poderia:
+O cache/offline básico por Service Worker e navegador foi avaliado, mas o caminho mais robusto e estratégico para a Fase 3 será o Fallback Local do Player com agente local em Node.js nos PCs das TVs.
 
-1. baixar a playlist;
-2. guardar a última playlist válida;
-3. tentar continuar exibindo mídias já carregadas;
-4. informar quando estiver usando conteúdo salvo;
-5. sincronizar novamente quando a conexão voltar.
+### Status
 
-### Itens
+Reclassificado para a cereja do bolo da Fase 3.
 
-- [ ] Estudar uso de Service Worker.
-- [ ] Avaliar cache de `playlist.json`.
-- [ ] Avaliar cache de imagens.
-- [ ] Avaliar cache de vídeos recentes.
-- [ ] Evitar cache infinito ocupando disco.
-- [ ] Criar política de limpeza de cache.
-- [ ] Criar mensagem “usando conteúdo salvo”.
-- [ ] Criar teste controlado de queda de conexão.
+---
+
+## 10. Cereja do bolo da Fase 3 — Fallback Local do Player com agente Node.js
+
+### Objetivo
+
+Criar uma camada local de sobrevivência para os players das TVs, permitindo que continuem exibindo conteúdo mesmo quando a rede local ou o acesso ao servidor principal ficar instável.
+
+### Conceito
+
+O servidor principal continua sendo a fonte oficial da playlist e das mídias.
+
+Nos PCs das TVs, um pequeno agente local em Node.js roda em segundo plano e mantém uma cópia local da playlist e das mídias necessárias.
+
+Quando o servidor principal estiver acessível, o player usa o fluxo normal.
+
+Quando houver falha de rede, o player pode usar o conteúdo local/cacheado.
+
+### Escopo inicial
+
+- [ ] Criar agente local Node.js para rodar no PC da TV.
+- [ ] Criar pasta local de cache do player.
+- [ ] Sincronizar `playlist.json` do servidor principal para o PC local.
+- [ ] Baixar mídias referenciadas pela playlist para o cache local.
+- [ ] Evitar baixar novamente arquivos já existentes e válidos.
+- [ ] Remover mídias antigas que não fazem mais parte da playlist.
+- [ ] Expor arquivos locais via `localhost`.
+- [ ] Permitir que o player use origem local quando o servidor principal falhar.
+- [ ] Criar logs locais simples do agente.
+- [ ] Criar configuração simples do endereço do servidor principal.
+- [ ] Documentar instalação do agente local no mini PC.
+- [ ] Documentar como iniciar o agente junto com o Windows.
+- [ ] Testar queda de rede controlada.
+- [ ] Testar retorno de rede e ressincronização.
+- [ ] Garantir que o agente local não substitui o servidor principal.
+
+### Fora do escopo inicial
+
+- [ ] Multiempresa.
+- [ ] Painel central de status das TVs.
+- [ ] Autoatualização do agente.
+- [ ] Métricas avançadas.
+- [ ] Sincronização bidirecional.
+- [ ] Controle remoto das TVs.
 
 ### Prioridade
 
-Média.
+Alta como fechamento premium da Fase 3.
 
 ---
 
-## 10. Limpeza de arquivos temporários
+## 11. Limpeza de arquivos temporários — concluída
 
-### Objetivo
-
-Evitar acúmulo de arquivos temporários, especialmente chunks de upload.
-
-### Itens
+### Itens concluídos
 
 - [x] Revisar funcionamento da pasta `data/upload-chunks/`.
 - [x] Criar rotina para limpar chunks antigos.
@@ -297,21 +352,21 @@ Evitar acúmulo de arquivos temporários, especialmente chunks de upload.
 - [x] Registrar limpeza em log/auditoria.
 - [x] Evitar remoção de arquivos ainda em upload.
 - [x] Documentar política de limpeza.
+- [x] Remover chunks temporários após cancelamento manual de upload.
+
+### Itens futuros
+
 - [ ] Criar função administrativa manual de limpeza segura, se necessário.
 
-### Prioridade
+### Status
 
-Alta.
+Concluído para Fase 3.
 
 ---
 
-## 11. Validação de espaço em disco
+## 12. Validação de espaço em disco — concluída
 
-### Objetivo
-
-Evitar falhas causadas por falta de espaço no servidor/VM.
-
-### Itens
+### Itens concluídos
 
 - [x] Exibir espaço total usado pela pasta `midia/`.
 - [x] Exibir tamanho total da biblioteca.
@@ -321,22 +376,25 @@ Evitar falhas causadas por falta de espaço no servidor/VM.
 - [x] Criar indicador visual na dashboard.
 - [x] Configurar limite operacional da pasta de mídias.
 - [x] Configurar reserva mínima de disco livre.
-- [ ] Refinar mensagens preventivas para o operador, se necessário.
+- [x] Refinar mensagens preventivas principais para o operador.
+
+### Itens futuros
+
 - [ ] Avaliar alerta visual persistente quando armazenamento estiver em aviso/crítico.
 
-### Prioridade
+### Status
 
-Alta.
+Concluído para Fase 3.
 
 ---
 
-## 12. Backups
+## 13. Backups — quase concluído
 
 ### Objetivo
 
 Aumentar a segurança operacional dos dados e configurações.
 
-### Itens
+### Itens concluídos
 
 - [x] Revisar rotina atual de backups.
 - [x] Garantir backup de `midia-config.json`.
@@ -347,7 +405,13 @@ Aumentar a segurança operacional dos dados e configurações.
 - [x] Definir política de retenção por tipo.
 - [x] Exibir backups JSON e SQLite no painel admin.
 - [x] Criar botão para backup manual do banco SQLite.
+
+### Item essencial para fechamento
+
 - [ ] Criar opção para baixar backup pela dashboard.
+
+### Itens futuros
+
 - [ ] Criar restauração manual controlada.
 - [ ] Registrar restauração de backup em log.
 - [ ] Criar filtros por tipo na listagem de backups.
@@ -358,13 +422,9 @@ Alta.
 
 ---
 
-## 13. Logs e auditoria
+## 14. Logs e auditoria — suficiente para Fase 3
 
-### Objetivo
-
-Melhorar a rastreabilidade das ações administrativas.
-
-### Itens
+### Itens concluídos
 
 - [x] Revisar eventos já registrados.
 - [x] Refinar visualização dos logs no admin.
@@ -375,6 +435,13 @@ Melhorar a rastreabilidade das ações administrativas.
 - [x] Registrar backup automático JSON.
 - [x] Registrar backup manual do banco SQLite.
 - [x] Registrar limpeza automática de chunks.
+- [x] Registrar uploads bloqueados por segurança.
+- [x] Registrar uploads cancelados pelo usuário.
+- [x] Registrar eventos de sessão.
+- [x] Registrar eventos de recuperação de senha.
+
+### Itens futuros
+
 - [ ] Registrar geração de playlist de forma mais explícita, se necessário.
 - [ ] Registrar alteração de período.
 - [ ] Registrar alteração de prioridade.
@@ -384,19 +451,15 @@ Melhorar a rastreabilidade das ações administrativas.
 - [ ] Criar exportação de logs.
 - [ ] Avaliar logs técnicos separados dos logs administrativos.
 
-### Prioridade
+### Status
 
-Média/Alta.
+Suficiente para fechamento da Fase 3.
 
 ---
 
-## 14. Diagnóstico operacional
+## 15. Diagnóstico operacional — concluído para Fase 3
 
-### Objetivo
-
-Permitir que o superadmin visualize rapidamente a saúde operacional do sistema.
-
-### Itens
+### Itens concluídos
 
 - [x] Criar rota protegida `/api/admin/diagnostico`.
 - [x] Verificar pastas principais.
@@ -408,21 +471,22 @@ Permitir que o superadmin visualize rapidamente a saúde operacional do sistema.
 - [x] Criar painel visual de Diagnóstico no admin.
 - [x] Exibir avisos detalhados.
 - [x] Validar diagnóstico na VM.
-- [ ] Criar modal detalhado para diagnóstico operacional completo.
+- [x] Exportar diagnóstico operacional em `.txt`.
+- [x] Manter função interna de cópia do diagnóstico, com botão ocultado/comentado para reduzir poluição visual.
+
+### Itens futuros
+
+- [ ] Criar modal detalhado para diagnóstico operacional completo, se necessário.
 - [ ] Melhorar responsividade mobile do card de diagnóstico.
-- [ ] Avaliar exportação ou cópia rápida do diagnóstico para suporte.
+- [ ] Criar indicadores adicionais de ambiente/versão, se necessário.
 
-### Prioridade
+### Status
 
-Alta.
+Concluído para Fase 3.
 
 ---
 
-## 15. Segurança
-
-### Objetivo
-
-Reforçar proteções básicas antes de ampliar o uso do sistema, garantindo controle de acesso, rastreabilidade, recuperação segura de conta e proteção contra arquivos indevidos.
+## 16. Segurança — quase concluída
 
 ### Itens concluídos
 
@@ -458,38 +522,34 @@ Reforçar proteções básicas antes de ampliar o uso do sistema, garantindo con
 - [x] Bloquear arquivos renomeados indevidamente, como script/texto fingindo ser imagem ou vídeo.
 - [x] Auditar uploads bloqueados por tipo inválido, MIME incompatível ou assinatura inválida.
 
-### Itens pendentes
+### Pendência externa
 
 - [ ] Configurar SMTP institucional definitivo com conta exclusiva do Painel TV.
 - [ ] Validar envio real com `painel-tv@ribasdoriopardo.ms.gov.br`.
-- [ ] Revisar proteções de rotas administrativas restantes.
-- [ ] Avaliar confirmação de e-mail de usuário antes de liberar login.
-- [ ] Avaliar política futura de múltiplas sessões permitidas por usuário, se necessário.
+
+### Observação
+
+A pendência de SMTP institucional depende de configuração/validação externa do ambiente de e-mail institucional e não deve travar o fechamento técnico da Fase 3.
 
 ### Itens futuros / não prioritários agora
 
+- [ ] Revisar proteções de rotas administrativas restantes, se necessário.
+- [ ] Avaliar confirmação de e-mail de usuário antes de liberar login.
+- [ ] Avaliar política futura de múltiplas sessões permitidas por usuário.
 - [ ] Criar fluxo de confirmação de e-mail para novos usuários.
 - [ ] Permitir reenvio de confirmação de e-mail pelo superadmin.
 - [ ] Exibir badge de e-mail verificado/pendente na lista de usuários.
 - [ ] Exigir confirmação de e-mail antes de liberar login, se a regra for adotada futuramente.
 
-### Prioridade atual
+### Status
 
-Alta.
-
-### Próximo foco recomendado
-
-O próximo foco de código deve ser a validação de MIME type e bloqueio de arquivos potencialmente perigosos no upload, antes de avançar para melhorias visuais ou refatorações maiores.
+Concluído para Fase 3, com pendência externa de SMTP institucional.
 
 ---
 
-## 16. Melhorias no upload
+## 17. Melhorias no upload — concluídas para Fase 3
 
-### Objetivo
-
-Reduzir erro do usuário e melhorar feedback durante envio de arquivos.
-
-### Itens
+### Itens concluídos
 
 - [x] Upload em partes/chunks.
 - [x] Progresso básico do upload.
@@ -501,28 +561,27 @@ Reduzir erro do usuário e melhorar feedback durante envio de arquivos.
 - [x] Remover chunks temporários após cancelamento manual.
 - [x] Auditar uploads cancelados pelo usuário.
 - [x] Mostrar progresso mais detalhado.
+- [x] Tratar cancelamento manual de upload.
+- [x] Melhorar mensagem de erro em upload falho.
+
+### Itens futuros
+
 - [ ] Mostrar tamanho enviado e tamanho total.
 - [ ] Mostrar velocidade estimada de upload.
-- [ ] Tratar cancelamento manual de upload.
 - [ ] Alertar sobre formato não recomendado.
 - [ ] Alertar sobre arquivo muito pesado.
-- [ ] Melhorar mensagem de erro em upload falho.
 - [ ] Avaliar drag and drop em tela inteira.
 - [ ] Permitir soltar arquivos em qualquer ponto da tela quando upload estiver ativo.
 
-### Prioridade
+### Status
 
-Média.
+Concluído para Fase 3.
 
 ---
 
-## 17. Melhorias de usabilidade e experiência do operador
+## 18. Melhorias de usabilidade e experiência do operador — concluídas para Fase 3
 
-### Objetivo
-
-Reduzir dúvidas do usuário e tornar o painel mais autoexplicativo.
-
-### Itens
+### Itens concluídos
 
 - [x] Criar sistema de tooltips/ajuda contextual no admin.
 - [x] Adicionar textos explicativos para prioridade.
@@ -534,48 +593,56 @@ Reduzir dúvidas do usuário e tornar o painel mais autoexplicativo.
 - [x] Adicionar textos explicativos para backups.
 - [x] Adicionar textos explicativos para diagnóstico.
 - [x] Implementar primeira proteção contra cache antigo nos assets do admin usando headers anti-cache para HTML/CSS/JS.
+
+### Itens futuros
+
 - [ ] Avaliar futuramente versionamento por `APP_VERSION` ou hash de commit para cache busting mais controlado.
 - [ ] Evoluir futuramente os ícones de ajuda das seções para abrir modais explicativos ou vídeos tutoriais.
 - [ ] Criar textos tutoriais mais completos por seção do painel.
 - [ ] Avaliar criação de uma central de ajuda interna no admin.
 
-### Prioridade
+### Status
 
-Média/Alta.
+Concluído para Fase 3.
 
 ---
 
-## 18. Melhorias na geração da playlist
+## 19. Melhorias na geração da playlist — concluídas para Fase 3
 
-### Objetivo
-
-Tornar a distribuição das mídias mais agradável e evitar repetições visualmente incômodas.
-
-### Itens
+### Itens concluídos
 
 - [x] Melhorar algoritmo de recorrência da playlist para evitar que uma mídia repetida apareça muito próxima da sua posição original.
 - [x] Criar regra de distância mínima entre aparições da mesma mídia.
 - [x] Evitar repetições coladas no início/fim do ciclo da playlist.
 - [x] Considerar o loop da playlist na contagem de recorrência.
 - [x] Testar cenários com poucas mídias e mídias configuradas como alta/urgente.
+
+### Itens futuros
+
 - [ ] Avaliar interface para explicar melhor como a recorrência funciona.
 - [ ] Avaliar prévia da playlist gerada no admin.
 - [ ] Avaliar alerta quando muitas mídias tiverem recorrência ativa.
 - [ ] Avaliar pesos mais inteligentes para alta/urgente no futuro.
 
-### Prioridade
+### Status
 
-Alta.
+Concluído para Fase 3.
 
 ---
 
-## 19. Responsividade e experiência mobile
+## 20. Responsividade e experiência mobile — reclassificado
 
 ### Objetivo
 
 Melhorar a experiência da dashboard em telas menores.
 
-### Itens
+### Decisão
+
+A responsividade completa do admin em mobile não deve travar o fechamento da Fase 3.
+
+O uso principal do painel administrativo será em desktop/notebook. Melhorias mobile podem continuar no backlog futuro.
+
+### Itens futuros
 
 - [ ] Refinar modal de detalhes no mobile.
 - [ ] Refinar modal de período no mobile.
@@ -587,19 +654,23 @@ Melhorar a experiência da dashboard em telas menores.
 - [ ] Avaliar experiência em tablet.
 - [ ] Avaliar experiência em notebook pequeno.
 
-### Prioridade
+### Status
 
-Média.
+Não bloqueia Fase 3.
 
 ---
 
-## 20. Font Awesome local
+## 21. Font Awesome local — reclassificado
 
 ### Objetivo
 
 Remover dependência externa de CDN para os ícones.
 
-### Itens
+### Decisão
+
+É uma melhoria válida, mas não deve travar o fechamento da Fase 3.
+
+### Itens futuros
 
 - [ ] Baixar Font Awesome localmente.
 - [ ] Criar pasta `assets/vendor/fontawesome/`.
@@ -610,19 +681,23 @@ Remover dependência externa de CDN para os ícones.
 - [ ] Remover dependência externa do CDN.
 - [ ] Documentar decisão técnica.
 
-### Prioridade
+### Status
 
-Média.
+Futuro.
 
 ---
 
-## 21. Detalhes da mídia
+## 22. Detalhes da mídia — reclassificado
 
 ### Objetivo
 
 Melhorar clareza do modal de detalhes.
 
-### Itens
+### Decisão
+
+É melhoria útil, mas não bloqueia a Fase 3.
+
+### Itens futuros
 
 - [ ] Revisar exibição de período.
 - [ ] Evitar redundância entre datas agrupadas e separadas.
@@ -633,19 +708,25 @@ Melhorar clareza do modal de detalhes.
 - [ ] Exibir data de cadastro, se disponível.
 - [ ] Exibir última alteração, se disponível.
 
-### Prioridade
+### Status
 
-Baixa/Média.
+Futuro.
 
 ---
 
-## 22. Organização técnica do código
+## 23. Organização técnica do código — reclassificado
 
 ### Objetivo
 
 Preparar o sistema para manutenção de longo prazo.
 
-### CSS
+### Decisão
+
+Refatorações grandes não devem ser feitas no fechamento da Fase 3, pois aumentam risco de regressão.
+
+### Itens futuros
+
+#### CSS
 
 - [ ] Refatorar `admin.css`.
 - [ ] Agrupar estilos por componente.
@@ -657,7 +738,7 @@ Preparar o sistema para manutenção de longo prazo.
 - [ ] Padronizar modais.
 - [ ] Separar estilos por área, se necessário.
 
-### JavaScript do admin
+#### JavaScript do admin
 
 - [ ] Modularizar `admin.js`.
 - [ ] Separar lógica de mídias.
@@ -670,7 +751,7 @@ Preparar o sistema para manutenção de longo prazo.
 - [ ] Separar lógica de modais.
 - [ ] Separar helpers/utilitários.
 
-### Backend
+#### Backend
 
 - [ ] Avaliar separação do `server.js`.
 - [ ] Criar pasta `routes/`.
@@ -684,15 +765,79 @@ Preparar o sistema para manutenção de longo prazo.
 - [ ] Separar lógica de backups.
 - [ ] Separar lógica de diagnóstico.
 
-### Prioridade
+### Status
 
-Média.
+Futuro.
+
+---
+
+# FASE 3 — PLANO FINAL DE FECHAMENTO
+
+## 24. Pendências reais para fechar a Fase 3
+
+### 1. Download seguro de backups pelo admin
+
+- [ ] Criar rota protegida para download de backup.
+- [ ] Permitir download apenas para superadmin.
+- [ ] Impedir path traversal.
+- [ ] Permitir download apenas de arquivos dentro da pasta `backups/`.
+- [ ] Criar botão “Baixar” nos cards de backup.
+- [ ] Auditar download de backup, se necessário.
+- [ ] Testar download de backup JSON.
+- [ ] Testar download de backup SQLite.
+
+### 2. Fallback básico do player
+
+- [ ] Mensagem amigável quando não houver playlist.
+- [ ] Mensagem amigável quando não houver mídia válida.
+- [ ] Fallback visual quando uma mídia falhar.
+- [ ] Tratamento básico de vídeo indisponível.
+- [ ] Tentativa automática simples de recarregar playlist.
+- [ ] Mensagem básica de modo sem conexão.
+
+### 3. Fallback Local do Player com agente Node.js
+
+- [ ] Criar agente local Node.js.
+- [ ] Criar pasta local de cache.
+- [ ] Sincronizar playlist.
+- [ ] Baixar mídias da playlist.
+- [ ] Servir cache via `localhost`.
+- [ ] Permitir fallback local quando servidor principal falhar.
+- [ ] Criar logs locais simples.
+- [ ] Documentar instalação no mini PC.
+- [ ] Testar queda de rede.
+- [ ] Testar retorno de rede.
+
+### 4. Revisão final de documentação
+
+- [ ] Atualizar `CHANGELOG.md`.
+- [ ] Atualizar `GUIA_TESTES.md`.
+- [ ] Atualizar documentação operacional da Fase 3.
+- [ ] Registrar SMTP institucional como pendência externa, se ainda não resolvido.
+- [ ] Registrar decisões técnicas finais da Fase 3.
+
+### 5. Deploy e validação final
+
+- [ ] Fazer deploy na VM/produção.
+- [ ] Validar login.
+- [ ] Validar upload.
+- [ ] Validar biblioteca.
+- [ ] Validar playlist.
+- [ ] Validar player.
+- [ ] Validar backups.
+- [ ] Validar diagnóstico.
+- [ ] Validar auditoria.
+- [ ] Validar mini PC/TV.
+- [ ] Confirmar ausência de erro vermelho no console.
+- [ ] Confirmar ausência de erro no terminal/PM2.
+- [ ] Commit e push finais.
+- [ ] Marcar Fase 3 como concluída.
 
 ---
 
 # FASE 4 — VERSÃO COMERCIAL / WHITELABEL
 
-## 23. Separar versão institucional da versão comercial
+## 25. Separar versão institucional da versão comercial
 
 ### Objetivo
 
@@ -713,7 +858,7 @@ Alta para versão comercial.
 
 ---
 
-## 24. Whitelabel básico
+## 26. Whitelabel básico
 
 ### Objetivo
 
@@ -737,7 +882,7 @@ Altíssima para venda.
 
 ---
 
-## 25. Tela de configuração da marca
+## 27. Tela de configuração da marca
 
 ### Objetivo
 
@@ -762,7 +907,7 @@ Alta.
 
 ---
 
-## 26. Modelos de player
+## 28. Modelos de player
 
 ### Objetivo
 
@@ -784,7 +929,7 @@ Média.
 
 ---
 
-## 27. Templates de conteúdo
+## 29. Templates de conteúdo
 
 ### Objetivo
 
@@ -809,7 +954,7 @@ Média/Alta para versão comercial.
 
 ---
 
-## 28. Pacote de conteúdo opcional
+## 30. Pacote de conteúdo opcional
 
 ### Objetivo
 
@@ -831,36 +976,7 @@ Alta para precificação.
 
 ---
 
-## 29. Multi-cliente / multiempresa
-
-### Objetivo
-
-Permitir atender múltiplos clientes com organização e segurança.
-
-### Possíveis modelos
-
-- Uma instalação separada por cliente.
-- Uma instalação central com separação por cliente.
-- Subdomínio por cliente.
-
-### Itens
-
-- [ ] Definir modelo inicial.
-- [ ] Criar estrutura de cliente.
-- [ ] Separar usuários por cliente.
-- [ ] Separar mídias por cliente.
-- [ ] Separar playlists por cliente.
-- [ ] Separar configurações por cliente.
-- [ ] Criar permissões por cliente.
-- [ ] Avaliar domínio/subdomínio por cliente.
-
-### Prioridade
-
-Baixa no começo, alta para escala.
-
----
-
-## 30. Status das telas
+## 31. Status das telas
 
 ### Objetivo
 
@@ -883,7 +999,7 @@ Alta para produto comercial maduro.
 
 ---
 
-## 31. Playlists por unidade ou tela
+## 32. Playlists por unidade ou tela
 
 ### Objetivo
 
@@ -906,7 +1022,7 @@ Média/Alta.
 
 ---
 
-## 32. Modo comunicado urgente
+## 33. Modo comunicado urgente
 
 ### Objetivo
 
@@ -927,7 +1043,7 @@ Média.
 
 ---
 
-## 33. Relatórios
+## 34. Relatórios
 
 ### Objetivo
 
@@ -950,7 +1066,7 @@ Média.
 
 ---
 
-## 34. Manual do cliente
+## 35. Manual do cliente
 
 ### Objetivo
 
@@ -978,7 +1094,7 @@ Alta.
 
 ---
 
-## 35. Proposta comercial
+## 36. Proposta comercial
 
 ### Objetivo
 
@@ -1004,109 +1120,52 @@ Alta antes da venda.
 
 ---
 
-# 36. Priorização geral
+# 37. Sprints finais sugeridas
 
-## Fazer primeiro
+## Sprint final 3.1 — Backups operacionais
 
-- [x] Limpeza de chunks.
-- [x] Validação de espaço em disco.
-- [x] Backup melhorado.
-- [x] Logs complementares.
-- [x] Diagnóstico operacional.
-- [x] Painel de backups.
-- [x] Painel de diagnóstico.
-- [x] Melhoria da recorrência da playlist.
-- [ ] Checklist final de implantação por ponto.
-- [ ] Diagnóstico de rede/travamentos documentado.
-- [x] Tooltips/ajuda contextual.
-- [ ] Manual de operação.
-- [ ] Segurança de upload complementar.
-- [ ] Whitelabel básico.
-- [ ] Configuração de marca.
+- [ ] Criar download seguro de backups pelo admin.
+- [ ] Testar backup JSON.
+- [ ] Testar backup SQLite.
+- [ ] Auditar download, se necessário.
+- [ ] Atualizar documentação.
 
 ---
 
-## Fazer depois
+## Sprint final 3.2 — Player resiliente
 
-- [ ] Cache/offline avançado.
-- [ ] Status online/offline das telas.
-- [ ] Playlists por tela/unidade.
-- [ ] Relatórios.
-- [ ] Multiempresa.
-- [ ] Templates de conteúdo.
-
----
-
-## Ideias futuras
-
-- [ ] Upload direto pelo celular.
-- [ ] QR Code para redes sociais.
-- [ ] Integração com Instagram.
-- [ ] Templates automáticos de promoção.
-- [ ] Agendamento por calendário visual.
-- [ ] Alertas automáticos por e-mail/WhatsApp.
-- [ ] Dashboard comercial com métricas.
-- [ ] Tema claro/escuro no admin.
-- [ ] Assistente de configuração inicial.
+- [ ] Fallback visual quando não houver playlist.
+- [ ] Fallback visual quando não houver mídia válida.
+- [ ] Tratamento de mídia indisponível.
+- [ ] Tentativa simples de recarregar playlist.
+- [ ] Mensagem de conexão instável/offline.
 
 ---
 
-# 37. Sprints sugeridas
+## Sprint final 3.3 — Cereja do bolo: agente local
 
-## Sprint 1 — Operação e robustez
-
-Status: concluída em grande parte.
-
-- [x] Limpeza de chunks.
-- [x] Validação de espaço em disco.
-- [x] Backup melhorado.
-- [x] Logs complementares.
-- [x] Diagnóstico operacional.
-- [x] Painel de backups.
-- [x] Painel de diagnóstico.
-- [x] Recorrência inteligente da playlist.
-- [ ] Diagnóstico de rede documentado.
-- [ ] Checklist final de implantação por ponto.
+- [ ] Criar agente local Node.js.
+- [ ] Sincronizar playlist.
+- [ ] Sincronizar mídias.
+- [ ] Servir arquivos locais via `localhost`.
+- [ ] Integrar fallback local ao player.
+- [ ] Documentar instalação.
+- [ ] Testar queda e retorno de rede.
 
 ---
 
-## Sprint 2 — Usabilidade e operação assistida
+## Sprint final 3.4 — Fechamento da Fase 3
 
-- [x] Criar sistema de tooltips/ajuda contextual.
-- [x] Melhorar textos explicativos da recorrência.
-- [x] Melhorar orientações de armazenamento.
-- [x] Melhorar orientações de backups e diagnóstico.
-- [x] Adicionar headers anti-cache nos arquivos leves do frontend administrativo para reduzir problemas de CSS/JS antigo após deploy.
-- [ ] Revisar manual administrativo.
-- [ ] Revisar manual de operação dos pontos instalados.
-
----
-
-## Sprint 3 — Segurança e manutenção
-
-- [x] Implementar logout automático por inatividade.
-- [x] Implementar controle de sessões simultâneas por usuário.
-- [x] Criar painel de sessões ativas para superadmin.
-- [x] Permitir revogação manual de sessões administrativas.
-- [x] Detectar sessão revogada automaticamente no admin.
-- [x] Implementar recuperação de senha por e-mail.
-- [x] Criar tela de redefinição de senha por token.
-- [x] Validar token de recuperação antes de liberar formulário.
-- [x] Criar limpeza automática de tokens antigos de recuperação.
-- [x] Criar rota administrativa de teste SMTP.
-- [x] Testar SMTP em ambiente local com Gmail.
-- [x] Revisar upload.
-- [x] Validar extensão e MIME type.
-- [x] Bloquear arquivos potencialmente perigosos.
-- [x] Melhorar mensagens de erro.
-- [x] Permitir cancelamento de upload em andamento.
-- [ ] Configurar SMTP institucional definitivo.
-- [ ] Limitar tamanho máximo, se necessário.
-- [ ] Font Awesome local.
+- [ ] Atualizar documentação final.
+- [ ] Validar local.
+- [ ] Deploy na VM.
+- [ ] Validar produção.
+- [ ] Registrar pendência externa do SMTP institucional, se necessário.
+- [ ] Marcar Fase 3 como concluída.
 
 ---
 
-## Sprint 4 — Whitelabel básico
+## Sprint 4.1 — Whitelabel básico
 
 - [ ] Configurar nome do cliente.
 - [ ] Configurar logo.
@@ -1117,7 +1176,7 @@ Status: concluída em grande parte.
 
 ---
 
-## Sprint 5 — Documentação e venda
+## Sprint 4.2 — Venda inicial
 
 - [ ] Manual do cliente.
 - [ ] Guia de implantação comercial.
@@ -1127,31 +1186,55 @@ Status: concluída em grande parte.
 
 ---
 
-## Sprint 6 — Escala
+# 38. Itens removidos da pressão da Fase 3
 
-- [ ] Status das telas.
-- [ ] Playlists por tela.
-- [ ] Cache/offline.
-- [ ] Multiempresa.
-- [ ] Relatórios.
+Estes itens continuam válidos, mas não devem impedir o fechamento da Fase 3:
+
+- restauração manual de backup;
+- filtros avançados na listagem de backups;
+- exportação de logs;
+- modal detalhado de diagnóstico;
+- central de ajuda interna;
+- preview da playlist gerada;
+- Font Awesome local;
+- refatoração grande de `admin.css`;
+- modularização grande de `admin.js`;
+- separação completa do `server.js`;
+- melhorias completas de mobile;
+- detalhes avançados da mídia;
+- cache/offline avançado por Service Worker;
+- status online/offline das telas;
+- multiempresa;
+- relatórios avançados;
+- templates de conteúdo.
 
 ---
 
-# 38. Observações estratégicas
+# 39. Regra de fechamento da Fase 3
+
+A Fase 3 deve ser considerada concluída quando:
+
+- [ ] download de backups estiver disponível ou formalmente reclassificado;
+- [ ] player tiver fallback básico para ausência/falha de conteúdo;
+- [ ] agente local/fallback local estiver implementado ou formalmente separado como versão 3.5;
+- [ ] documentação essencial estiver atualizada;
+- [ ] deploy final estiver validado;
+- [ ] operação em TV/mini PC estiver validada;
+- [ ] pendências externas, como SMTP institucional, estiverem documentadas;
+- [ ] não houver erro vermelho no console nos fluxos principais;
+- [ ] não houver erro crítico no terminal/PM2;
+- [ ] `git status` estiver limpo;
+- [ ] commits e push finais tiverem sido realizados.
+
+---
+
+# 40. Observações estratégicas
 
 A evolução comercial do sistema deve ocorrer sem comprometer a versão institucional da Prefeitura.
 
 A versão atual do Painel Ribas deve continuar como base estável e documentada.
 
-A versão comercial deve nascer somente após:
-
-- estabilização operacional;
-- definição de escopo;
-- definição de responsabilidade sobre hardware;
-- definição de suporte mensal;
-- definição de criação de conteúdo;
-- definição de limites técnicos;
-- definição de política de implantação.
+A versão comercial deve nascer após o fechamento da Fase 3 ou após uma versão 3.5 focada no agente local.
 
 A meta não é transformar o sistema imediatamente em uma plataforma SaaS complexa.
 
@@ -1167,7 +1250,7 @@ A meta inicial deve ser criar um produto:
 
 ---
 
-# 39. Regra de ouro
+# 41. Regra de ouro
 
 Antes de transformar uma ideia em desenvolvimento, classificar:
 
@@ -1177,4 +1260,4 @@ Antes de transformar uma ideia em desenvolvimento, classificar:
 4. É apenas melhoria visual?
 5. É ideia futura?
 
-Essa classificação deve orientar a prioridade real do backlog.
+A partir deste ponto, qualquer item que não ajude a fechar a Fase 3 ou preparar diretamente a versão comercial deve ser mantido no backlog futuro, sem travar a entrega.
