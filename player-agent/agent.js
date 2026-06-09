@@ -94,6 +94,10 @@ function carregarConfigAgent() {
         config.cacheFolder = "cache";
     }
 
+    if (!config.mediaCacheFolder) {
+        config.mediaCacheFolder = path.join(config.cacheFolder, "midia");
+    }
+
     if (!config.logsFolder) {
         config.logsFolder = "logs";
     }
@@ -104,6 +108,7 @@ function carregarConfigAgent() {
 const config = carregarConfigAgent();
 
 const cacheFolder = path.join(agentRoot, config.cacheFolder);
+const mediaCacheFolder = path.join(agentRoot, config.mediaCacheFolder);
 const logsFolder = path.join(agentRoot, config.logsFolder);
 
 const playlistCacheFile = path.join(cacheFolder, "playlist.json");
@@ -142,6 +147,158 @@ function montarUrlAbsoluta(baseUrl, caminho) {
  */
 function obterUrlPlaylistRemota() {
     return montarUrlAbsoluta(config.serverBaseUrl, config.playlistPath);
+}
+
+/* =========================================================
+   MÍDIAS / CACHE LOCAL
+   ========================================================= */
+
+/**
+ * Extrai nome seguro do arquivo a partir da URL/caminho da mídia.
+ */
+function obterNomeArquivoMidia(caminhoMidia) {
+    const url = new URL(caminhoMidia, config.serverBaseUrl);
+    const nome = path.basename(decodeURIComponent(url.pathname));
+
+    if (!nome || nome === "." || nome === "/" || nome.includes("..")) {
+        throw new Error(`Nome de mídia inválido: ${caminhoMidia}`);
+    }
+
+    return nome;
+}
+
+/**
+ * Monta caminho local da mídia dentro do cache.
+ */
+function obterCaminhoLocalMidia(caminhoMidia) {
+    const nomeArquivo = obterNomeArquivoMidia(caminhoMidia);
+    return path.join(mediaCacheFolder, nomeArquivo);
+}
+
+/**
+ * Monta URL remota absoluta da mídia.
+ */
+function obterUrlRemotaMidia(caminhoMidia) {
+    return montarUrlAbsoluta(config.serverBaseUrl, caminhoMidia);
+}
+
+/**
+ * Retorna somente itens de mídia válidos da playlist.
+ */
+function obterMidiasDaPlaylist(lista) {
+    if (!Array.isArray(lista)) return [];
+
+    return lista.filter((item) => {
+        return item &&
+            typeof item === "object" &&
+            item.arquivo &&
+            (item.tipo === "imagem" || item.tipo === "video");
+    });
+}
+
+/**
+ * Baixa uma mídia remota para o cache local.
+ */
+async function baixarMidiaParaCache(item) {
+    const caminhoMidia = item.arquivo;
+    const nomeArquivo = obterNomeArquivoMidia(caminhoMidia);
+    const caminhoLocal = obterCaminhoLocalMidia(caminhoMidia);
+    const urlRemota = obterUrlRemotaMidia(caminhoMidia);
+
+    garantirPasta(mediaCacheFolder);
+
+    if (fs.existsSync(caminhoLocal)) {
+        const stats = fs.statSync(caminhoLocal);
+
+        if (stats.size > 0) {
+            log(`Mídia já existe no cache: ${nomeArquivo} (${stats.size} bytes)`);
+            return {
+                nome: nomeArquivo,
+                status: "ja_existe",
+                caminhoLocal,
+                tamanhoBytes: stats.size
+            };
+        }
+    }
+
+    log(`Baixando mídia: ${nomeArquivo}`);
+    log(`Origem: ${urlRemota}`);
+
+    const resposta = await fetch(urlRemota, {
+        cache: "no-store"
+    });
+
+    if (!resposta.ok) {
+        throw new Error(`Erro HTTP ${resposta.status} ao baixar ${nomeArquivo}`);
+    }
+
+    const arrayBuffer = await resposta.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    if (!buffer.length) {
+        throw new Error(`Arquivo baixado vazio: ${nomeArquivo}`);
+    }
+
+    fs.writeFileSync(caminhoLocal, buffer);
+
+    log(`Mídia salva no cache: ${nomeArquivo} (${buffer.length} bytes)`, "OK");
+
+    return {
+        nome: nomeArquivo,
+        status: "baixado",
+        caminhoLocal,
+        tamanhoBytes: buffer.length
+    };
+}
+
+/**
+ * Sincroniza mídias referenciadas pela playlist.
+ */
+async function sincronizarMidiasDaPlaylist(lista) {
+    const midias = obterMidiasDaPlaylist(lista);
+
+    if (!midias.length) {
+        log("Nenhuma mídia encontrada na playlist para sincronizar.");
+        return {
+            total: 0,
+            baixadas: 0,
+            existentes: 0,
+            falhas: 0
+        };
+    }
+
+    log(`Sincronizando ${midias.length} mídia(s) da playlist...`);
+
+    let baixadas = 0;
+    let existentes = 0;
+    let falhas = 0;
+
+    for (const item of midias) {
+        try {
+            const resultado = await baixarMidiaParaCache(item);
+
+            if (resultado.status === "baixado") {
+                baixadas++;
+            } else if (resultado.status === "ja_existe") {
+                existentes++;
+            }
+        } catch (erro) {
+            falhas++;
+            log(`Falha ao sincronizar mídia ${item.arquivo}: ${erro.message || erro}`, "ERRO");
+        }
+    }
+
+    log(
+        `Resumo de mídias: ${baixadas} baixada(s), ${existentes} já existente(s), ${falhas} falha(s).`,
+        falhas > 0 ? "AVISO" : "OK"
+    );
+
+    return {
+        total: midias.length,
+        baixadas,
+        existentes,
+        falhas
+    };
 }
 
 /* =========================================================
@@ -210,7 +367,9 @@ async function sincronizarPlaylist() {
 
         salvarPlaylistNoCache(playlist);
 
-        log("Sincronização da playlist concluída com sucesso.", "OK");
+        await sincronizarMidiasDaPlaylist(playlist);
+
+        log("Sincronização da playlist e mídias concluída com sucesso.", "OK");
     } catch (erro) {
         log(`Falha ao sincronizar playlist: ${erro.message || erro}`, "ERRO");
     }
@@ -222,6 +381,7 @@ async function sincronizarPlaylist() {
 
 async function iniciarAgent() {
     garantirPasta(cacheFolder);
+    garantirPasta(mediaCacheFolder);
     garantirPasta(logsFolder);
 
     log("==================================================");
@@ -229,6 +389,7 @@ async function iniciarAgent() {
     log(`Servidor principal: ${config.serverBaseUrl}`);
     log(`Intervalo de sincronização: ${config.syncIntervalSeconds}s`);
     log(`Pasta de cache: ${cacheFolder}`);
+    log(`Pasta de mídias em cache: ${mediaCacheFolder}`);
     log(`Pasta de logs: ${logsFolder}`);
     log("==================================================");
 

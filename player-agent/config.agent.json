@@ -3,5 +3,6 @@
     "playlistPath": "/playlist.json",
     "syncIntervalSeconds": 30,
     "cacheFolder": "cache",
+    "mediaCacheFolder": "cache/midia",
     "logsFolder": "logs"
 }
