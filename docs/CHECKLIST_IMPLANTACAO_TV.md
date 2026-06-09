@@ -365,6 +365,47 @@ Informar ao responsável local:
 
 ---
 
+# PARTE — Player Agent local e Kit Ponto TV
+
+## Player Agent local
+
+- [ ] Pasta do Player Agent presente no computador.
+- [ ] `config.agent.json` conferido.
+- [ ] Servidor principal configurado corretamente no agente.
+- [ ] Tarefa agendada do Player Agent criada.
+- [ ] Player Agent inicia automaticamente com o Windows.
+- [ ] Endpoint local `http://localhost:3579/health` responde.
+- [ ] Playlist local `http://localhost:3579/playlist.json` responde.
+- [ ] Pasta local de mídias em cache criada.
+- [ ] Mídias da playlist foram baixadas para cache local.
+- [ ] Limpeza de mídias antigas configurada.
+- [ ] Logs do agente gerados corretamente.
+
+## Teste de fallback local
+
+- [ ] Player abre normalmente usando o servidor principal.
+- [ ] Servidor principal/rede foi simulado como indisponível.
+- [ ] Player alternou automaticamente para o agente local.
+- [ ] Mídias tocaram via `localhost:3579`.
+- [ ] Servidor principal/rede foi restabelecido.
+- [ ] Player voltou automaticamente para a playlist remota.
+- [ ] Agente local voltou a sincronizar atualizações.
+- [ ] Teste realizado sem necessidade de atualizar manualmente a página.
+
+## Kit Ponto TV
+
+- [ ] Script de preparação executado como administrador.
+- [ ] Relatório de preparação gerado.
+- [ ] Node.js validado.
+- [ ] Google Chrome validado.
+- [ ] Player Agent validado.
+- [ ] Tarefa do agente validada.
+- [ ] Configurações de energia aplicadas ou conferidas.
+- [ ] Modo quiosque criado ou conferido.
+- [ ] Pendências manuais listadas para o técnico.
+
+---
+
 # PARTE 8 — Checklist resumido final
 
 ---

@@ -38,6 +38,71 @@ Ao final da configuração, o PC deve:
 
 ---
 
+## Kit Ponto TV — preparação semi-automatizada
+
+Além do procedimento manual documentado neste guia, o projeto passa a prever a criação de um **Kit Ponto TV**, com scripts de preparação para reduzir etapas manuais na configuração dos computadores conectados às TVs.
+
+O objetivo do kit é permitir que, após uma preparação inicial mínima do Windows, a equipe técnica execute um instalador local para aplicar ou validar automaticamente grande parte das configurações necessárias para operação do Painel Ribas.
+
+### O que o Kit Ponto TV deve automatizar
+
+Sempre que possível, o instalador deve:
+
+- verificar se está sendo executado com permissão de administrador;
+- verificar se o Node.js está instalado;
+- verificar se o Google Chrome está instalado;
+- validar a presença do Player Agent local;
+- instalar ou atualizar a tarefa agendada do Player Agent;
+- iniciar o Player Agent automaticamente;
+- testar o endpoint local `http://localhost:3579/health`;
+- preparar configurações de energia para impedir suspensão;
+- auxiliar na criação do modo quiosque do Chrome;
+- gerar relatório de preparação do ponto;
+- orientar o técnico sobre pendências manuais.
+
+### Player Agent local
+
+O Player Agent local é um componente instalado no computador conectado à TV.
+
+Ele tem como objetivo manter uma cópia local da playlist e das mídias publicadas pelo servidor principal, permitindo que o player continue funcionando temporariamente mesmo em caso de queda de rede ou indisponibilidade do servidor.
+
+Endereço local padrão do agente:
+
+```txt
+http://localhost:3579
+```
+
+Rotas principais:
+
+```txt
+http://localhost:3579/health
+http://localhost:3579/playlist.json
+http://localhost:3579/midia/NOME_DO_ARQUIVO
+```
+
+### Funcionamento esperado
+
+Quando o servidor principal estiver disponível, o player deve usar normalmente o conteúdo remoto.
+
+Quando o servidor principal cair, o player deve alternar automaticamente para o cache local servido pelo Player Agent.
+
+Quando o servidor principal voltar, o player deve retornar automaticamente para a playlist remota oficial.
+
+### Etapas que continuam manuais
+
+Mesmo com o Kit Ponto TV, algumas etapas ainda exigem validação humana:
+
+- configuração da BIOS para ligar após queda de energia;
+- configuração de senha segura da conta local;
+- configuração do acesso não supervisionado do AnyDesk;
+- conexão física HDMI e energia;
+- teste de áudio na TV;
+- teste real de rede;
+- teste prolongado de funcionamento;
+- preenchimento da ficha interna do ponto.
+
+---
+
 ## 3. Materiais necessários
 
 Antes de iniciar, separar:

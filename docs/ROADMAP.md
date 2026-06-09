@@ -318,6 +318,32 @@ Alta.
 - [ ] Revisar modais em telas pequenas.
 - [ ] Avaliar experiência em tablet.
 
+## Kit Ponto TV — automação de preparação dos computadores
+
+### Objetivo
+
+Criar um pacote de preparação semi-automatizada para os computadores conectados às TVs, reduzindo etapas manuais e padronizando a implantação dos pontos de exibição.
+
+### Itens planejados
+
+- [ ] Criar pasta `ponto-tv/`.
+- [ ] Criar configuração do Kit Ponto TV.
+- [ ] Criar script PowerShell em modo diagnóstico.
+- [ ] Criar relatório local de instalação/preparação.
+- [ ] Automatizar validação de Node.js.
+- [ ] Automatizar validação de Google Chrome.
+- [ ] Automatizar instalação/validação do Player Agent.
+- [ ] Automatizar tarefa do agente no Windows.
+- [ ] Automatizar configuração de energia.
+- [ ] Automatizar criação de modo quiosque.
+- [ ] Orientar instalação/configuração do AnyDesk.
+- [ ] Listar pendências manuais ao final da preparação.
+- [ ] Testar em PC dedicado real antes de instalar em TV definitiva.
+
+### Prioridade
+
+Alta para fechamento operacional da Fase 3.
+
 ---
 
 # 7. Fase 4 — Versão comercial / whitelabel

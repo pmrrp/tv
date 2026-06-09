@@ -758,6 +758,33 @@ O sistema passou a ter melhor proteção operacional, rastreabilidade, diagnóst
 - Uploads cancelados têm seus temporários removidos imediatamente quando possível.
 - A rotina automática de limpeza de chunks continua atuando como camada adicional de segurança.
 
+# 2026-06 — Player Agent local e fallback operacional dos pontos de TV
+
+## Implementado
+
+- Criação inicial do Player Agent local em Node.js.
+- Sincronização local da playlist remota.
+- Download local das mídias publicadas na playlist.
+- Limpeza segura de mídias antigas fora da playlist.
+- Servidor local do agente em `http://localhost:3579`.
+- Rota local de saúde em `/health`.
+- Rota local da playlist em `/playlist.json`.
+- Serviço local de mídias em `/midia/`.
+- Integração do player com fallback para o agente local.
+- Alternância automática para o agente local quando o servidor principal cai.
+- Retorno automático para o servidor principal quando ele volta.
+- Scripts de inicialização automática do agente no Windows por tarefa agendada.
+- Instalador inicial do ponto de TV para validar e iniciar o agente.
+
+## Impacto
+
+Os pontos de TV passam a ter uma camada adicional de resiliência operacional.
+
+Em caso de queda temporária de rede ou indisponibilidade do servidor principal, o player pode continuar exibindo conteúdos já sincronizados no computador local.
+
+Essa evolução reduz a necessidade de intervenção manual e prepara o projeto para uma implantação mais profissional dos pontos de exibição.
+
+
 # Próximos registros esperados
 
 Próximas entradas deste changelog deverão registrar:

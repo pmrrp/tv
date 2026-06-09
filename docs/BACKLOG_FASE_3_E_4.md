@@ -179,6 +179,58 @@ Padronizar o processo de instalação e configuração dos computadores conectad
 
 Suficiente para fechamento da Fase 3.
 
+## Implantação automatizada dos pontos de TV — em andamento
+
+### Objetivo
+
+Evoluir a preparação dos computadores conectados às TVs de um processo manual assistido para um processo semi-automatizado, reduzindo o tempo de configuração, diminuindo risco de esquecimento de etapas e padronizando a instalação dos pontos de exibição.
+
+A proposta é criar um **Kit Ponto TV** contendo scripts, configurações e verificações para preparar o Windows, iniciar o Player Agent local, configurar o Chrome em modo quiosque e validar o funcionamento básico do ponto.
+
+### Direção técnica
+
+O Kit Ponto TV deve automatizar, sempre que possível:
+
+- verificação de permissões administrativas;
+- criação/validação de estrutura local do Painel Ribas;
+- instalação/validação do Player Agent local;
+- criação de tarefa agendada para iniciar o Player Agent com o Windows;
+- validação do endpoint local `http://localhost:3579/health`;
+- configuração de energia para evitar suspensão/hibernação;
+- criação de atalho ou tarefa para Chrome em modo quiosque;
+- abertura automática do player;
+- geração de relatório local de preparação;
+- checklist final de validação do ponto.
+
+### Itens que permanecem manuais ou assistidos
+
+Algumas etapas não devem ser automatizadas completamente por segurança ou por dependerem do equipamento:
+
+- configuração da BIOS para ligar após queda de energia;
+- ajuste de BIOS para não travar sem teclado/mouse, quando existir;
+- instalação ou configuração final de senha do AnyDesk;
+- definição de senha da conta local do Windows;
+- conexão física HDMI/energia/rede;
+- validação visual e sonora na TV definitiva;
+- registro de senhas apenas em controle interno restrito da TI.
+
+### Itens planejados
+
+- [ ] Criar estrutura `ponto-tv/` para scripts de preparação do ponto.
+- [ ] Criar arquivo de configuração do Kit Ponto TV.
+- [ ] Criar script PowerShell em modo diagnóstico/simulação.
+- [ ] Gerar relatório local de preparação.
+- [ ] Automatizar configurações de energia do Windows.
+- [ ] Automatizar criação do modo quiosque do Chrome.
+- [ ] Integrar instalação/validação do Player Agent local.
+- [ ] Integrar teste do endpoint `http://localhost:3579/health`.
+- [ ] Criar checklist final automatizado de validação.
+- [ ] Documentar o uso do Kit Ponto TV no guia de preparação.
+
+### Status
+
+Planejado para execução após a conclusão inicial do Player Agent local e dos scripts de inicialização automática no Windows.
+
 ---
 
 ## 6. Diagnóstico de rede e travamentos — documentação operacional

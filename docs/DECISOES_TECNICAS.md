@@ -958,6 +958,53 @@ O seletor ficou mais previsível, visualmente coerente e sem dependência de com
 
 ---
 
+## 34. Player Agent local nos computadores das TVs
+
+### Decisão
+
+Criar um agente local em Node.js para ser executado nos computadores conectados às TVs.
+
+Esse agente mantém cache local da playlist e das mídias publicadas pelo servidor principal, servindo esse conteúdo em `localhost` para o player.
+
+### Motivos
+
+- Reduzir impacto de quedas temporárias de rede.
+- Permitir continuidade da exibição mesmo se o servidor principal ficar indisponível.
+- Evitar tela parada ou player vazio em locais públicos.
+- Melhorar robustez operacional dos pontos de TV.
+- Preparar a solução para uso mais profissional e eventual versão comercial.
+
+### Funcionamento
+
+O agente local:
+
+- baixa periodicamente a playlist remota;
+- salva a playlist em cache local;
+- baixa as mídias referenciadas pela playlist;
+- mantém uma pasta local de mídias;
+- remove mídias antigas que não fazem mais parte da playlist, respeitando retenção configurada;
+- serve a playlist e as mídias em `http://localhost:3579`.
+
+### Integração com o player
+
+O player continua priorizando o servidor principal.
+
+Caso o servidor principal fique indisponível, o player tenta usar o agente local.
+
+Quando o servidor principal volta, o player retorna automaticamente para a playlist remota oficial.
+
+### Limitações
+
+O agente local precisa ser instalado uma vez no computador da TV.
+
+O navegador não pode instalar esse agente automaticamente por segurança. Por isso, a preparação do ponto deve ser feita por técnico da TI ou por instalador local controlado.
+
+### Evolução prevista
+
+Criar um Kit Ponto TV para automatizar a instalação e validação do agente local, do Chrome em modo quiosque e das principais configurações operacionais do Windows.
+
+---
+
 ## Observação final
 
 As decisões técnicas deste documento refletem o estágio atual do projeto.
