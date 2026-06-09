@@ -6,5 +6,6 @@
     "mediaCacheFolder": "cache/midia",
     "logsFolder": "logs",
     "removeOldMedia": true,
-    "oldMediaRetentionHours": 24
+    "oldMediaRetentionHours": 24,
+    "localServerPort": 3579
 }

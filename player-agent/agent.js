@@ -17,6 +17,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const http = require("http");
 
 /* =========================================================
    CAMINHOS BASE
@@ -111,6 +112,10 @@ function carregarConfigAgent() {
         Number(config.oldMediaRetentionHours) < 0
     ) {
         config.oldMediaRetentionHours = 24;
+    }
+
+    if (!config.localServerPort || Number(config.localServerPort) <= 0) {
+        config.localServerPort = 3579;
     }
 
     return config;
@@ -438,6 +443,202 @@ function limparMidiasAntigasDoCache(lista) {
 }
 
 /* =========================================================
+   SERVIDOR LOCAL DO CACHE
+   =========================================================
+   Disponibiliza o cache local via localhost.
+
+   Rotas:
+   - GET /health
+   - GET /playlist.json
+   - GET /midia/:arquivo
+   ========================================================= */
+
+/**
+ * Retorna content-type básico conforme extensão.
+ */
+function obterContentType(caminhoArquivo) {
+    const extensao = path.extname(caminhoArquivo).toLowerCase();
+
+    const mapa = {
+        ".json": "application/json; charset=utf-8",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".webp": "image/webp",
+        ".gif": "image/gif",
+        ".svg": "image/svg+xml",
+        ".mp4": "video/mp4",
+        ".webm": "video/webm",
+        ".mov": "video/quicktime"
+    };
+
+    return mapa[extensao] || "application/octet-stream";
+}
+
+/**
+ * Envia JSON na resposta HTTP.
+ */
+function responderJson(res, statusCode, dados) {
+    const corpo = JSON.stringify(dados, null, 2);
+
+    res.writeHead(statusCode, {
+        "Content-Type": "application/json; charset=utf-8",
+        "Content-Length": Buffer.byteLength(corpo),
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-store"
+    });
+
+    res.end(corpo);
+}
+
+/**
+ * Envia resposta de erro em texto simples.
+ */
+function responderTexto(res, statusCode, texto) {
+    res.writeHead(statusCode, {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-store"
+    });
+
+    res.end(texto);
+}
+
+/**
+ * Envia arquivo físico com validação básica.
+ */
+function enviarArquivo(res, caminhoArquivo) {
+    if (!fs.existsSync(caminhoArquivo)) {
+        return responderTexto(res, 404, "Arquivo não encontrado.");
+    }
+
+    const stats = fs.statSync(caminhoArquivo);
+
+    if (!stats.isFile()) {
+        return responderTexto(res, 400, "O caminho solicitado não é um arquivo.");
+    }
+
+    res.writeHead(200, {
+        "Content-Type": obterContentType(caminhoArquivo),
+        "Content-Length": stats.size,
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-store"
+    });
+
+    fs.createReadStream(caminhoArquivo).pipe(res);
+}
+
+/**
+ * Resolve com segurança arquivo dentro da pasta de mídias cacheadas.
+ */
+function resolverMidiaLocal(nomeArquivo) {
+    const nome = String(nomeArquivo || "").trim();
+
+    if (!nome || nome !== path.basename(nome)) {
+        return null;
+    }
+
+    const caminho = path.resolve(mediaCacheFolder, nome);
+    const pastaMidiasResolvida = path.resolve(mediaCacheFolder);
+
+    if (!caminho.startsWith(pastaMidiasResolvida + path.sep)) {
+        return null;
+    }
+
+    return caminho;
+}
+
+/**
+ * Obtém resumo rápido do cache local.
+ */
+function obterResumoCacheLocal() {
+    const playlistExiste = fs.existsSync(playlistCacheFile);
+    const arquivosMidia = listarArquivosCacheMidia();
+
+    return {
+        ok: true,
+        nome: "Painel Ribas Player Agent",
+        dataHora: obterDataHoraLocal(),
+        servidorPrincipal: config.serverBaseUrl,
+        playlistCache: {
+            existe: playlistExiste,
+            caminho: playlistCacheFile
+        },
+        midias: {
+            total: arquivosMidia.length,
+            pasta: mediaCacheFolder
+        }
+    };
+}
+
+/**
+ * Trata requisições HTTP do servidor local.
+ */
+function tratarRequisicaoLocal(req, res) {
+    try {
+        const url = new URL(req.url, `http://localhost:${config.localServerPort}`);
+        const pathname = decodeURIComponent(url.pathname);
+
+        if (req.method !== "GET") {
+            return responderJson(res, 405, {
+                erro: true,
+                mensagem: "Método não permitido."
+            });
+        }
+
+        if (pathname === "/" || pathname === "/health") {
+            return responderJson(res, 200, obterResumoCacheLocal());
+        }
+
+        if (pathname === "/playlist.json") {
+            return enviarArquivo(res, playlistCacheFile);
+        }
+
+        if (pathname.startsWith("/midia/")) {
+            const nomeArquivo = pathname.replace("/midia/", "");
+            const caminhoMidia = resolverMidiaLocal(nomeArquivo);
+
+            if (!caminhoMidia) {
+                return responderTexto(res, 400, "Nome de mídia inválido.");
+            }
+
+            return enviarArquivo(res, caminhoMidia);
+        }
+
+        return responderJson(res, 404, {
+            erro: true,
+            mensagem: "Rota não encontrada."
+        });
+    } catch (erro) {
+        log(`Erro no servidor local: ${erro.message || erro}`, "ERRO");
+
+        return responderJson(res, 500, {
+            erro: true,
+            mensagem: "Erro interno no servidor local."
+        });
+    }
+}
+
+/**
+ * Inicia servidor local do agente.
+ */
+function iniciarServidorLocal() {
+    const porta = Number(config.localServerPort) || 3579;
+
+    const servidor = http.createServer(tratarRequisicaoLocal);
+
+    servidor.listen(porta, "127.0.0.1", () => {
+        log(`Servidor local do cache iniciado em http://localhost:${porta}`, "OK");
+    });
+
+    servidor.on("error", (erro) => {
+        log(`Falha no servidor local do cache: ${erro.message || erro}`, "ERRO");
+    });
+
+    return servidor;
+}
+
+/* =========================================================
    PLAYLIST
    ========================================================= */
 
@@ -530,8 +731,11 @@ async function iniciarAgent() {
     log(`Pasta de mídias em cache: ${mediaCacheFolder}`);
     log(`Limpeza de mídias antigas: ${config.removeOldMedia ? "ativada" : "desativada"}`);
     log(`Retenção de mídias antigas: ${config.oldMediaRetentionHours}h`);
+    log(`Servidor local: http://localhost:${config.localServerPort}`);
     log(`Pasta de logs: ${logsFolder}`);
     log("==================================================");
+
+    iniciarServidorLocal();
 
     await sincronizarPlaylist();
 
