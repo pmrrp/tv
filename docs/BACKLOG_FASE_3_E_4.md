@@ -444,7 +444,7 @@ Reforçar proteções básicas antes de ampliar o uso do sistema, garantindo con
 - [x] Criar tela visual de solicitação de recuperação de senha.
 - [x] Criar tela visual de redefinição de senha por token.
 - [x] Validar token de recuperação antes de liberar formulário.
-- [x] Bloquear formulário quando token estiver ausente, expirado, inválido ou já utilizado.
+- [x] Bloquear formulário quando token for ausente, expirado, inválido ou já utilizado.
 - [x] Remover token da URL após redefinição bem-sucedida.
 - [x] Revogar sessões abertas do usuário após redefinição de senha.
 - [x] Criar limpeza automática de tokens antigos de recuperação de senha.
@@ -452,13 +452,16 @@ Reforçar proteções básicas antes de ampliar o uso do sistema, garantindo con
 - [x] Criar rota administrativa de teste de envio SMTP.
 - [x] Testar envio SMTP com conta Gmail em ambiente local.
 - [x] Ajustar recuperação de senha para orientar uso do e-mail cadastrado.
+- [x] Validar MIME type dos arquivos enviados.
+- [x] Bloquear arquivos potencialmente perigosos.
+- [x] Validar assinatura básica/magic bytes dos arquivos enviados.
+- [x] Bloquear arquivos renomeados indevidamente, como script/texto fingindo ser imagem ou vídeo.
+- [x] Auditar uploads bloqueados por tipo inválido, MIME incompatível ou assinatura inválida.
 
 ### Itens pendentes
 
 - [ ] Configurar SMTP institucional definitivo com conta exclusiva do Painel TV.
 - [ ] Validar envio real com `painel-tv@ribasdoriopardo.ms.gov.br`.
-- [ ] Validar MIME type dos arquivos enviados.
-- [ ] Bloquear arquivos potencialmente perigosos.
 - [ ] Revisar proteções de rotas administrativas restantes.
 - [ ] Avaliar confirmação de e-mail de usuário antes de liberar login.
 - [ ] Avaliar política futura de múltiplas sessões permitidas por usuário, se necessário.
@@ -493,7 +496,11 @@ Reduzir erro do usuário e melhorar feedback durante envio de arquivos.
 - [x] Tratamento de queda de conexão durante upload.
 - [x] Mensagem amigável em bloqueio por armazenamento.
 - [x] Auditoria de upload bloqueado.
-- [ ] Mostrar progresso mais detalhado.
+- [x] Melhorar mensagens de erro do upload.
+- [x] Permitir cancelamento manual de upload em andamento.
+- [x] Remover chunks temporários após cancelamento manual.
+- [x] Auditar uploads cancelados pelo usuário.
+- [x] Mostrar progresso mais detalhado.
 - [ ] Mostrar tamanho enviado e tamanho total.
 - [ ] Mostrar velocidade estimada de upload.
 - [ ] Tratar cancelamento manual de upload.
@@ -1088,12 +1095,13 @@ Status: concluída em grande parte.
 - [x] Criar limpeza automática de tokens antigos de recuperação.
 - [x] Criar rota administrativa de teste SMTP.
 - [x] Testar SMTP em ambiente local com Gmail.
+- [x] Revisar upload.
+- [x] Validar extensão e MIME type.
+- [x] Bloquear arquivos potencialmente perigosos.
+- [x] Melhorar mensagens de erro.
+- [x] Permitir cancelamento de upload em andamento.
 - [ ] Configurar SMTP institucional definitivo.
-- [ ] Revisar upload.
-- [ ] Validar extensão e MIME type.
-- [ ] Bloquear arquivos potencialmente perigosos.
 - [ ] Limitar tamanho máximo, se necessário.
-- [ ] Melhorar mensagens de erro.
 - [ ] Font Awesome local.
 
 ---

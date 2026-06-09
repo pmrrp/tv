@@ -120,41 +120,77 @@ git --no-pager log --oneline -5
 
 ## 7. Testes de upload básico
 
-- [ ] Enviar imagem pequena.
-- [ ] Enviar vídeo pequeno.
-- [ ] Enviar arquivo maior usando chunks.
+### Objetivo
+
+Validar se o painel envia mídias válidas, atualiza a biblioteca, publica a playlist e registra auditoria corretamente.
+
+### Testes
+
+- [ ] Enviar imagem pequena válida (`.jpg`, `.jpeg`, `.png`, `.webp` ou `.gif`).
+- [ ] Enviar vídeo pequeno válido (`.mp4`, `.webm`, `.ogg` ou `.mov`).
 - [ ] Confirmar barra/progresso de upload.
 - [ ] Confirmar mensagem de sucesso.
 - [ ] Confirmar mídia na biblioteca.
+- [ ] Confirmar título amigável da mídia.
+- [ ] Confirmar tipo correto da mídia.
 - [ ] Confirmar atualização da playlist.
 - [ ] Confirmar log de upload.
 - [ ] Confirmar que o card de armazenamento atualiza após upload.
+- [ ] Confirmar ausência de erro vermelho no console.
+- [ ] Confirmar ausência de erro no terminal do Node.
+
+### Resultado esperado
+
+- A mídia válida deve ser enviada com sucesso.
+- A mídia deve aparecer na biblioteca.
+- A playlist deve ser atualizada automaticamente.
+- O log `midia.upload` deve ser registrado.
+- O card de armazenamento deve refletir o novo uso.
 
 ---
 
 ## 8. Testes de upload em partes/chunks
 
+### Objetivo
+
+Validar se arquivos grandes são enviados em partes, montados corretamente no backend e limpos após a finalização.
+
+### Testes
+
 - [ ] Enviar vídeo grande.
 - [ ] Confirmar envio sequencial dos chunks.
+- [ ] Confirmar atualização da barra de progresso.
+- [ ] Confirmar mensagem de envio em andamento.
 - [ ] Confirmar finalização do upload.
 - [ ] Confirmar criação do arquivo final em `midia/`.
 - [ ] Confirmar remoção da pasta temporária em `data/upload-chunks/`.
 - [ ] Confirmar registro da mídia na biblioteca.
 - [ ] Confirmar atualização da playlist.
 - [ ] Confirmar log de auditoria.
+- [ ] Confirmar ausência de erro vermelho no console.
+- [ ] Confirmar ausência de erro no terminal do Node.
+
+### Resultado esperado
+
+- O arquivo grande deve ser dividido em chunks.
+- O backend deve montar o arquivo final corretamente.
+- A pasta temporária do upload deve ser removida após a finalização.
+- A mídia deve ser cadastrada e publicada normalmente.
 
 ---
 
 ## 9. Testes de bloqueio preventivo por armazenamento
 
+### Objetivo
+
+Validar se o sistema impede uploads que ultrapassem o limite operacional da pasta de mídias ou comprometam a reserva mínima de disco.
+
 ### Preparação
 
 Temporariamente, em ambiente local, ajustar o `.env`:
 
-```env
-MEDIA_MAX_STORAGE_GB=1
-DISK_MIN_FREE_GB=50
-```
+    MEDIA_MAX_STORAGE_GB=1
+    DISK_MIN_FREE_GB=50
 
 Reiniciar o servidor após alterar o `.env`.
 
@@ -169,17 +205,178 @@ Reiniciar o servidor após alterar o `.env`.
 - [ ] Testar bloqueio em upload simples, se aplicável.
 - [ ] Testar bloqueio na finalização de chunks.
 - [ ] Confirmar limpeza dos chunks após bloqueio na finalização.
+- [ ] Confirmar atualização do card de armazenamento após o bloqueio.
+- [ ] Confirmar ausência de erro vermelho no console.
+- [ ] Confirmar ausência de erro no terminal do Node.
+
+### Resultado esperado
+
+- O upload deve ser bloqueado antes de comprometer o armazenamento.
+- A mensagem deve explicar o motivo do bloqueio.
+- O arquivo não deve permanecer salvo indevidamente.
+- A tentativa deve aparecer nos logs de auditoria.
 
 ### Restauração
 
 Após o teste, retornar o `.env` para:
 
-```env
-MEDIA_MAX_STORAGE_GB=180
-DISK_MIN_FREE_GB=50
-```
+    MEDIA_MAX_STORAGE_GB=180
+    DISK_MIN_FREE_GB=50
 
 Reiniciar o servidor.
+
+---
+
+## 9.1 Testes de bloqueio por tipo de arquivo
+
+### Objetivo
+
+Validar se o backend bloqueia arquivos perigosos ou não permitidos antes que eles sejam cadastrados na biblioteca.
+
+### Arquivos sugeridos para teste
+
+- `.txt`
+- `.bat`
+- `.cmd`
+- `.ps1`
+- `.js`
+- `.html`
+- `.exe`, se houver arquivo seguro apenas para teste controlado
+- `.zip`
+- `.rar`
+
+### Testes
+
+- [ ] Tentar enviar arquivo `.txt`.
+- [ ] Tentar enviar arquivo `.bat`.
+- [ ] Tentar enviar arquivo `.js`.
+- [ ] Tentar enviar arquivo `.html`.
+- [ ] Tentar enviar arquivo compactado, como `.zip` ou `.rar`.
+- [ ] Confirmar mensagem amigável de bloqueio.
+- [ ] Confirmar que o arquivo não entra na biblioteca.
+- [ ] Confirmar que o arquivo não fica salvo em `midia/`.
+- [ ] Confirmar log `midia.upload.bloqueado`.
+- [ ] Confirmar resumo amigável do bloqueio nos logs.
+- [ ] Confirmar detalhes técnicos expansíveis nos logs.
+- [ ] Confirmar ausência de erro vermelho no console.
+- [ ] Confirmar ausência de erro no terminal do Node.
+
+### Resultado esperado
+
+- O sistema deve bloquear arquivos não permitidos.
+- A mensagem deve indicar que o arquivo foi bloqueado por segurança.
+- O arquivo não deve ser cadastrado nem publicado.
+- A tentativa deve ser auditada.
+
+---
+
+## 9.2 Testes de bloqueio por MIME type e assinatura/magic bytes
+
+### Objetivo
+
+Validar se o sistema não confia apenas na extensão do arquivo e bloqueia arquivos renomeados indevidamente.
+
+### Preparação
+
+Criar um arquivo de texto simples e renomear para uma extensão permitida, por exemplo:
+
+    fake.png
+    fake.mp4
+
+Também pode ser criado um arquivo grande de texto e renomeado para `.mp4` para forçar upload em chunks.
+
+### Testes
+
+- [ ] Criar arquivo de texto comum.
+- [ ] Renomear o arquivo para `.png`.
+- [ ] Tentar enviar pelo painel.
+- [ ] Confirmar bloqueio por conteúdo incompatível.
+- [ ] Confirmar que o arquivo não entra na biblioteca.
+- [ ] Confirmar que o arquivo não fica salvo em `midia/`.
+- [ ] Confirmar log `midia.upload.bloqueado`.
+- [ ] Criar arquivo de texto grande.
+- [ ] Renomear o arquivo grande para `.mp4`.
+- [ ] Enviar pelo painel para forçar upload em chunks.
+- [ ] Confirmar que os chunks podem até ser recebidos, mas a finalização bloqueia o arquivo.
+- [ ] Confirmar remoção do arquivo final inválido.
+- [ ] Confirmar remoção da pasta temporária em `data/upload-chunks/`.
+- [ ] Confirmar auditoria do bloqueio.
+- [ ] Confirmar ausência de erro vermelho no console.
+- [ ] Confirmar ausência de erro no terminal do Node.
+
+### Resultado esperado
+
+- Arquivos com extensão permitida, mas conteúdo incompatível, devem ser bloqueados.
+- O sistema deve impedir que texto/script disfarçado de imagem ou vídeo seja cadastrado.
+- Uploads inválidos em chunks devem ser bloqueados na finalização.
+- Arquivos finais inválidos e chunks temporários devem ser removidos.
+
+---
+
+## 9.3 Testes de cancelamento de upload
+
+### Objetivo
+
+Validar se o operador consegue cancelar um upload em andamento e se o sistema remove os chunks temporários quando possível.
+
+### Testes
+
+- [ ] Selecionar arquivo grande.
+- [ ] Iniciar o envio.
+- [ ] Confirmar que a barra de progresso aparece.
+- [ ] Confirmar que o botão “Cancelar envio” aparece.
+- [ ] Confirmar que o botão “Enviar mídia” fica desabilitado durante o envio.
+- [ ] Clicar em “Cancelar envio”.
+- [ ] Confirmar que o botão muda para estado de cancelamento.
+- [ ] Confirmar que o envio é interrompido.
+- [ ] Confirmar que a barra de progresso para.
+- [ ] Confirmar mensagem de cancelamento no card de upload.
+- [ ] Confirmar que a mensagem de cancelamento usa visual de aviso.
+- [ ] Confirmar que o botão “Enviar mídia” volta ao estado normal.
+- [ ] Confirmar que o input de arquivo volta a ficar disponível.
+- [ ] Confirmar log `midia.upload.cancelado`.
+- [ ] Confirmar nos detalhes técnicos do log o tamanho temporário removido.
+- [ ] Confirmar remoção da pasta temporária em `data/upload-chunks/`, quando aplicável.
+- [ ] Confirmar ausência de erro vermelho no console.
+- [ ] Confirmar ausência de erro no terminal do Node.
+
+### Resultado esperado
+
+- O upload deve ser cancelado sem travar a tela.
+- O botão de envio deve voltar ao estado normal.
+- O sistema deve tentar remover os chunks temporários imediatamente.
+- A auditoria `midia.upload.cancelado` deve ser registrada.
+- A rotina automática de limpeza de chunks continua como segunda camada de segurança.
+
+---
+
+## 9.4 Testes de upload após cancelamento
+
+### Objetivo
+
+Garantir que cancelar um upload não quebra o próximo envio.
+
+### Testes
+
+- [ ] Cancelar um upload grande.
+- [ ] Selecionar uma imagem válida.
+- [ ] Enviar normalmente.
+- [ ] Confirmar sucesso do upload.
+- [ ] Confirmar mídia na biblioteca.
+- [ ] Confirmar playlist atualizada.
+- [ ] Selecionar um vídeo válido.
+- [ ] Enviar normalmente.
+- [ ] Confirmar sucesso do upload.
+- [ ] Confirmar ausência de travamento no botão.
+- [ ] Confirmar ausência de progresso antigo preso na tela.
+- [ ] Confirmar ausência de mensagem antiga no card de upload.
+- [ ] Confirmar ausência de erro vermelho no console.
+
+### Resultado esperado
+
+- O sistema deve continuar aceitando novos uploads após um cancelamento.
+- Nenhum estado visual antigo deve permanecer travado.
+- O fluxo normal de upload deve continuar funcionando.
 
 ---
 

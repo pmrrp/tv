@@ -726,6 +726,38 @@ O sistema passou a ter melhor proteção operacional, rastreabilidade, diagnóst
 - Validar SMTP institucional em produção.
 - Avaliar fluxo futuro de confirmação de e-mail para novos usuários.
 
+---
+
+# 2026-06 — Fase 3: Upload seguro e cancelamento de envio
+
+## Adicionado
+
+- Implementada validação reforçada de upload por extensão, MIME type e assinatura básica do arquivo.
+- Criadas listas centralizadas de extensões e MIME types permitidos para imagens e vídeos.
+- Adicionada validação de assinatura/magic bytes para bloquear arquivos renomeados indevidamente.
+- Bloqueados arquivos perigosos, como executáveis, scripts, páginas HTML, arquivos compactados e outros formatos não permitidos.
+- Adicionada auditoria para uploads bloqueados por tipo inválido, MIME incompatível ou assinatura inválida.
+- Implementado cancelamento de upload em andamento pelo painel administrativo.
+- Criada rota `/api/upload/cancelar` para remover chunks temporários de uploads cancelados.
+- Adicionada auditoria `midia.upload.cancelado`.
+- Melhorado feedback visual do upload no admin, com mensagens mais claras para erro, bloqueio, armazenamento, conexão e cancelamento.
+- Ajustado visual do botão “Cancelar envio” junto à barra de progresso.
+
+## Alterado
+
+- O upload simples passou a tratar erros do Multer/fileFilter com resposta JSON amigável.
+- O upload em chunks passou a validar o tipo antes da finalização e a assinatura após montar o arquivo final.
+- Arquivos inválidos são removidos automaticamente após bloqueio.
+- Mensagens intermediárias de upload deixaram de empilhar toasts.
+- Mensagens finais de erro e sucesso continuam gerando toast; avisos de cancelamento ficam no card de upload.
+
+## Segurança
+
+- O sistema não confia apenas na extensão do arquivo.
+- Arquivos com extensão permitida, mas conteúdo incompatível, são bloqueados.
+- Uploads cancelados têm seus temporários removidos imediatamente quando possível.
+- A rotina automática de limpeza de chunks continua atuando como camada adicional de segurança.
+
 # Próximos registros esperados
 
 Próximas entradas deste changelog deverão registrar:
