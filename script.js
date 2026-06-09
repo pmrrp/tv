@@ -94,6 +94,8 @@ let playlist = [];
 // Índice atual da playlist
 let indiceAtual = 0;
 
+let origemPlaylistAtual = "remota";
+
 // Tipo da mídia atual ("video" ou "imagem")
 let tipoAtual = null;
 
@@ -195,6 +197,36 @@ function criarUrlComCacheBuster(caminho) {
   const url = new URL(caminho, window.location.href);
   url.searchParams.set("t", Date.now().toString());
   return url.href;
+}
+
+/**
+ * Retorna apenas o nome do arquivo de uma mídia.
+ *
+ * Exemplo:
+ * /midia/video.mp4 -> video.mp4
+ * http://servidor/midia/video.mp4 -> video.mp4
+ */
+function obterNomeArquivoDaMidia(caminhoMidia) {
+  try {
+    const url = new URL(caminhoMidia, window.location.href);
+    return decodeURIComponent(url.pathname.split("/").pop() || "");
+  } catch (erro) {
+    const partes = String(caminhoMidia || "").split("/");
+    return decodeURIComponent(partes.pop() || "");
+  }
+}
+
+/**
+ * Monta a URL local da mídia servida pelo agente.
+ */
+function montarUrlMidiaLocal(caminhoMidia) {
+  const nomeArquivo = obterNomeArquivoDaMidia(caminhoMidia);
+
+  if (!nomeArquivo) {
+    return caminhoMidia;
+  }
+
+  return `${LOCAL_AGENT_BASE_URL}/midia/${encodeURIComponent(nomeArquivo)}`;
 }
 
 /**
@@ -576,6 +608,9 @@ no navegador, evitando tela parada por falha temporária.
 const PLAYLIST_CACHE_KEY = "painelRibasUltimaPlaylistValida";
 const PLAYLIST_CACHE_DATA_KEY = "painelRibasUltimaPlaylistValidaEm";
 
+const LOCAL_AGENT_BASE_URL = "http://localhost:3579";
+const LOCAL_AGENT_PLAYLIST_URL = `${LOCAL_AGENT_BASE_URL}/playlist.json`;
+
 /**
  * Cria erro operacional do player com código interno.
  *
@@ -672,6 +707,42 @@ async function buscarPlaylistRemota() {
 }
 
 /**
+ * Busca playlist no agente local Node.js.
+ *
+ * Essa opção é usada quando o servidor principal falha.
+ * O agente local mantém uma cópia cacheada da playlist e das mídias.
+ */
+async function buscarPlaylistDoAgenteLocal() {
+  debugMensagem(`Tentando buscar playlist no agente local: ${LOCAL_AGENT_PLAYLIST_URL}`);
+
+  const resposta = await fetch(`${LOCAL_AGENT_PLAYLIST_URL}?v=${Date.now()}`, {
+    cache: "no-store"
+  });
+
+  if (!resposta.ok) {
+    throw new Error(`Erro HTTP ao carregar playlist local do agente: ${resposta.status}`);
+  }
+
+  const dados = await resposta.json();
+
+  if (!Array.isArray(dados)) {
+    throw criarErroPlayer(
+      "A playlist local do agente foi carregada, mas possui formato inválido.",
+      "PLAYLIST_LOCAL_FORMATO_INVALIDO"
+    );
+  }
+
+  if (!dados.length) {
+    throw criarErroPlayer(
+      "Nenhuma mídia ativa encontrada na playlist local do agente.",
+      "PLAYLIST_LOCAL_VAZIA"
+    );
+  }
+
+  return dados;
+}
+
+/**
  * Carrega o arquivo playlist.json.
  *
  * Se a playlist remota falhar, tenta usar a última playlist válida
@@ -684,6 +755,7 @@ async function carregarPlaylist() {
     const dados = await buscarPlaylistRemota();
 
     playlist = dados;
+    origemPlaylistAtual = "remota";
     indiceAtual = 0;
 
     preCarregarImagensDaPlaylist(playlist);
@@ -692,6 +764,7 @@ async function carregarPlaylist() {
       atualizarIndicadorConexao("online", "Conexão restabelecida.");
     }
 
+    esconderFallbackOperacionalPlayer();
     atualizarStatus("Playlist carregada.");
     debugMensagem(`playlist.json carregado. Total de itens: ${playlist.length}`);
 
@@ -699,17 +772,9 @@ async function carregarPlaylist() {
   } catch (erro) {
     console.warn("Falha ao carregar playlist remota:", erro);
 
-    /*
-      Se o servidor respondeu corretamente, mas a playlist veio vazia,
-      isso não é queda de rede.
-  
-      Exemplo real:
-      - todas as mídias foram inativadas no admin;
-      - playlist.json foi regenerada vazia;
-      - o player não deve usar playlist antiga salva localmente.
-    */
     if (erro && erro.codigo === "PLAYLIST_VAZIA") {
       playlist = [];
+      origemPlaylistAtual = "remota";
       indiceAtual = 0;
 
       atualizarIndicadorConexao("erro", "Nenhuma mídia ativa.");
@@ -725,12 +790,9 @@ async function carregarPlaylist() {
       throw erro;
     }
 
-    /*
-      Formato inválido também não deve usar cache antigo automaticamente,
-      porque pode indicar arquivo corrompido ou problema de geração.
-    */
     if (erro && erro.codigo === "PLAYLIST_FORMATO_INVALIDO") {
       playlist = [];
+      origemPlaylistAtual = "remota";
       indiceAtual = 0;
 
       atualizarIndicadorConexao("erro", "Playlist inválida.");
@@ -746,26 +808,55 @@ async function carregarPlaylist() {
       throw erro;
     }
 
-    debugMensagem("Falha ao carregar playlist remota. Tentando fallback local...");
+    debugMensagem("Falha ao carregar playlist remota. Tentando agente local...");
   }
 
-  const playlistLocal = carregarPlaylistLocal();
+  /*
+    1º fallback real:
+    tenta usar o agente local Node.js.
+  */
+  try {
+    const dadosLocais = await buscarPlaylistDoAgenteLocal();
 
-  if (playlistEhValida(playlistLocal)) {
-    playlist = playlistLocal;
+    playlist = dadosLocais;
+    origemPlaylistAtual = "agente-local";
     indiceAtual = 0;
 
     preCarregarImagensDaPlaylist(playlist);
 
-    atualizarIndicadorConexao("fallback", "Usando última playlist salva.");
-    debugMensagem(`Fallback local carregado. Total de itens: ${playlist.length}`);
+    atualizarIndicadorConexao("fallback", "Usando cache local do mini PC.");
+    atualizarStatus("Usando conteúdo local.");
+    debugMensagem(`Playlist carregada pelo agente local. Total de itens: ${playlist.length}`);
+
+    return;
+  } catch (erroLocal) {
+    console.warn("Falha ao carregar playlist do agente local:", erroLocal);
+    debugMensagem(`Falha no agente local: ${erroLocal.message || erroLocal}`);
+  }
+
+  /*
+    2º fallback:
+    usa última playlist salva no navegador.
+  */
+  const playlistLocal = carregarPlaylistLocal();
+
+  if (playlistEhValida(playlistLocal)) {
+    playlist = playlistLocal;
+    origemPlaylistAtual = "localStorage";
+    indiceAtual = 0;
+
+    preCarregarImagensDaPlaylist(playlist);
+
+    atualizarIndicadorConexao("fallback", "Usando última playlist salva no navegador.");
+    debugMensagem(`Fallback localStorage carregado. Total de itens: ${playlist.length}`);
 
     return;
   }
 
+  origemPlaylistAtual = "indisponivel";
   atualizarIndicadorConexao("erro", "Não foi possível carregar playlist.");
 
-  throw new Error("Não foi possível carregar a playlist remota nem uma playlist local salva.");
+  throw new Error("Não foi possível carregar a playlist remota, agente local ou playlist salva no navegador.");
 }
 
 /* =========================================================
@@ -975,7 +1066,8 @@ function preCarregarProximoVideo() {
   const proximo = playlist[proximoIndex];
 
   if (proximo && proximo.tipo === "video") {
-    const proximoUrlAbsoluto = new URL(proximo.arquivo, window.location.href).href;
+    const urlProximoVideo = resolverUrlMidiaParaExecucao(proximo);
+    const proximoUrlAbsoluto = new URL(urlProximoVideo, window.location.href).href;
 
     /*
       Blindagem de segurança:
@@ -987,7 +1079,7 @@ function preCarregarProximoVideo() {
     videoPreload.pause();
 
     if (videoPreload.src !== proximoUrlAbsoluto) {
-      videoPreload.src = proximo.arquivo;
+      videoPreload.src = urlProximoVideo;
       videoPreload.load();
     }
   }
@@ -1004,7 +1096,7 @@ function preCarregarProximaImagem() {
 
   if (proximo && proximo.tipo === "imagem") {
     const img = new Image();
-    img.src = proximo.arquivo;
+    img.src = resolverUrlMidiaParaExecucao(proximo);
   }
 }
 
@@ -1048,9 +1140,11 @@ async function prepararPrimeiraMidiaDoCiclo() {
 
   const primeiroItem = playlist[0];
 
+  const urlPrimeiraMidia = resolverUrlMidiaParaExecucao(primeiroItem);
+
   if (primeiroItem.tipo === "video") {
     return new Promise((resolve) => {
-      videoPlayer.src = primeiroItem.arquivo;
+      videoPlayer.src = urlPrimeiraMidia;
       videoPlayer.load();
 
       const timeoutSeguranca = setTimeout(() => {
@@ -1072,7 +1166,7 @@ async function prepararPrimeiraMidiaDoCiclo() {
       const img = new Image();
       img.onload = () => resolve();
       img.onerror = () => resolve();
-      img.src = primeiroItem.arquivo;
+      img.src = urlPrimeiraMidia;
     });
   }
 }
@@ -1165,6 +1259,25 @@ function tratarFalhaMidiaAtual(motivo = "Falha ao abrir mídia.") {
    ========================================================= */
 
 /**
+* Resolve qual URL de mídia deve ser usada.
+*
+* - playlist remota: usa caminho original;
+* - agente-local: usa http://localhost:3579/midia/arquivo;
+* - localStorage: usa caminho original, pois pode depender do navegador/cache.
+*/
+function resolverUrlMidiaParaExecucao(item) {
+  if (!item || !item.arquivo) {
+    return "";
+  }
+
+  if (origemPlaylistAtual === "agente-local") {
+    return montarUrlMidiaLocal(item.arquivo);
+  }
+
+  return item.arquivo;
+}
+
+/**
  * Toca a mídia atual da playlist.
  * Mantém comportamento seguro:
  * se falhar, avança para a próxima.
@@ -1176,7 +1289,9 @@ async function tocarItemAtual() {
 
   const item = playlist[indiceAtual];
 
-  if (!item || !item.tipo || !item.arquivo) {
+  const urlMidiaAtual = resolverUrlMidiaParaExecucao(item);
+
+  if (!item || !item.tipo || !urlMidiaAtual) {
     tratarFalhaMidiaAtual("Conteúdo inválido na playlist.");
     return;
   }
@@ -1191,7 +1306,7 @@ async function tocarItemAtual() {
   atualizarStatus("Preparando conteúdo...");
 
   if (item.tipo === "video") {
-    debugMensagem(`Mídia atual: vídeo | ${item.arquivo}`);
+    debugMensagem(`Mídia atual: vídeo | ${urlMidiaAtual}`);
     atualizarStatus("Carregando vídeo...");
 
     let jaTentouIniciar = false;
@@ -1347,7 +1462,7 @@ async function tocarItemAtual() {
     videoPlayer.muted = !somHabilitadoPeloUsuario;
     videoPlayer.volume = somHabilitadoPeloUsuario ? 1 : 0;
 
-    videoPlayer.src = item.arquivo;
+    videoPlayer.src = urlMidiaAtual;
     videoPlayer.load();
 
     debugMensagem(`src definido: ${videoPlayer.src}`);
@@ -1375,7 +1490,7 @@ async function tocarItemAtual() {
 
       registrarMidiaExecutadaComSucesso();
 
-      imagePlayer.src = item.arquivo;
+      imagePlayer.src = urlMidiaAtual;
       mostrarImagem();
 
       const duracao = Number(item.duracao) > 0 ? Number(item.duracao) : 8;
@@ -1399,7 +1514,7 @@ async function tocarItemAtual() {
       tratarFalhaMidiaAtual("Falha ao carregar imagem.");
     };
 
-    img.src = item.arquivo;
+    img.src = urlMidiaAtual;
   } else {
     tratarFalhaMidiaAtual("Tipo de mídia desconhecido na playlist.");
   }
