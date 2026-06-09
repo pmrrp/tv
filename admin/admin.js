@@ -146,6 +146,7 @@ const diagnosticSummaryText = document.getElementById("diagnosticSummaryText");
 const diagnosticList = document.getElementById("diagnosticList");
 const btnReloadDiagnostic = document.getElementById("btnReloadDiagnostic");
 const btnCopyDiagnostic = document.getElementById("btnCopyDiagnostic");
+const btnExportDiagnostic = document.getElementById("btnExportDiagnostic");
 
 let ultimoDiagnosticoOperacional = null;
 
@@ -9271,6 +9272,10 @@ if (btnCopyDiagnostic) {
     btnCopyDiagnostic.addEventListener("click", copiarDiagnosticoOperacional);
 }
 
+if (btnExportDiagnostic) {
+    btnExportDiagnostic.addEventListener("click", exportarDiagnosticoOperacional);
+}
+
 /* =========================================================
    EVENTOS - BACKUPS DO SISTEMA
    ========================================================= */
@@ -11363,6 +11368,76 @@ async function copiarDiagnosticoOperacional() {
     } catch (erro) {
         console.error(erro);
         mostrarToast("Não foi possível copiar o diagnóstico.", "erro");
+    }
+}
+
+/**
+ * Gera uma data segura para nome de arquivo.
+ *
+ * Exemplo:
+ * 2026-06-09_14-35-22
+ */
+function gerarTimestampArquivo() {
+    const agora = new Date();
+
+    const pad = (valor) => String(valor).padStart(2, "0");
+
+    const ano = agora.getFullYear();
+    const mes = pad(agora.getMonth() + 1);
+    const dia = pad(agora.getDate());
+    const hora = pad(agora.getHours());
+    const minuto = pad(agora.getMinutes());
+    const segundo = pad(agora.getSeconds());
+
+    return `${ano}-${mes}-${dia}_${hora}-${minuto}-${segundo}`;
+}
+
+/**
+ * Baixa um arquivo de texto gerado no navegador.
+ */
+function baixarArquivoTexto(nomeArquivo, conteudo) {
+    const blob = new Blob([conteudo], {
+        type: "text/plain;charset=utf-8"
+    });
+
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = nomeArquivo;
+    link.style.display = "none";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+}
+
+/**
+ * Exporta o diagnóstico operacional atualmente carregado
+ * em um arquivo .txt gerado no navegador.
+ */
+async function exportarDiagnosticoOperacional() {
+    try {
+        if (!ultimoDiagnosticoOperacional) {
+            mostrarToast("Carregue o diagnóstico antes de exportar.", "info");
+            await carregarDiagnosticoOperacional();
+        }
+
+        if (!ultimoDiagnosticoOperacional) {
+            throw new Error("Diagnóstico indisponível para exportação.");
+        }
+
+        const texto = montarTextoDiagnosticoOperacional(ultimoDiagnosticoOperacional);
+        const nomeArquivo = `painel-ribas-diagnostico-${gerarTimestampArquivo()}.txt`;
+
+        baixarArquivoTexto(nomeArquivo, texto);
+
+        mostrarToast("Diagnóstico exportado em arquivo .txt.", "sucesso");
+    } catch (erro) {
+        console.error(erro);
+        mostrarToast("Não foi possível exportar o diagnóstico.", "erro");
     }
 }
 
