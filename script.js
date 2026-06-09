@@ -96,6 +96,13 @@ let indiceAtual = 0;
 
 let origemPlaylistAtual = "remota";
 
+// Monitoramento do servidor principal para troca automática para o agente local
+let timerMonitorServidorPrincipal = null;
+let alternanciaParaAgenteLocalEmAndamento = false;
+
+const INTERVALO_MONITOR_SERVIDOR_MS = 5000;
+const TIMEOUT_MONITOR_SERVIDOR_MS = 3000;
+
 // Tipo da mídia atual ("video" ou "imagem")
 let tipoAtual = null;
 
@@ -264,6 +271,30 @@ function atualizarStatus(texto) {
   timerStatus = setTimeout(() => {
     statusBox.classList.add("hidden");
   }, tempoVisivel);
+}
+
+/**
+ * Faz fetch com timeout.
+ *
+ * Útil para o monitoramento do servidor principal:
+ * se o servidor não responder rapidamente, o player pode
+ * alternar para o agente local sem depender de F5.
+ */
+async function fetchComTimeout(url, opcoes = {}, timeoutMs = 3000) {
+  const controller = new AbortController();
+
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...opcoes,
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 /* =========================================================
@@ -743,6 +774,115 @@ async function buscarPlaylistDoAgenteLocal() {
 }
 
 /**
+ * Alterna o player para a playlist do agente local em tempo real.
+ *
+ * Usado quando:
+ * - o servidor principal cai depois que o player já estava aberto;
+ * - o usuário tenta avançar para a próxima mídia e a URL remota falha;
+ * - o monitoramento detecta indisponibilidade do servidor.
+ */
+async function alternarParaAgenteLocalSePossivel(motivo = "Servidor principal indisponível.") {
+  if (alternanciaParaAgenteLocalEmAndamento) {
+    return false;
+  }
+
+  if (origemPlaylistAtual === "agente-local") {
+    return true;
+  }
+
+  alternanciaParaAgenteLocalEmAndamento = true;
+
+  try {
+    debugMensagem(`Tentando alternar para agente local. Motivo: ${motivo}`);
+
+    const itemAtualAnterior = playlist[indiceAtual];
+    const playlistAgente = await buscarPlaylistDoAgenteLocal();
+
+    if (!playlistEhValida(playlistAgente)) {
+      throw new Error("Playlist do agente local vazia ou inválida.");
+    }
+
+    playlist = playlistAgente;
+    origemPlaylistAtual = "agente-local";
+    indiceAtual = encontrarIndiceMidiaEquivalente(playlistAgente, itemAtualAnterior);
+
+    preCarregarImagensDaPlaylist(playlist);
+
+    atualizarIndicadorConexao("fallback", "Servidor principal indisponível. Usando cache local.");
+    atualizarStatus("Usando cache local do mini PC.");
+
+    esconderFallbackOperacionalPlayer();
+
+    debugMensagem(
+      `Player alternado para agente local. Índice atual: ${indiceAtual}. Total: ${playlist.length}.`
+    );
+
+    return true;
+  } catch (erro) {
+    console.warn("Não foi possível alternar para o agente local:", erro);
+    debugMensagem(`Falha ao alternar para agente local: ${erro.message || erro}`);
+
+    return false;
+  } finally {
+    alternanciaParaAgenteLocalEmAndamento = false;
+  }
+}
+
+/**
+ * Verifica se o servidor principal ainda está acessível.
+ *
+ * Importante:
+ * - se o servidor responder, não faz nada;
+ * - se o servidor cair, alterna para o agente local;
+ * - não trata playlist vazia como queda de rede;
+ * - não interrompe a mídia atual, apenas troca a origem para os próximos itens.
+ */
+async function verificarServidorPrincipalParaFallback() {
+  if (origemPlaylistAtual !== "remota") {
+    return;
+  }
+
+  try {
+    const resposta = await fetchComTimeout(
+      `playlist.json?v=${Date.now()}`,
+      {
+        cache: "no-store"
+      },
+      TIMEOUT_MONITOR_SERVIDOR_MS
+    );
+
+    /*
+      Se respondeu, mesmo com playlist vazia, o servidor está vivo.
+      Playlist vazia é decisão administrativa, não falha de rede.
+    */
+    if (resposta.ok) {
+      return;
+    }
+
+    throw new Error(`Servidor respondeu HTTP ${resposta.status}`);
+  } catch (erro) {
+    debugMensagem(`Servidor principal indisponível no monitor: ${erro.message || erro}`);
+
+    await alternarParaAgenteLocalSePossivel("Monitor detectou queda do servidor principal.");
+  }
+}
+
+/**
+ * Inicia monitoramento contínuo do servidor principal.
+ */
+function iniciarMonitoramentoServidorPrincipal() {
+  if (timerMonitorServidorPrincipal) {
+    clearInterval(timerMonitorServidorPrincipal);
+  }
+
+  timerMonitorServidorPrincipal = setInterval(() => {
+    verificarServidorPrincipalParaFallback();
+  }, INTERVALO_MONITOR_SERVIDOR_MS);
+
+  debugMensagem("Monitoramento do servidor principal iniciado.");
+}
+
+/**
  * Carrega o arquivo playlist.json.
  *
  * Se a playlist remota falhar, tenta usar a última playlist válida
@@ -1208,7 +1348,28 @@ function registrarMidiaExecutadaComSucesso() {
  * Possui proteção para evitar loop infinito caso todas as mídias
  * da playlist estejam indisponíveis.
  */
-function tratarFalhaMidiaAtual(motivo = "Falha ao abrir mídia.") {
+async function tratarFalhaMidiaAtual(motivo = "Falha ao abrir mídia.") {
+  /*
+    Se a mídia falhou enquanto estávamos usando servidor remoto,
+    tentamos alternar para o agente local antes de avançar/contabilizar
+    como falha definitiva.
+  */
+  if (origemPlaylistAtual === "remota") {
+    const alternouParaAgente = await alternarParaAgenteLocalSePossivel(motivo);
+
+    if (alternouParaAgente) {
+      emTransicao = false;
+      falhasSequenciaisDeMidia = 0;
+
+      /*
+        Mantém a experiência fluida:
+        tenta tocar o item equivalente pela origem local.
+      */
+      tocarItemAtual();
+      return;
+    }
+  }
+
   falhasSequenciaisDeMidia += 1;
 
   debugMensagem(`${motivo} Falhas sequenciais: ${falhasSequenciaisDeMidia}.`);
@@ -1275,6 +1436,30 @@ function resolverUrlMidiaParaExecucao(item) {
   }
 
   return item.arquivo;
+}
+
+/**
+ * Encontra na nova playlist uma mídia equivalente à mídia atual.
+ *
+ * Isso evita que, ao trocar da playlist remota para a playlist
+ * do agente local, o player volte sempre para o primeiro item.
+ */
+function encontrarIndiceMidiaEquivalente(novaPlaylist, itemAtualAnterior) {
+  if (!Array.isArray(novaPlaylist) || !novaPlaylist.length || !itemAtualAnterior) {
+    return 0;
+  }
+
+  const nomeAtual = obterNomeArquivoDaMidia(itemAtualAnterior.arquivo);
+
+  if (!nomeAtual) {
+    return 0;
+  }
+
+  const indice = novaPlaylist.findIndex((item) => {
+    return obterNomeArquivoDaMidia(item && item.arquivo) === nomeAtual;
+  });
+
+  return indice >= 0 ? indice : 0;
 }
 
 /**
@@ -1830,6 +2015,8 @@ async function iniciarSistema() {
     esconderSplash();
     await sleep(800);
     splashScreen.classList.add("hidden");
+
+    iniciarMonitoramentoServidorPrincipal();
 
     atualizarModoResponsivo();
     resetarInterface();
