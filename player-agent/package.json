@@ -1,0 +1,10 @@
+{
+    "name": "painel-ribas-player-agent",
+    "version": "0.1.0",
+    "description": "Agente local do Painel Ribas para sincronização de playlist e cache local do player.",
+    "main": "agent.js",
+    "scripts": {
+        "start": "node agent.js"
+    },
+    "private": true
+}

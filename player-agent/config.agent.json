@@ -1,0 +1,7 @@
+{
+    "serverBaseUrl": "http://localhost:3000",
+    "playlistPath": "/playlist.json",
+    "syncIntervalSeconds": 30,
+    "cacheFolder": "cache",
+    "logsFolder": "logs"
+}
