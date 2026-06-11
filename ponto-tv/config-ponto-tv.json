@@ -1,0 +1,13 @@
+{
+    "dryRun": true,
+    "playerUrl": "https://painelribas.com.br/",
+    "localAgentHealthUrl": "http://localhost:3579/health",
+    "agentTaskName": "PainelRibasPlayerAgent",
+    "kioskTaskName": "PainelRibasChromeKiosk",
+    "computerNamePattern": "PAINEL-TV",
+    "enablePowerTweaks": false,
+    "enableKioskTask": false,
+    "enableCleanup": false,
+    "enableAnyDeskCheck": true,
+    "reportFolder": "relatorios"
+}
