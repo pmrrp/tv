@@ -1,0 +1,5 @@
+# Relatórios locais gerados pelo Kit Ponto TV
+relatorios/*.txt
+
+# Mantém a pasta relatorios versionada, sem commitar os relatórios
+!relatorios/.gitkeep
