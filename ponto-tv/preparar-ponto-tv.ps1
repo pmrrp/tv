@@ -201,7 +201,7 @@ function Invoke-AcaoSegura {
 # GARANTE EXISTÊNCIA DE PASTA
 # ---------------------------------------------------------
 
-function Ensure-Pasta {
+function Confirm-Pasta {
     param(
         [string]$Caminho
     )
@@ -422,7 +422,7 @@ function Set-ChromeQuiosque {
     $DelaySeconds = if ($KioskConfig.delaySeconds) { [int]$KioskConfig.delaySeconds } else { 20 }
     $ChromeUserDataDir = if ($KioskConfig.chromeUserDataDir) { [string]$KioskConfig.chromeUserDataDir } else { "C:\PainelRibas\chrome-profile" }
 
-    Ensure-Pasta $ChromeUserDataDir
+    Confirm-Pasta $ChromeUserDataDir
 
     $ArgsLista = New-Object System.Collections.Generic.List[string]
 
