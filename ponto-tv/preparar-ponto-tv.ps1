@@ -172,6 +172,31 @@ function Find-Chrome {
 # LOCALIZA ANYDESK
 # ---------------------------------------------------------
 
+# ---------------------------------------------------------
+# EXECUTA OU SIMULA AÇÕES
+# ---------------------------------------------------------
+
+function Invoke-AcaoSegura {
+    param(
+        [string]$Descricao,
+        [scriptblock]$Acao
+    )
+
+    if ($Config.dryRun -eq $true) {
+        Add-Log "[DRY-RUN] $Descricao" "AVISO"
+        return
+    }
+
+    try {
+        Add-Log "Executando: $Descricao"
+        & $Acao
+        Add-Log "Concluido: $Descricao" "OK"
+    }
+    catch {
+        Add-Log "Falha ao executar '$Descricao': $($_.Exception.Message)" "ERRO"
+    }
+}
+
 function Find-AnyDesk {
     # Caminhos comuns quando AnyDesk está instalado.
     $Possiveis = @(
@@ -244,6 +269,84 @@ function Find-AnyDesk {
     }
 
     return @{ Encontrado = $false; Caminho = $null; Tipo = "NaoEncontrado" }
+}
+
+# ---------------------------------------------------------
+# CONFIGURAÇÕES DE ENERGIA DO PONTO TV
+# ---------------------------------------------------------
+
+function Aplicar-ConfiguracoesEnergia {
+    Add-Log "Preparando configuracoes de energia para ponto de TV..."
+
+    $ExecutandoComoAdmin = Test-Administrador
+
+    if ($ExecutandoComoAdmin -ne $true -and $Config.dryRun -ne $true) {
+        Add-Log "Configuracoes de energia exigem Administrador quando dryRun=false. Execute o kit como Administrador." "ERRO"
+        return
+    }
+
+    if ($ExecutandoComoAdmin -ne $true -and $Config.dryRun -eq $true) {
+        Add-Log "Nao esta como Administrador, mas dryRun=true. As configuracoes de energia serao apenas simuladas." "AVISO"
+    }
+
+    $PowerConfig = $Config.power
+
+    if ($null -eq $PowerConfig) {
+        Add-Log "Bloco 'power' nao encontrado no config-ponto-tv.json. Usando valores padrao." "AVISO"
+
+        $PowerConfig = [PSCustomObject]@{
+            setHighPerformance      = $true
+            disableHibernate        = $true
+            acMonitorTimeoutMinutes = 0
+            acStandbyTimeoutMinutes = 0
+            acDiskTimeoutMinutes    = 0
+        }
+    }
+
+    if ($PowerConfig.setHighPerformance -eq $true) {
+        Invoke-AcaoSegura "Ativar plano de energia Alto desempenho, quando disponivel" {
+            powercfg /setactive SCHEME_MIN | Out-Null
+        }
+    }
+
+    if ($PowerConfig.disableHibernate -eq $true) {
+        Invoke-AcaoSegura "Desativar hibernacao do Windows" {
+            powercfg /hibernate off | Out-Null
+        }
+    }
+
+    $MonitorTimeout = if ($null -ne $PowerConfig.acMonitorTimeoutMinutes) { [int]$PowerConfig.acMonitorTimeoutMinutes } else { 0 }
+    $StandbyTimeout = if ($null -ne $PowerConfig.acStandbyTimeoutMinutes) { [int]$PowerConfig.acStandbyTimeoutMinutes } else { 0 }
+    $DiskTimeout = if ($null -ne $PowerConfig.acDiskTimeoutMinutes) { [int]$PowerConfig.acDiskTimeoutMinutes } else { 0 }
+
+    Invoke-AcaoSegura "Configurar tela para nunca desligar na energia" {
+        powercfg /change monitor-timeout-ac $MonitorTimeout | Out-Null
+    }
+
+    Invoke-AcaoSegura "Configurar suspensao para nunca ocorrer na energia" {
+        powercfg /change standby-timeout-ac $StandbyTimeout | Out-Null
+    }
+
+    Invoke-AcaoSegura "Configurar disco para nunca desligar na energia" {
+        powercfg /change disk-timeout-ac $DiskTimeout | Out-Null
+    }
+
+    Invoke-AcaoSegura "Desativar suspensao hibrida na energia" {
+        powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP HYBRIDSLEEP 0 | Out-Null
+        powercfg /setactive SCHEME_CURRENT | Out-Null
+    }
+
+    Invoke-AcaoSegura "Garantir que o tempo de suspensao AC esteja zerado no esquema atual" {
+        powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP STANDBYIDLE 0 | Out-Null
+        powercfg /setactive SCHEME_CURRENT | Out-Null
+    }
+
+    Invoke-AcaoSegura "Garantir que o tempo de desligamento de video AC esteja zerado no esquema atual" {
+        powercfg /setacvalueindex SCHEME_CURRENT SUB_VIDEO VIDEOIDLE 0 | Out-Null
+        powercfg /setactive SCHEME_CURRENT | Out-Null
+    }
+
+    Add-Log "Rotina de energia finalizada."
 }
 
 # =========================================================
@@ -349,10 +452,11 @@ try { Add-Log "Plano de energia ativo: $(powercfg /GETACTIVESCHEME)" }
 catch { Add-Log "Nao foi possivel consultar plano de energia: $($_.Exception.Message)" "AVISO" }
 
 if ($Config.enablePowerTweaks -eq $true) {
-    if ($Config.dryRun -eq $true) { Add-Log "enablePowerTweaks=true, mas dryRun=true. Nenhuma configuracao de energia sera alterada." "AVISO" }
-    else { Add-Log "Alteracoes reais de energia ainda nao implementadas nesta sprint." "AVISO" }
+    Aplicar-ConfiguracoesEnergia
 }
-else { Add-Log "Alteracoes de energia desativadas por configuracao." }
+else {
+    Add-Log "Alteracoes de energia desativadas por configuracao."
+}
 
 # Quiosque diagnóstico
 if ($Config.enableKioskTask -eq $true) {

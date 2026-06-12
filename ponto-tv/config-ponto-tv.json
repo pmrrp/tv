@@ -5,9 +5,16 @@
     "agentTaskName": "PainelRibasPlayerAgent",
     "kioskTaskName": "PainelRibasChromeKiosk",
     "computerNamePattern": "PAINEL-TV",
-    "enablePowerTweaks": false,
+    "enablePowerTweaks": true,
     "enableKioskTask": false,
     "enableCleanup": false,
     "enableAnyDeskCheck": true,
-    "reportFolder": "relatorios"
+    "reportFolder": "relatorios",
+    "power": {
+        "setHighPerformance": true,
+        "disableHibernate": true,
+        "acMonitorTimeoutMinutes": 0,
+        "acStandbyTimeoutMinutes": 0,
+        "acDiskTimeoutMinutes": 0
+    }
 }
