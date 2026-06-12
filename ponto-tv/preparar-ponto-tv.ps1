@@ -197,6 +197,29 @@ function Invoke-AcaoSegura {
     }
 }
 
+# ---------------------------------------------------------
+# GARANTE EXISTÊNCIA DE PASTA
+# ---------------------------------------------------------
+
+function Ensure-Pasta {
+    param(
+        [string]$Caminho
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Caminho)) {
+        return
+    }
+
+    if (Test-Path $Caminho) {
+        Add-Log "Pasta ja existe: $Caminho" "OK"
+        return
+    }
+
+    Invoke-AcaoSegura "Criar pasta: $Caminho" {
+        New-Item -ItemType Directory -Force -Path $Caminho | Out-Null
+    }
+}
+
 function Find-AnyDesk {
     # Caminhos comuns quando AnyDesk está instalado.
     $Possiveis = @(
@@ -349,6 +372,105 @@ function Set-ConfiguracoesEnergia {
     Add-Log "Rotina de energia finalizada."
 }
 
+# ---------------------------------------------------------
+# CHROME EM MODO QUIOSQUE
+# ---------------------------------------------------------
+
+function Set-ChromeQuiosque {
+    Add-Log "Preparando Chrome em modo quiosque..."
+
+    $ExecutandoComoAdmin = Test-Administrador
+
+    if ($ExecutandoComoAdmin -ne $true -and $Config.dryRun -ne $true) {
+        Add-Log "Criacao da tarefa de quiosque exige Administrador quando dryRun=false. Execute o kit como Administrador." "ERRO"
+        return
+    }
+
+    if ($ExecutandoComoAdmin -ne $true -and $Config.dryRun -eq $true) {
+        Add-Log "Nao esta como Administrador, mas dryRun=true. O quiosque sera apenas simulado." "AVISO"
+    }
+
+    $ChromePath = Find-Chrome
+
+    if (!$ChromePath) {
+        Add-Log "Google Chrome nao encontrado. Nao sera possivel preparar o modo quiosque." "ERRO"
+        return
+    }
+
+    $KioskConfig = $Config.kiosk
+
+    if ($null -eq $KioskConfig) {
+        Add-Log "Bloco 'kiosk' nao encontrado no config-ponto-tv.json. Usando configuracao padrao." "AVISO"
+
+        $KioskConfig = [PSCustomObject]@{
+            delaySeconds      = 20
+            chromeUserDataDir = "C:\PainelRibas\chrome-profile"
+            arguments         = @(
+                "--kiosk",
+                "--start-fullscreen",
+                "--autoplay-policy=no-user-gesture-required",
+                "--disable-session-crashed-bubble",
+                "--disable-infobars",
+                "--no-first-run",
+                "--disable-features=TranslateUI"
+            )
+        }
+    }
+
+    $PlayerUrl = if ($Config.playerUrl) { $Config.playerUrl } else { "https://painelribas.com.br/" }
+    $TaskName = if ($Config.kioskTaskName) { $Config.kioskTaskName } else { "PainelRibasChromeKiosk" }
+    $DelaySeconds = if ($KioskConfig.delaySeconds) { [int]$KioskConfig.delaySeconds } else { 20 }
+    $ChromeUserDataDir = if ($KioskConfig.chromeUserDataDir) { [string]$KioskConfig.chromeUserDataDir } else { "C:\PainelRibas\chrome-profile" }
+
+    Ensure-Pasta $ChromeUserDataDir
+
+    $ArgsLista = New-Object System.Collections.Generic.List[string]
+
+    foreach ($Arg in $KioskConfig.arguments) {
+        if (![string]::IsNullOrWhiteSpace($Arg)) {
+            $ArgsLista.Add($Arg) | Out-Null
+        }
+    }
+
+    $ArgsLista.Add("--user-data-dir=`"$ChromeUserDataDir`"") | Out-Null
+    $ArgsLista.Add("`"$PlayerUrl`"") | Out-Null
+
+    $ChromeArgs = $ArgsLista -join " "
+
+    Add-Log "Chrome encontrado em: $ChromePath" "OK"
+    Add-Log "URL do player para quiosque: $PlayerUrl"
+    Add-Log "Perfil isolado do Chrome: $ChromeUserDataDir"
+    Add-Log "Nome da tarefa de quiosque: $TaskName"
+    Add-Log "Delay da tarefa: $DelaySeconds segundo(s)"
+    Add-Log "Argumentos do Chrome: $ChromeArgs"
+
+    Invoke-AcaoSegura "Criar/atualizar tarefa agendada do Chrome em modo quiosque" {
+        $Action = New-ScheduledTaskAction -Execute $ChromePath -Argument $ChromeArgs
+
+        $Trigger = New-ScheduledTaskTrigger -AtLogOn
+
+        if ($DelaySeconds -gt 0) {
+            $Trigger.Delay = "PT$($DelaySeconds)S"
+        }
+
+        $Settings = New-ScheduledTaskSettingsSet `
+            -AllowStartIfOnBatteries `
+            -DontStopIfGoingOnBatteries `
+            -StartWhenAvailable `
+            -MultipleInstances IgnoreNew
+
+        Register-ScheduledTask `
+            -TaskName $TaskName `
+            -Action $Action `
+            -Trigger $Trigger `
+            -Settings $Settings `
+            -Description "Abre o Painel Ribas automaticamente no Google Chrome em modo quiosque." `
+            -Force | Out-Null
+    }
+
+    Add-Log "Rotina de Chrome quiosque finalizada."
+}
+
 # =========================================================
 # INÍCIO DO DIAGNÓSTICO
 # =========================================================
@@ -460,10 +582,11 @@ else {
 
 # Quiosque diagnóstico
 if ($Config.enableKioskTask -eq $true) {
-    if ($Config.dryRun -eq $true) { Add-Log "enableKioskTask=true, mas dryRun=true. Nenhuma tarefa de quiosque sera criada." "AVISO" }
-    else { Add-Log "Criacao real de quiosque ainda nao implementada nesta sprint." "AVISO" }
+    Set-ChromeQuiosque
 }
-else { Add-Log "Criacao de quiosque desativada por configuracao." }
+else {
+    Add-Log "Criacao de quiosque desativada por configuracao."
+}
 
 # Limpeza diagnóstico
 if ($Config.enableCleanup -eq $true) {

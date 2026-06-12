@@ -6,7 +6,7 @@
     "kioskTaskName": "PainelRibasChromeKiosk",
     "computerNamePattern": "PAINEL-TV",
     "enablePowerTweaks": true,
-    "enableKioskTask": false,
+    "enableKioskTask": true,
     "enableCleanup": false,
     "enableAnyDeskCheck": true,
     "reportFolder": "relatorios",
@@ -16,5 +16,18 @@
         "acMonitorTimeoutMinutes": 0,
         "acStandbyTimeoutMinutes": 0,
         "acDiskTimeoutMinutes": 0
+    },
+    "kiosk": {
+        "delaySeconds": 20,
+        "chromeUserDataDir": "C:\\PainelRibas\\chrome-profile",
+        "arguments": [
+            "--kiosk",
+            "--start-fullscreen",
+            "--autoplay-policy=no-user-gesture-required",
+            "--disable-session-crashed-bubble",
+            "--disable-infobars",
+            "--no-first-run",
+            "--disable-features=TranslateUI"
+        ]
     }
 }
