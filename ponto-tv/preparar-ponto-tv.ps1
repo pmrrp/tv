@@ -275,7 +275,7 @@ function Find-AnyDesk {
 # CONFIGURAÇÕES DE ENERGIA DO PONTO TV
 # ---------------------------------------------------------
 
-function Aplicar-ConfiguracoesEnergia {
+function Set-ConfiguracoesEnergia {
     Add-Log "Preparando configuracoes de energia para ponto de TV..."
 
     $ExecutandoComoAdmin = Test-Administrador
@@ -452,7 +452,7 @@ try { Add-Log "Plano de energia ativo: $(powercfg /GETACTIVESCHEME)" }
 catch { Add-Log "Nao foi possivel consultar plano de energia: $($_.Exception.Message)" "AVISO" }
 
 if ($Config.enablePowerTweaks -eq $true) {
-    Aplicar-ConfiguracoesEnergia
+    Set-ConfiguracoesEnergia
 }
 else {
     Add-Log "Alteracoes de energia desativadas por configuracao."
