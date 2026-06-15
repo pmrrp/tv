@@ -1,15 +1,24 @@
 {
-    "dryRun": true,
+    "dryRun": false,
     "playerUrl": "https://painelribas.com.br/",
     "localAgentHealthUrl": "http://localhost:3579/health",
     "agentTaskName": "PainelRibasPlayerAgent",
     "kioskTaskName": "PainelRibasChromeKiosk",
     "computerNamePattern": "PAINEL-TV",
+    "enableAgentSetup": true,
     "enablePowerTweaks": true,
     "enableKioskTask": true,
     "enableCleanup": false,
     "enableAnyDeskCheck": true,
     "reportFolder": "relatorios",
+    "agent": {
+        "relativeInstallScript": "..\\player-agent\\scripts\\instalar-tarefa-agent.bat",
+        "relativeConfigPath": "..\\player-agent\\config.agent.json",
+        "expectedServerBaseUrl": "https://painelribas.com.br",
+        "runTaskAfterInstall": true,
+        "healthTimeoutSeconds": 5,
+        "healthRetrySeconds": 5
+    },
     "power": {
         "setHighPerformance": true,
         "disableHibernate": true,
@@ -27,7 +36,10 @@
             "--disable-session-crashed-bubble",
             "--disable-infobars",
             "--no-first-run",
-            "--disable-features=TranslateUI"
+            "--disable-translate",
+            "--disable-features=Translate,TranslateUI",
+            "--lang=pt-BR",
+            "--accept-lang=pt-BR,pt,en-US,en"
         ]
     }
 }

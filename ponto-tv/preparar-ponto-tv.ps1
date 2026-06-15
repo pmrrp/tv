@@ -114,6 +114,26 @@ function Get-Comando {
 }
 
 # ---------------------------------------------------------
+# RESOLVE CAMINHOS RELATIVOS AO KIT
+# ---------------------------------------------------------
+
+function Resolve-CaminhoKit {
+    param(
+        [string]$CaminhoRelativo
+    )
+
+    if ([string]::IsNullOrWhiteSpace($CaminhoRelativo)) {
+        return $null
+    }
+
+    if ([System.IO.Path]::IsPathRooted($CaminhoRelativo)) {
+        return $CaminhoRelativo
+    }
+
+    return [System.IO.Path]::GetFullPath((Join-Path $ScriptDir $CaminhoRelativo))
+}
+
+# ---------------------------------------------------------
 # TESTA URL JSON
 # ---------------------------------------------------------
 
@@ -292,6 +312,140 @@ function Find-AnyDesk {
     }
 
     return @{ Encontrado = $false; Caminho = $null; Tipo = "NaoEncontrado" }
+}
+
+# ---------------------------------------------------------
+# VALIDA CONFIGURAÇÃO DO PLAYER AGENT
+# ---------------------------------------------------------
+
+function Test-ConfigPlayerAgent {
+    Add-Log "Validando config.agent.json do Player Agent..."
+
+    $AgentConfig = $Config.agent
+
+    if ($null -eq $AgentConfig) {
+        Add-Log "Bloco 'agent' nao encontrado no config-ponto-tv.json." "AVISO"
+        return
+    }
+
+    $ConfigAgentPath = Resolve-CaminhoKit $AgentConfig.relativeConfigPath
+
+    if (!(Test-Path $ConfigAgentPath)) {
+        Add-Log "config.agent.json nao encontrado em: $ConfigAgentPath" "AVISO"
+        return
+    }
+
+    try {
+        $AgentJson = Get-Content $ConfigAgentPath -Raw | ConvertFrom-Json
+        $ServerBaseUrl = [string]$AgentJson.serverBaseUrl
+        $ExpectedUrl = [string]$AgentConfig.expectedServerBaseUrl
+
+        Add-Log "config.agent.json encontrado em: $ConfigAgentPath" "OK"
+        Add-Log "serverBaseUrl atual do Agent: $ServerBaseUrl"
+
+        if ($ServerBaseUrl -match "localhost|127\.0\.0\.1") {
+            Add-Log "O Player Agent esta apontando para localhost. Isso serve para desenvolvimento, mas nao para PC de TV em producao." "AVISO"
+        }
+
+        if (![string]::IsNullOrWhiteSpace($ExpectedUrl) -and $ServerBaseUrl -ne $ExpectedUrl) {
+            Add-Log "serverBaseUrl diferente do esperado. Esperado: $ExpectedUrl" "AVISO"
+        }
+
+        if ($ServerBaseUrl -eq $ExpectedUrl) {
+            Add-Log "serverBaseUrl do Agent esta correto para producao." "OK"
+        }
+    }
+    catch {
+        Add-Log "Falha ao ler config.agent.json: $($_.Exception.Message)" "AVISO"
+    }
+}
+
+# ---------------------------------------------------------
+# PLAYER AGENT — INSTALAÇÃO E INICIALIZAÇÃO
+# ---------------------------------------------------------
+
+function Set-PlayerAgent {
+    Add-Log "Preparando Player Agent local..."
+
+    $ExecutandoComoAdmin = Test-Administrador
+
+    if ($ExecutandoComoAdmin -ne $true -and $Config.dryRun -ne $true) {
+        Add-Log "Instalacao do Player Agent exige Administrador quando dryRun=false. Execute o kit como Administrador." "ERRO"
+        return
+    }
+
+    $AgentConfig = $Config.agent
+
+    if ($null -eq $AgentConfig) {
+        Add-Log "Bloco 'agent' nao encontrado no config-ponto-tv.json. Nao sera possivel instalar o Player Agent automaticamente." "AVISO"
+        return
+    }
+
+    Test-ConfigPlayerAgent
+
+    $TaskName = if ($Config.agentTaskName) { $Config.agentTaskName } else { "PainelRibasPlayerAgent" }
+    $InstallScriptPath = Resolve-CaminhoKit $AgentConfig.relativeInstallScript
+
+    Add-Log "Nome da tarefa do Player Agent: $TaskName"
+    Add-Log "Script de instalacao do Agent: $InstallScriptPath"
+
+    $AgentTask = Test-TarefaAgendada $TaskName
+
+    if ($AgentTask) {
+        Add-Log "Tarefa do Player Agent ja existe: $TaskName" "OK"
+    }
+    else {
+        if (!(Test-Path $InstallScriptPath)) {
+            Add-Log "Script de instalacao do Player Agent nao encontrado: $InstallScriptPath" "ERRO"
+            return
+        }
+
+        Invoke-AcaoSegura "Instalar tarefa agendada do Player Agent" {
+            Start-Process `
+                -FilePath "cmd.exe" `
+                -ArgumentList "/c `"$InstallScriptPath`"" `
+                -Wait `
+                -WindowStyle Normal
+        }
+    }
+
+    if ($AgentConfig.runTaskAfterInstall -eq $true) {
+        Invoke-AcaoSegura "Iniciar tarefa agendada do Player Agent" {
+            schtasks /Run /TN $TaskName | Out-Null
+        }
+    }
+
+    $HealthUrl = if ($Config.localAgentHealthUrl) { $Config.localAgentHealthUrl } else { "http://localhost:3579/health" }
+    $Timeout = if ($AgentConfig.healthTimeoutSeconds) { [int]$AgentConfig.healthTimeoutSeconds } else { 5 }
+    $RetrySeconds = if ($AgentConfig.healthRetrySeconds) { [int]$AgentConfig.healthRetrySeconds } else { 5 }
+
+    if ($Config.dryRun -eq $true) {
+        Add-Log "[DRY-RUN] Testaria novamente o endpoint do Player Agent em: $HealthUrl" "AVISO"
+        return
+    }
+
+    Add-Log "Aguardando $RetrySeconds segundo(s) para o Player Agent iniciar..."
+    Start-Sleep -Seconds $RetrySeconds
+
+    $Health = Test-HttpJson $HealthUrl $Timeout
+
+    if ($Health.Ok) {
+        Add-Log "Player Agent respondeu apos instalacao/inicializacao: $HealthUrl" "OK"
+
+        try {
+            if ($Health.Dados.nome) {
+                Add-Log "Nome retornado pelo agent: $($Health.Dados.nome)"
+            }
+        }
+        catch {
+            Add-Log "Agent respondeu, mas alguns campos nao puderam ser lidos." "AVISO"
+        }
+    }
+    else {
+        Add-Log "Player Agent ainda nao respondeu apos tentativa de inicializacao. Erro: $($Health.Erro)" "AVISO"
+    }
+
+    Add-Log "Rotina do Player Agent finalizada."
 }
 
 # ---------------------------------------------------------
@@ -553,6 +707,17 @@ $KioskTaskName = if ($Config.kioskTaskName) { $Config.kioskTaskName } else { "Pa
 $KioskTask = Test-TarefaAgendada $KioskTaskName
 if ($KioskTask) { Add-Log "Tarefa do Chrome Quiosque encontrada: $KioskTaskName" "OK"; Add-Log "Estado da tarefa do quiosque: $($KioskTask.State)" }
 else { Add-Log "Tarefa do Chrome Quiosque nao encontrada: $KioskTaskName" "AVISO" }
+
+# ---------------------------------------------------------
+# PLAYER AGENT — INSTALAÇÃO AUTOMÁTICA PELO KIT
+# ---------------------------------------------------------
+
+if ($Config.enableAgentSetup -eq $true) {
+    Set-PlayerAgent
+}
+else {
+    Add-Log "Instalacao/inicializacao automatica do Player Agent desativada por configuracao."
+}
 
 # Health Agent
 Add-Log "Testando endpoint local do Player Agent..."
