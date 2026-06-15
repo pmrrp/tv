@@ -5,12 +5,17 @@
     "agentTaskName": "PainelRibasPlayerAgent",
     "kioskTaskName": "PainelRibasChromeKiosk",
     "computerNamePattern": "PAINEL-TV",
+    "enableNodeInstall": false,
     "enableAgentSetup": true,
     "enablePowerTweaks": true,
     "enableKioskTask": true,
     "enableCleanup": false,
     "enableAnyDeskCheck": true,
     "reportFolder": "relatorios",
+    "node": {
+        "installMethod": "winget",
+        "wingetPackageId": "OpenJS.NodeJS.LTS"
+    },
     "agent": {
         "relativeInstallScript": "..\\player-agent\\scripts\\instalar-tarefa-agent.bat",
         "relativeConfigPath": "..\\player-agent\\config.agent.json",

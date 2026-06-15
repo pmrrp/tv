@@ -114,6 +114,127 @@ function Get-Comando {
 }
 
 # ---------------------------------------------------------
+# TESTA NODE.JS
+# ---------------------------------------------------------
+
+function Test-NodeJs {
+    $NodeCmd = Get-Comando "node.exe"
+
+    if ($NodeCmd) {
+        try {
+            $NodeVersion = node -v
+
+            return @{
+                Encontrado = $true
+                Caminho    = $NodeCmd.Source
+                Versao     = $NodeVersion
+            }
+        }
+        catch {
+            return @{
+                Encontrado = $true
+                Caminho    = $NodeCmd.Source
+                Versao     = "Versao nao identificada"
+            }
+        }
+    }
+
+    return @{
+        Encontrado = $false
+        Caminho    = $null
+        Versao     = $null
+    }
+}
+
+# ---------------------------------------------------------
+# NODE.JS — INSTALAÇÃO ASSISTIDA
+# ---------------------------------------------------------
+
+function Install-NodeJsAssistido {
+    Add-Log "Preparando verificacao/instalacao assistida do Node.js..."
+
+    $NodeInfo = Test-NodeJs
+
+    if ($NodeInfo.Encontrado) {
+        Add-Log "Node.js encontrado: $($NodeInfo.Versao) em $($NodeInfo.Caminho)" "OK"
+        return $true
+    }
+
+    Add-Log "Node.js nao encontrado no PATH." "AVISO"
+
+    if ($Config.enableNodeInstall -ne $true) {
+        Add-Log "Instalacao automatica do Node.js esta desativada por configuracao." "AVISO"
+        Add-Log "Para instalar manualmente: baixe o Node.js LTS ou use winget install OpenJS.NodeJS.LTS." "AVISO"
+        return $false
+    }
+
+    $ExecutandoComoAdmin = Test-Administrador
+
+    if ($ExecutandoComoAdmin -ne $true -and $Config.dryRun -ne $true) {
+        Add-Log "Instalacao do Node.js exige Administrador quando dryRun=false. Execute o kit como Administrador." "ERRO"
+        return $false
+    }
+
+    $NodeConfig = $Config.node
+
+    if ($null -eq $NodeConfig) {
+        Add-Log "Bloco 'node' nao encontrado no config-ponto-tv.json. Usando configuracao padrao de winget." "AVISO"
+
+        $NodeConfig = [PSCustomObject]@{
+            installMethod   = "winget"
+            wingetPackageId = "OpenJS.NodeJS.LTS"
+        }
+    }
+
+    $InstallMethod = if ($NodeConfig.installMethod) { [string]$NodeConfig.installMethod } else { "winget" }
+    $WingetPackageId = if ($NodeConfig.wingetPackageId) { [string]$NodeConfig.wingetPackageId } else { "OpenJS.NodeJS.LTS" }
+
+    if ($InstallMethod -ne "winget") {
+        Add-Log "Metodo de instalacao do Node.js nao suportado nesta versao: $InstallMethod" "ERRO"
+        return $false
+    }
+
+    $WingetCmd = Get-Comando "winget.exe"
+
+    if (!$WingetCmd) {
+        Add-Log "winget nao encontrado neste Windows." "ERRO"
+        Add-Log "Instale o Node.js LTS manualmente e rode o Kit novamente." "AVISO"
+        return $false
+    }
+
+    Add-Log "winget encontrado em: $($WingetCmd.Source)" "OK"
+    Add-Log "Pacote Node.js configurado: $WingetPackageId"
+
+    Invoke-AcaoSegura "Instalar Node.js LTS via winget ($WingetPackageId)" {
+        winget install `
+            --id $WingetPackageId `
+            --exact `
+            --accept-source-agreements `
+            --accept-package-agreements `
+            --silent
+    }
+
+    if ($Config.dryRun -eq $true) {
+        Add-Log "[DRY-RUN] Apos instalar Node.js, seria necessario reabrir o terminal ou reiniciar o instalador." "AVISO"
+        return $false
+    }
+
+    Add-Log "Verificando Node.js apos tentativa de instalacao..."
+
+    $NodeInfoDepois = Test-NodeJs
+
+    if ($NodeInfoDepois.Encontrado) {
+        Add-Log "Node.js encontrado apos instalacao: $($NodeInfoDepois.Versao) em $($NodeInfoDepois.Caminho)" "OK"
+        return $true
+    }
+
+    Add-Log "Node.js ainda nao foi encontrado apos instalacao." "AVISO"
+    Add-Log "Pode ser necessario fechar e abrir o terminal, fazer logoff ou reiniciar o Windows para atualizar o PATH." "AVISO"
+
+    return $false
+}
+
+# ---------------------------------------------------------
 # RESOLVE CAMINHOS RELATIVOS AO KIT
 # ---------------------------------------------------------
 
@@ -366,6 +487,13 @@ function Test-ConfigPlayerAgent {
 
 function Set-PlayerAgent {
     Add-Log "Preparando Player Agent local..."
+
+    $NodeInfo = Test-NodeJs
+
+    if ($NodeInfo.Encontrado -ne $true) {
+        Add-Log "Player Agent depende do Node.js, mas Node.js nao foi encontrado. Instalacao/inicializacao do Agent sera ignorada." "ERRO"
+        return
+    }
 
     $ExecutandoComoAdmin = Test-Administrador
 
@@ -664,12 +792,12 @@ if ($Config.computerNamePattern) {
 
 # Node
 Add-Log "Verificando Node.js..."
-$NodeCmd = Get-Comando "node.exe"
-if ($NodeCmd) {
-    try { Add-Log "Node.js encontrado: $(node -v) em $($NodeCmd.Source)" "OK" }
-    catch { Add-Log "Node.js encontrado, mas falhou ao obter versao." "AVISO" }
+
+$NodeDisponivel = Install-NodeJsAssistido
+
+if ($NodeDisponivel -ne $true) {
+    Add-Log "Node.js nao esta disponivel neste momento. Recursos que dependem do Player Agent podem falhar ate o Node.js ser instalado." "AVISO"
 }
-else { Add-Log "Node.js nao encontrado no PATH." "AVISO" }
 
 # Chrome
 Add-Log "Verificando Google Chrome..."
