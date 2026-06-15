@@ -35,3 +35,6 @@ Thumbs.db
 # Fontes locais / licenciadas
 *.ttf
 *.otf
+
+# Pacotes gerados localmente
+dist/

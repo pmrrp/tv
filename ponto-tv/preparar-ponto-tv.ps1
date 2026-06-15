@@ -40,6 +40,27 @@ try {
     # -Raw lê o arquivo inteiro como uma string.
     # ConvertFrom-Json transforma o texto JSON em objeto PowerShell.
     $Config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
+
+    # ---------------------------------------------------------
+    # STATUS FINAL DA PREPARAÇÃO
+    # ---------------------------------------------------------
+    # Esses status alimentam o resumo final do Kit Ponto TV.
+    # A ideia é o instalador não apenas executar ações, mas também
+    # entregar um parecer claro do que ficou OK e do que ainda exige ação manual.
+
+    $StatusFinal = [ordered]@{
+        Administrador      = $false
+        NomePcPadrao       = $false
+        NodeDisponivel     = $false
+        ChromeDisponivel   = $false
+        AnyDeskEncontrado  = $false
+        AgentConfigOk      = $false
+        AgentTaskOk        = $false
+        AgentHealthOk      = $false
+        KioskTaskOk        = $false
+        EnergiaConfigurada = $false
+        EnergiaSimulada    = $false
+    }
 }
 catch {
     Write-Host "ERRO: Nao foi possivel ler config-ponto-tv.json." -ForegroundColor Red
@@ -85,6 +106,22 @@ function Add-Log {
         "AVISO" { Write-Host $Linha -ForegroundColor Yellow }
         "ERRO" { Write-Host $Linha -ForegroundColor Red }
         default { Write-Host $Linha }
+    }
+}
+
+# ---------------------------------------------------------
+# STATUS FINAL — HELPER
+# ---------------------------------------------------------
+# Marca informações que serão exibidas no resumo final do Kit.
+
+function Set-StatusFinal {
+    param(
+        [string]$Nome,
+        [bool]$Valor
+    )
+
+    if ($StatusFinal.Contains($Nome)) {
+        $StatusFinal[$Nome] = $Valor
     }
 }
 
@@ -157,10 +194,12 @@ function Install-NodeJsAssistido {
 
     if ($NodeInfo.Encontrado) {
         Add-Log "Node.js encontrado: $($NodeInfo.Versao) em $($NodeInfo.Caminho)" "OK"
+        Set-StatusFinal "NodeDisponivel" $true
         return $true
     }
 
     Add-Log "Node.js nao encontrado no PATH." "AVISO"
+    Set-StatusFinal "NodeDisponivel" $false
 
     if ($Config.enableNodeInstall -ne $true) {
         Add-Log "Instalacao automatica do Node.js esta desativada por configuracao." "AVISO"
@@ -169,6 +208,7 @@ function Install-NodeJsAssistido {
     }
 
     $ExecutandoComoAdmin = Test-Administrador
+    Set-StatusFinal "Administrador" $ExecutandoComoAdmin
 
     if ($ExecutandoComoAdmin -ne $true -and $Config.dryRun -ne $true) {
         Add-Log "Instalacao do Node.js exige Administrador quando dryRun=false. Execute o kit como Administrador." "ERRO"
@@ -225,6 +265,7 @@ function Install-NodeJsAssistido {
 
     if ($NodeInfoDepois.Encontrado) {
         Add-Log "Node.js encontrado apos instalacao: $($NodeInfoDepois.Versao) em $($NodeInfoDepois.Caminho)" "OK"
+        Set-StatusFinal "NodeDisponivel" $true
         return $true
     }
 
@@ -474,6 +515,10 @@ function Test-ConfigPlayerAgent {
 
         if ($ServerBaseUrl -eq $ExpectedUrl) {
             Add-Log "serverBaseUrl do Agent esta correto para producao." "OK"
+            Set-StatusFinal "AgentConfigOk" $true
+        }
+        else {
+            Set-StatusFinal "AgentConfigOk" $false
         }
     }
     catch {
@@ -521,6 +566,7 @@ function Set-PlayerAgent {
 
     if ($AgentTask) {
         Add-Log "Tarefa do Player Agent ja existe: $TaskName" "OK"
+        Set-StatusFinal "AgentTaskOk" $true
     }
     else {
         if (!(Test-Path $InstallScriptPath)) {
@@ -534,6 +580,15 @@ function Set-PlayerAgent {
                 -ArgumentList "/c `"$InstallScriptPath`"" `
                 -Wait `
                 -WindowStyle Normal
+        }
+
+        $AgentTaskDepois = Test-TarefaAgendada $TaskName
+
+        if ($AgentTaskDepois) {
+            Set-StatusFinal "AgentTaskOk" $true
+        }
+        else {
+            Set-StatusFinal "AgentTaskOk" $false
         }
     }
 
@@ -559,6 +614,7 @@ function Set-PlayerAgent {
 
     if ($Health.Ok) {
         Add-Log "Player Agent respondeu apos instalacao/inicializacao: $HealthUrl" "OK"
+        Set-StatusFinal "AgentHealthOk" $true
 
         try {
             if ($Health.Dados.nome) {
@@ -571,6 +627,7 @@ function Set-PlayerAgent {
     }
     else {
         Add-Log "Player Agent ainda nao respondeu apos tentativa de inicializacao. Erro: $($Health.Erro)" "AVISO"
+        Set-StatusFinal "AgentHealthOk" $false
     }
 
     Add-Log "Rotina do Player Agent finalizada."
@@ -652,6 +709,15 @@ function Set-ConfiguracoesEnergia {
     }
 
     Add-Log "Rotina de energia finalizada."
+
+    if ($Config.dryRun -eq $true) {
+        Set-StatusFinal "EnergiaSimulada" $true
+        Set-StatusFinal "EnergiaConfigurada" $false
+    }
+    else {
+        Set-StatusFinal "EnergiaConfigurada" $true
+        Set-StatusFinal "EnergiaSimulada" $false
+    }
 }
 
 # ---------------------------------------------------------
@@ -674,9 +740,13 @@ function Set-ChromeQuiosque {
 
     $ChromePath = Find-Chrome
 
-    if (!$ChromePath) {
-        Add-Log "Google Chrome nao encontrado. Nao sera possivel preparar o modo quiosque." "ERRO"
-        return
+    if ($ChromePath) {
+        Add-Log "Google Chrome encontrado em: $ChromePath" "OK"
+        Set-StatusFinal "ChromeDisponivel" $true
+    }
+    else {
+        Add-Log "Google Chrome não encontrado." "AVISO"
+        Set-StatusFinal "ChromeDisponivel" $false
     }
 
     $KioskConfig = $Config.kiosk
@@ -750,7 +820,88 @@ function Set-ChromeQuiosque {
             -Force | Out-Null
     }
 
+    $KioskTaskDepois = Test-TarefaAgendada $TaskName
+
+    if ($KioskTaskDepois) {
+        Add-Log "Tarefa do Chrome Quiosque validada apos criacao/atualizacao." "OK"
+        Set-StatusFinal "KioskTaskOk" $true
+    }
+    else {
+        Add-Log "Tarefa do Chrome Quiosque nao foi encontrada apos tentativa de criacao." "AVISO"
+        Set-StatusFinal "KioskTaskOk" $false
+    }
+
     Add-Log "Rotina de Chrome quiosque finalizada."
+}
+
+# ---------------------------------------------------------
+# RESUMO FINAL DA PREPARAÇÃO
+# ---------------------------------------------------------
+
+function Write-LinhaResumo {
+    param(
+        [string]$Descricao,
+        [bool]$Ok
+    )
+
+    if ($Ok) {
+        Add-Log $Descricao "OK"
+    }
+    else {
+        Add-Log $Descricao "AVISO"
+    }
+}
+
+function Show-ResumoFinalPontoTv {
+    Add-Log ""
+    Add-Log "========================================================"
+    Add-Log "             RESUMO FINAL DO PONTO TV"
+    Add-Log "========================================================"
+
+    Write-LinhaResumo "Executado como Administrador" $StatusFinal.Administrador
+    Write-LinhaResumo "Nome do computador no padrao PAINEL-TV" $StatusFinal.NomePcPadrao
+    Write-LinhaResumo "Node.js disponivel" $StatusFinal.NodeDisponivel
+    Write-LinhaResumo "Google Chrome disponivel" $StatusFinal.ChromeDisponivel
+    Write-LinhaResumo "AnyDesk encontrado" $StatusFinal.AnyDeskEncontrado
+    Write-LinhaResumo "config.agent.json apontando para producao" $StatusFinal.AgentConfigOk
+    Write-LinhaResumo "Tarefa do Player Agent encontrada/criada" $StatusFinal.AgentTaskOk
+    Write-LinhaResumo "Player Agent respondendo em localhost" $StatusFinal.AgentHealthOk
+    Write-LinhaResumo "Tarefa do Chrome Quiosque encontrada/criada" $StatusFinal.KioskTaskOk
+    if ($StatusFinal.EnergiaConfigurada) {
+        Write-LinhaResumo "Configuracoes de energia aplicadas" $true
+    }
+    elseif ($StatusFinal.EnergiaSimulada) {
+        Write-LinhaResumo "Configuracoes de energia simuladas em dryRun" $true
+    }
+    else {
+        Write-LinhaResumo "Configuracoes de energia nao aplicadas" $false
+    }
+
+    Add-Log ""
+    Add-Log "========================================================"
+    Add-Log "             PENDENCIAS MANUAIS DO TECNICO"
+    Add-Log "========================================================"
+
+    Add-Log "[MANUAL] Restaurar/limpar Windows quando o PC vier de outro setor."
+    Add-Log "[MANUAL] Criar ou conferir conta local dedicada chamada Painel."
+    Add-Log "[MANUAL] Definir senha exclusiva e registrar apenas no controle interno da TI."
+    Add-Log "[MANUAL] Configurar login automatico do Windows."
+    Add-Log "[MANUAL] Configurar BIOS/UEFI para ligar apos queda de energia."
+    Add-Log "[MANUAL] Configurar BIOS/UEFI para nao travar sem teclado/mouse."
+    Add-Log "[MANUAL] Instalar/configurar AnyDesk com acesso nao supervisionado."
+    Add-Log "[MANUAL] Testar HDMI, resolucao, escala e audio na TV real."
+    Add-Log "[MANUAL] Testar reinicio completo do Windows."
+    Add-Log "[MANUAL] Testar funcionamento sem teclado e mouse."
+    Add-Log "[MANUAL] Testar queda e retorno de energia."
+    Add-Log "[MANUAL] Fazer teste prolongado de 30 a 60 minutos."
+
+    Add-Log ""
+    Add-Log "========================================================"
+    Add-Log "             RESULTADO OPERACIONAL ESPERADO"
+    Add-Log "========================================================"
+
+    Add-Log "Energia voltou -> PC ligou -> Windows entrou -> Agent iniciou -> Chrome abriu em modo quiosque -> Painel exibiu conteudos."
+    Add-Log "========================================================"
 }
 
 # =========================================================
@@ -770,8 +921,15 @@ Add-Log "========================================================"
 # Windows
 Add-Log "Iniciando diagnostico do Windows..."
 
-if (Test-Administrador) { Add-Log "Executando com permissao de Administrador." "OK" }
-else { Add-Log "Nao esta executando como Administrador. Algumas configuracoes futuras exigirao Administrador." "AVISO" }
+$ExecutandoComoAdmin = Test-Administrador
+Set-StatusFinal "Administrador" $ExecutandoComoAdmin
+
+if ($ExecutandoComoAdmin) {
+    Add-Log "Executando com permissao de Administrador." "OK"
+}
+else {
+    Add-Log "Nao esta executando como Administrador. Algumas configuracoes futuras exigirao Administrador." "AVISO"
+}
 
 Add-Log "Usuario atual: $env:USERNAME"
 Add-Log "Dominio/Maquina do usuario: $env:USERDOMAIN"
@@ -786,8 +944,18 @@ try {
 catch { Add-Log "Nao foi possivel obter detalhes do sistema operacional: $($_.Exception.Message)" "AVISO" }
 
 if ($Config.computerNamePattern) {
-    if ($env:COMPUTERNAME -like "$($Config.computerNamePattern)*") { Add-Log "Nome do computador segue o padrao esperado: $($Config.computerNamePattern)*" "OK" }
-    else { Add-Log "Nome do computador nao segue o padrao esperado: $($Config.computerNamePattern)*" "AVISO" }
+    if ($env:COMPUTERNAME -like "$($Config.computerNamePattern)*") {
+        Add-Log "Nome do computador segue o padrao esperado: $($Config.computerNamePattern)*" "OK" 
+
+        Set-StatusFinal "NomePcPadrao" $true
+
+    }
+    else {
+        Add-Log "Nome do computador nao segue o padrao esperado: $($Config.computerNamePattern)*" "AVISO" 
+
+        Set-StatusFinal "NomePcPadrao" $false
+
+    }
 }
 
 # Node
@@ -802,8 +970,15 @@ if ($NodeDisponivel -ne $true) {
 # Chrome
 Add-Log "Verificando Google Chrome..."
 $ChromePath = Find-Chrome
-if ($ChromePath) { Add-Log "Google Chrome encontrado em: $ChromePath" "OK" }
-else { Add-Log "Google Chrome nao encontrado." "AVISO" }
+
+if ($ChromePath) {
+    Add-Log "Google Chrome encontrado em: $ChromePath" "OK"
+    Set-StatusFinal "ChromeDisponivel" $true
+}
+else {
+    Add-Log "Google Chrome nao encontrado." "AVISO"
+    Set-StatusFinal "ChromeDisponivel" $false
+}
 
 # AnyDesk
 if ($Config.enableAnyDeskCheck -eq $true) {
@@ -814,12 +989,17 @@ if ($Config.enableAnyDeskCheck -eq $true) {
         if ($AnyDeskInfo.Tipo -eq "PortatilOuInstaladorEmDownloads") {
             Add-Log "AnyDesk.exe encontrado em Downloads: $($AnyDeskInfo.Caminho)" "AVISO"
             Add-Log "Isso indica que ele pode estar apenas baixado/portatil, nao instalado como acesso nao supervisionado." "AVISO"
+            Set-StatusFinal "AnyDeskEncontrado" $true
         }
         else {
             Add-Log "AnyDesk encontrado em: $($AnyDeskInfo.Caminho) [Tipo: $($AnyDeskInfo.Tipo)]" "OK"
+            Set-StatusFinal "AnyDeskEncontrado" $true
         }
     }
-    else { Add-Log "AnyDesk nao encontrado. Instalacao/configuracao pode ser feita manualmente depois." "AVISO" }
+    else {
+        Add-Log "AnyDesk nao encontrado. Instalacao/configuracao pode ser feita manualmente depois." "AVISO" 
+        Set-StatusFinal "AnyDeskEncontrado" $false
+    }
 }
 else { Add-Log "Verificacao do AnyDesk desativada por configuracao." }
 
@@ -827,14 +1007,28 @@ else { Add-Log "Verificacao do AnyDesk desativada por configuracao." }
 Add-Log "Verificando tarefa agendada do Player Agent..."
 $AgentTaskName = if ($Config.agentTaskName) { $Config.agentTaskName } else { "PainelRibasPlayerAgent" }
 $AgentTask = Test-TarefaAgendada $AgentTaskName
-if ($AgentTask) { Add-Log "Tarefa do Player Agent encontrada: $AgentTaskName" "OK"; Add-Log "Estado da tarefa do agente: $($AgentTask.State)" }
-else { Add-Log "Tarefa do Player Agent nao encontrada: $AgentTaskName" "AVISO" }
+if ($AgentTask) {
+    Add-Log "Tarefa do Player Agent encontrada: $AgentTaskName" "OK"
+    Add-Log "Estado da tarefa do agente: $($AgentTask.State)"
+    Set-StatusFinal "AgentTaskOk" $true
+}
+else {
+    Add-Log "Tarefa do Player Agent nao encontrada: $AgentTaskName" "AVISO"
+    Set-StatusFinal "AgentTaskOk" $false
+}
 
 Add-Log "Verificando tarefa agendada do Chrome Quiosque..."
 $KioskTaskName = if ($Config.kioskTaskName) { $Config.kioskTaskName } else { "PainelRibasChromeKiosk" }
 $KioskTask = Test-TarefaAgendada $KioskTaskName
-if ($KioskTask) { Add-Log "Tarefa do Chrome Quiosque encontrada: $KioskTaskName" "OK"; Add-Log "Estado da tarefa do quiosque: $($KioskTask.State)" }
-else { Add-Log "Tarefa do Chrome Quiosque nao encontrada: $KioskTaskName" "AVISO" }
+if ($KioskTask) {
+    Add-Log "Tarefa do Chrome Quiosque encontrada: $KioskTaskName" "OK"
+    Add-Log "Estado da tarefa do quiosque: $($KioskTask.State)"
+    Set-StatusFinal "KioskTaskOk" $true
+}
+else {
+    Add-Log "Tarefa do Chrome Quiosque nao encontrada: $KioskTaskName" "AVISO"
+    Set-StatusFinal "KioskTaskOk" $false
+}
 
 # ---------------------------------------------------------
 # PLAYER AGENT — INSTALAÇÃO AUTOMÁTICA PELO KIT
@@ -853,13 +1047,18 @@ $HealthUrl = if ($Config.localAgentHealthUrl) { $Config.localAgentHealthUrl } el
 $Health = Test-HttpJson $HealthUrl 3
 if ($Health.Ok) {
     Add-Log "Player Agent respondeu em: $HealthUrl" "OK"
+    Set-StatusFinal "AgentHealthOk" $true
+
     try {
         if ($Health.Dados.nome) { Add-Log "Nome retornado pelo agent: $($Health.Dados.nome)" }
         if ($null -ne $Health.Dados.midias.total) { Add-Log "Total de midias em cache local: $($Health.Dados.midias.total)" }
     }
     catch { Add-Log "Agent respondeu, mas nao foi possivel ler todos os campos." "AVISO" }
 }
-else { Add-Log "Player Agent nao respondeu em $HealthUrl. Erro: $($Health.Erro)" "AVISO" }
+else {
+    Add-Log "Player Agent nao respondeu em $HealthUrl. Erro: $($Health.Erro)" "AVISO"
+    Set-StatusFinal "AgentHealthOk" $false
+}
 
 # Energia diagnóstico
 Add-Log "Coletando informacoes basicas de energia..."
@@ -889,6 +1088,8 @@ if ($Config.enableCleanup -eq $true) {
 else { Add-Log "Limpeza desativada por configuracao." }
 
 # Encerramento
+Show-ResumoFinalPontoTv
+
 Add-Log "========================================================"
 Add-Log "DIAGNOSTICO CONCLUIDO"
 Add-Log "========================================================"

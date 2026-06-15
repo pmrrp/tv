@@ -1,5 +1,5 @@
 {
-    "dryRun": false,
+    "dryRun": true,
     "playerUrl": "https://painelribas.com.br/",
     "localAgentHealthUrl": "http://localhost:3579/health",
     "agentTaskName": "PainelRibasPlayerAgent",
