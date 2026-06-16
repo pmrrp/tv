@@ -247,3 +247,102 @@ Todo o desenvolvimento foi realizado priorizando:
 - possibilidade de crescimento futuro
 
 O projeto continua em evolução contínua.
+
+---
+
+## 16/06/2026 — Recuperação e estabilização da produção
+
+### Resumo
+
+Foi realizada uma intervenção operacional na VM de produção do Painel Ribas para recuperar o acesso público ao sistema e tornar a inicialização automática mais confiável.
+
+### Situação encontrada
+
+O painel estava fora do ar porque os processos responsáveis pela aplicação e pelo túnel não estavam retornando automaticamente após reinicialização/alterações no ambiente.
+
+Foram encontrados os seguintes pontos:
+
+- o PM2 não possuía processo ativo confiável para restaurar a aplicação;
+- a tarefa antiga do PM2 dependia de contexto de usuário;
+- o Cloudflared não estava instalado como serviço;
+- havia uma tarefa antiga do Cloudflared vinculada ao usuário `raul.souza`;
+- a senha/credencial do usuário poderia impedir a execução automática dessas tarefas.
+
+### Correção aplicada
+
+Foram criadas novas tarefas agendadas executando como `SYSTEM`:
+
+```txt
+Painel Ribas - Node Server SYSTEM
+Painel Ribas - Cloudflared SYSTEM
+```
+
+As tarefas antigas foram desativadas:
+
+```txt
+Cloudflare Tunnel Painel Ribas
+Painel TV V2 - PM2 Restore
+```
+
+### Validação após restart
+
+Após reiniciar a VM, foi confirmado que:
+
+```txt
+Painel Ribas - Node Server SYSTEM       Running
+Painel Ribas - Cloudflared SYSTEM       Running
+Cloudflare Tunnel Painel Ribas          Disabled
+Painel TV V2 - PM2 Restore              Disabled
+```
+
+Também foi validado:
+
+```txt
+http://localhost:3000/api/health
+StatusCode: 200
+```
+
+E acesso externo:
+
+```txt
+https://painelribas.com.br
+https://painelribas.com.br/admin
+```
+
+### Atualização do código em produção
+
+Após estabilizar a VM, foi feito backup da pasta de produção e executado `git pull` na branch `fix-admin-funcionalidades`.
+
+Resultado do deploy:
+
+```txt
+Updating 3acc44d..4ab378a
+Fast-forward
+45 files changed, 11150 insertions(+), 648 deletions(-)
+```
+
+Depois foi executado:
+
+```txt
+npm install
+```
+
+O Node foi reiniciado pela tarefa agendada `Painel Ribas - Node Server SYSTEM` e o endpoint `/api/health` respondeu com sucesso.
+
+### Status final
+
+```txt
+[OK] Produção online
+[OK] VM reinicia e o Painel sobe automaticamente
+[OK] Node rodando como SYSTEM
+[OK] Cloudflared rodando como SYSTEM
+[OK] Tarefas antigas desativadas
+[OK] Código atualizado na VM
+[OK] git status limpo
+```
+
+### Pendências
+
+- configurar no host/Hyper-V para que a VM ligue automaticamente junto com o servidor físico;
+- futuramente migrar o acesso oficial para `tv.ribasdoriopardo.ms.gov.br`, quando a gestão do DNS institucional estiver regularizada;
+- tratar com calma o aviso moderado do `npm audit`, sem aplicar `npm audit fix` diretamente em produção sem teste prévio.

@@ -1018,3 +1018,92 @@ Elas podem ser revistas futuramente conforme:
 - necessidade de monitoramento;
 - exigências institucionais;
 - amadurecimento da solução.
+
+---
+
+## Decisão técnica — Inicialização automática da produção sem dependência de usuário
+
+**Data:** 16/06/2026  
+**Projeto:** Painel Ribas / Painel TV  
+**Branch:** `fix-admin-funcionalidades`
+
+### Decisão
+
+A produção do Painel Ribas passou a ser iniciada por tarefas agendadas do Windows executando como `SYSTEM`, em vez de depender de processos manuais, PM2 interativo ou tarefas vinculadas ao usuário `raul.souza`.
+
+### Motivo
+
+Foi identificado que a produção poderia não retornar automaticamente após reinicialização da VM ou alteração/expiração de senha do usuário. As tarefas antigas dependiam do contexto do usuário e/ou do `PATH` da sessão, o que tornava o ambiente mais frágil.
+
+### Implementação adotada
+
+Foram criadas duas tarefas agendadas principais:
+
+```txt
+Painel Ribas - Node Server SYSTEM
+Painel Ribas - Cloudflared SYSTEM
+```
+
+A tarefa do Node executa:
+
+```txt
+C:\Program Files\nodejs\node.exe server.js
+```
+
+com diretório de trabalho:
+
+```txt
+C:\tv-v2\tv
+```
+
+A tarefa do Cloudflared executa:
+
+```txt
+C:\cloudflared\cloudflared.exe tunnel --config "C:\Windows\System32\config\systemprofile\.cloudflared\config.yml" run painelribas
+```
+
+com diretório de trabalho:
+
+```txt
+C:\cloudflared
+```
+
+### Tarefas antigas desativadas
+
+As tarefas abaixo foram desativadas por dependerem de usuário/senha/contexto interativo:
+
+```txt
+Cloudflare Tunnel Painel Ribas
+Painel TV V2 - PM2 Restore
+```
+
+### Resultado
+
+Após reiniciar a VM, foi confirmado que:
+
+```txt
+Painel Ribas - Node Server SYSTEM       Running
+Painel Ribas - Cloudflared SYSTEM       Running
+```
+
+O endpoint local respondeu:
+
+```txt
+http://localhost:3000/api/health
+StatusCode: 200
+```
+
+E o painel externo permaneceu funcional em:
+
+```txt
+https://painelribas.com.br
+https://painelribas.com.br/admin
+```
+
+### Consequência prática
+
+Quando a VM liga, o sistema volta automaticamente sem necessidade de login manual, senha do usuário ou execução manual de comandos.
+
+### Pendência relacionada
+
+Ainda é necessário configurar no servidor físico/host de virtualização para que a própria VM seja iniciada automaticamente junto com o servidor físico.

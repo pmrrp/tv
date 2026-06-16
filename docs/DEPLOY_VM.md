@@ -616,4 +616,207 @@ Itens validados:
 - recorrência inteligente da playlist;
 - documentação atualizada.
 
+
 ---
+
+## Atualização operacional — Inicialização automática da produção
+
+**Data:** 16/06/2026  
+**Branch de produção:** `fix-admin-funcionalidades`  
+**Pasta da aplicação na VM:** `C:\tv-v2\tv`
+
+### Contexto
+
+Foi identificado que o Painel Ribas estava dependente de processos iniciados manualmente ou de tarefas agendadas vinculadas ao usuário `raul.souza`. Após alteração/expiração de senha e reinicialização da VM, o serviço não retornava automaticamente.
+
+O problema afetava principalmente:
+
+- o servidor Node.js do Painel;
+- o túnel Cloudflare responsável por expor o domínio público;
+- a tarefa antiga de restauração via PM2;
+- a tarefa antiga do Cloudflared vinculada ao usuário.
+
+### Ajuste realizado
+
+Foram criadas duas novas tarefas agendadas executando como `SYSTEM`, sem dependência de login interativo ou senha de usuário.
+
+#### Tarefa do servidor Node.js
+
+**Nome da tarefa:**
+
+```txt
+Painel Ribas - Node Server SYSTEM
+```
+
+**Executável:**
+
+```txt
+C:\Program Files\nodejs\node.exe
+```
+
+**Argumento:**
+
+```txt
+server.js
+```
+
+**Diretório de trabalho:**
+
+```txt
+C:\tv-v2\tv
+```
+
+**Usuário de execução:**
+
+```txt
+SYSTEM
+```
+
+**Gatilho:**
+
+```txt
+Ao iniciar o sistema
+```
+
+Essa tarefa inicia o servidor principal do Painel na porta `3000`.
+
+#### Tarefa do Cloudflared
+
+**Nome da tarefa:**
+
+```txt
+Painel Ribas - Cloudflared SYSTEM
+```
+
+**Executável:**
+
+```txt
+C:\cloudflared\cloudflared.exe
+```
+
+**Argumentos:**
+
+```txt
+tunnel --config "C:\Windows\System32\config\systemprofile\.cloudflared\config.yml" run painelribas
+```
+
+**Diretório de trabalho:**
+
+```txt
+C:\cloudflared
+```
+
+**Usuário de execução:**
+
+```txt
+SYSTEM
+```
+
+**Gatilho:**
+
+```txt
+Ao iniciar o sistema
+```
+
+Essa tarefa inicia o túnel Cloudflare usado para expor o Painel publicamente.
+
+### Tarefas antigas desativadas
+
+As tarefas antigas foram mantidas apenas como histórico, porém desativadas:
+
+```txt
+Cloudflare Tunnel Painel Ribas
+Painel TV V2 - PM2 Restore
+```
+
+Motivo:
+
+- dependiam do usuário `raul.souza`;
+- podiam falhar em caso de alteração de senha;
+- a tarefa PM2 dependia de contexto interativo/PATH do usuário;
+- não eram adequadas para retomada automática confiável da produção.
+
+### Validação realizada
+
+Após reinicialização da VM, foi validado que:
+
+```txt
+Painel Ribas - Node Server SYSTEM       Running
+Painel Ribas - Cloudflared SYSTEM       Running
+Cloudflare Tunnel Painel Ribas          Disabled
+Painel TV V2 - PM2 Restore              Disabled
+```
+
+Também foi validado o processo Node:
+
+```txt
+"C:\Program Files\nodejs\node.exe" server.js
+```
+
+E o processo Cloudflared:
+
+```txt
+"C:\cloudflared\cloudflared.exe" tunnel --config "C:\Windows\System32\config\systemprofile\.cloudflared\config.yml" run painelribas
+```
+
+O endpoint local respondeu corretamente:
+
+```txt
+http://localhost:3000/api/health
+StatusCode: 200
+```
+
+Também foi validado o acesso externo:
+
+```txt
+https://painelribas.com.br
+https://painelribas.com.br/admin
+```
+
+### Deploy atualizado na VM
+
+Após estabilização da VM, foi realizado `git pull` na branch `fix-admin-funcionalidades`.
+
+Resultado:
+
+```txt
+Updating 3acc44d..4ab378a
+Fast-forward
+45 files changed, 11150 insertions(+), 648 deletions(-)
+```
+
+Após o pull, foi executado:
+
+```txt
+npm install
+```
+
+Em seguida, o servidor Node foi reiniciado pela tarefa agendada SYSTEM e o endpoint `/api/health` respondeu com sucesso.
+
+### Status final
+
+```txt
+[OK] VM reinicia e o Painel sobe automaticamente
+[OK] Node.js não depende mais do PM2 para produção
+[OK] Cloudflared não depende mais de login/senha de usuário
+[OK] painelribas.com.br funcional
+[OK] /admin funcional
+[OK] git status limpo após atualização
+```
+
+### Pendência externa
+
+Ainda é necessário configurar no servidor físico/host da virtualização para que a VM seja iniciada automaticamente junto com o Windows Server físico.
+
+Essa configuração deve ser realizada no host, por exemplo no Hyper-V:
+
+```txt
+Hyper-V Manager
+→ VM do Painel Ribas
+→ Configurações
+→ Ação automática de inicialização
+→ Sempre iniciar esta máquina virtual automaticamente
+→ Atraso sugerido: 60 segundos
+```
+
+Essa pendência não é feita dentro da VM.

@@ -683,3 +683,48 @@ A meta atual é manter uma solução:
 - fácil de explicar;
 - útil para a Prefeitura;
 - com potencial futuro de adaptação comercial.
+
+---
+
+## Pendências pós-estabilização da produção
+
+### Produção / VM
+
+- [x] Recuperar acesso ao `painelribas.com.br`.
+- [x] Validar `/admin`.
+- [x] Criar tarefa agendada SYSTEM para o Node.js.
+- [x] Criar tarefa agendada SYSTEM para o Cloudflared.
+- [x] Desativar tarefas antigas dependentes de usuário.
+- [x] Testar restart da VM.
+- [x] Atualizar código da VM com `git pull`.
+- [x] Validar produção após deploy.
+
+### Infraestrutura externa
+
+- [ ] Configurar no host/Hyper-V para que a VM inicie automaticamente junto com o servidor físico.
+- [ ] Confirmar com o responsável pelo servidor físico se a ação automática de inicialização da VM está habilitada.
+- [ ] Definir atraso sugerido de inicialização da VM, preferencialmente 60 segundos.
+
+### DNS institucional
+
+- [ ] Manter `painelribas.com.br` como domínio operacional provisório.
+- [ ] Após migração do portal da Prefeitura, solicitar retorno/centralização da gestão DNS institucional.
+- [ ] Solicitar criação/ajuste do registro `tv.ribasdoriopardo.ms.gov.br`.
+- [ ] Apontar `tv.ribasdoriopardo.ms.gov.br` para o túnel Cloudflare correto.
+- [ ] Validar painel no domínio institucional.
+- [ ] Atualizar documentação e configurações que ainda apontarem para `painelribas.com.br`, quando a migração institucional estiver concluída.
+
+### Segurança / manutenção
+
+- [ ] Avaliar o aviso moderado do `npm audit` relacionado ao pacote `qs`.
+- [ ] Testar eventual correção em ambiente seguro antes de aplicar em produção.
+- [ ] Evitar executar `npm audit fix` diretamente em produção sem validação prévia.
+
+### Kit Ponto TV
+
+- [x] Criar Kit Ponto TV.
+- [x] Criar gerador de pacote.
+- [x] Criar script de preparação do Windows.
+- [ ] Testar o fluxo completo em Windows limpo via pendrive.
+- [ ] Validar instalação em equipamento final.
+- [ ] Validar fallback local com Player Agent.
