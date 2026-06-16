@@ -745,8 +745,10 @@ function Set-ChromeQuiosque {
         Set-StatusFinal "ChromeDisponivel" $true
     }
     else {
-        Add-Log "Google Chrome não encontrado." "AVISO"
+        Add-Log "Google Chrome nao encontrado. A tarefa de quiosque nao sera criada ate o Chrome ser instalado." "AVISO"
         Set-StatusFinal "ChromeDisponivel" $false
+        Set-StatusFinal "KioskTaskOk" $false
+        return
     }
 
     $KioskConfig = $Config.kiosk
