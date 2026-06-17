@@ -566,29 +566,81 @@ $AnyDeskPath = Find-AnyDesk
 
 if ($AnyDeskPath) {
     Add-Log "AnyDesk encontrado em: $AnyDeskPath" "OK"
+    Set-StatusFinal "AnyDeskEncontrado" $true
 }
 else {
     Add-Log "AnyDesk nao encontrado." "AVISO"
+    Set-StatusFinal "AnyDeskEncontrado" $false
 
-    if ($InstallAnyDesk -and $Winget) {
-        Invoke-AcaoSegura "Instalar AnyDesk via winget ($AnyDeskWingetId)" {
-            winget install --id $AnyDeskWingetId --exact --silent --accept-source-agreements --accept-package-agreements
-        } | Out-Null
+    if ($InstallAnyDesk) {
+        $InstalouViaWinget = $false
 
-        Update-PathDaSessao
+        if ($Winget) {
+            Invoke-AcaoSegura "Instalar AnyDesk via winget ($AnyDeskWingetId)" {
+                winget install --id $AnyDeskWingetId --exact --silent --accept-source-agreements --accept-package-agreements
+            } | Out-Null
 
-        $AnyDeskPath = Find-AnyDesk
+            Update-PathDaSessao
+            Start-Sleep -Seconds 5
 
-        if ($AnyDeskPath) {
-            Add-Log "AnyDesk encontrado apos instalacao: $AnyDeskPath" "OK"
-            Add-Log "Configure manualmente o acesso nao supervisionado e registre a senha apenas no controle interno da TI." "AVISO"
+            $AnyDeskPath = Find-AnyDesk
+
+            if ($AnyDeskPath) {
+                $InstalouViaWinget = $true
+                Add-Log "AnyDesk encontrado apos instalacao via winget: $AnyDeskPath" "OK"
+                Set-StatusFinal "AnyDeskEncontrado" $true
+            }
+            else {
+                Add-Log "winget concluiu, mas o AnyDesk nao foi localizado. Tentando instalador oficial." "AVISO"
+            }
         }
         else {
-            Add-Log "AnyDesk ainda nao foi encontrado apos instalacao. Pode ser necessario reiniciar ou instalar manualmente." "AVISO"
+            Add-Log "winget nao encontrado. Tentando instalador oficial do AnyDesk." "AVISO"
+        }
+
+        if (-not $InstalouViaWinget) {
+            $AnyDeskInstaller = Join-Path $env:TEMP "AnyDesk.exe"
+            $AnyDeskInstallDir = "C:\Program Files (x86)\AnyDesk"
+
+            Invoke-AcaoSegura "Baixar instalador oficial do AnyDesk" {
+                Invoke-WebRequest `
+                    -Uri "https://download.anydesk.com/AnyDesk.exe" `
+                    -OutFile $AnyDeskInstaller `
+                    -UseBasicParsing
+            } | Out-Null
+
+            if (Test-Path $AnyDeskInstaller) {
+                Invoke-AcaoSegura "Instalar AnyDesk via instalador oficial" {
+                    Start-Process `
+                        -FilePath $AnyDeskInstaller `
+                        -ArgumentList "--install `"$AnyDeskInstallDir`" --start-with-win --create-shortcuts --silent" `
+                        -Wait
+                } | Out-Null
+
+                Start-Sleep -Seconds 8
+                Update-PathDaSessao
+
+                $AnyDeskPath = Find-AnyDesk
+
+                if ($AnyDeskPath) {
+                    Add-Log "AnyDesk encontrado apos instalacao oficial: $AnyDeskPath" "OK"
+                    Set-StatusFinal "AnyDeskEncontrado" $true
+                    Add-Log "Configure manualmente o acesso nao supervisionado e registre a senha apenas no controle interno da TI." "AVISO"
+                }
+                else {
+                    Add-Log "AnyDesk ainda nao foi encontrado apos winget/fallback oficial. Configuracao manual pode ser necessaria." "AVISO"
+                    Set-StatusFinal "AnyDeskEncontrado" $false
+                }
+            }
+            else {
+                Add-Log "Instalador oficial do AnyDesk nao foi baixado: $AnyDeskInstaller" "ERRO"
+                Set-StatusFinal "AnyDeskEncontrado" $false
+            }
         }
     }
     else {
-        Add-Log "Instalacao automatica do AnyDesk nao executada." "AVISO"
+        Add-Log "Instalacao automatica do AnyDesk nao executada por configuracao." "AVISO"
+        Set-StatusFinal "AnyDeskEncontrado" $false
     }
 }
 

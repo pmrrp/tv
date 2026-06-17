@@ -313,7 +313,7 @@ function Repair-JsonUtf8SemBom {
         }
     }
     catch {
-        Add-Log "Nao foi possivel corrigir BOM do JSON $Caminho: $($_.Exception.Message)" "AVISO"
+        Add-Log ("Nao foi possivel corrigir BOM do JSON {0}: {1}" -f $Caminho, $_.Exception.Message) "AVISO"
     }
 }
 
@@ -1108,8 +1108,10 @@ if ($ChromePath) {
     Set-StatusFinal "ChromeDisponivel" $true
 }
 else {
-    Add-Log "Google Chrome nao encontrado." "AVISO"
+    Add-Log "Google Chrome nao encontrado. A tarefa de quiosque nao sera criada ate o Chrome ser instalado." "AVISO"
     Set-StatusFinal "ChromeDisponivel" $false
+    Set-StatusFinal "KioskTaskOk" $false
+    return
 }
 
 # AnyDesk
