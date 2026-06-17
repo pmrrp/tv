@@ -295,6 +295,101 @@ function Resolve-CaminhoKit {
     return [System.IO.Path]::GetFullPath((Join-Path $ScriptDir $CaminhoRelativo))
 }
 
+function Repair-JsonUtf8SemBom {
+    param([string]$Caminho)
+
+    if ([string]::IsNullOrWhiteSpace($Caminho) -or !(Test-Path $Caminho)) {
+        return
+    }
+
+    try {
+        $Texto = Get-Content $Caminho -Raw
+        $TextoSemBom = $Texto -replace "^\uFEFF", ""
+
+        if ($Texto -ne $TextoSemBom) {
+            $Utf8SemBom = New-Object System.Text.UTF8Encoding($false)
+            [System.IO.File]::WriteAllText($Caminho, $TextoSemBom, $Utf8SemBom)
+            Add-Log "Arquivo JSON regravado em UTF-8 sem BOM: $Caminho" "OK"
+        }
+    }
+    catch {
+        Add-Log "Nao foi possivel corrigir BOM do JSON $Caminho: $($_.Exception.Message)" "AVISO"
+    }
+}
+
+function Get-NpmCmd {
+    $Possiveis = @(
+        "C:\Program Files\nodejs\npm.cmd",
+        "C:\Program Files (x86)\nodejs\npm.cmd"
+    )
+
+    foreach ($Caminho in $Possiveis) {
+        if (Test-Path $Caminho) {
+            return $Caminho
+        }
+    }
+
+    $Cmd = Get-Comando "npm.cmd"
+    if ($Cmd) {
+        return $Cmd.Source
+    }
+
+    return $null
+}
+
+function Find-PlayerAgentProcess {
+    param([string]$AgentJsPath)
+
+    try {
+        $Processos = Get-CimInstance Win32_Process -Filter "name = 'node.exe'" -ErrorAction SilentlyContinue
+
+        foreach ($Proc in $Processos) {
+            if ($Proc.CommandLine -and $Proc.CommandLine -like "*agent.js*") {
+                if ([string]::IsNullOrWhiteSpace($AgentJsPath) -or $Proc.CommandLine -like "*$AgentJsPath*") {
+                    return $Proc
+                }
+            }
+        }
+    }
+    catch {}
+
+    return $null
+}
+
+function Install-DependenciasPlayerAgent {
+    param([string]$AgentRoot)
+
+    if ([string]::IsNullOrWhiteSpace($AgentRoot) -or !(Test-Path $AgentRoot)) {
+        Add-Log "Pasta do Player Agent nao encontrada para npm install: $AgentRoot" "AVISO"
+        return
+    }
+
+    $PackageJson = Join-Path $AgentRoot "package.json"
+
+    if (!(Test-Path $PackageJson)) {
+        Add-Log "package.json do Player Agent nao encontrado. npm install ignorado." "AVISO"
+        return
+    }
+
+    $NpmCmd = Get-NpmCmd
+
+    if (!$NpmCmd) {
+        Add-Log "npm.cmd nao encontrado. Dependencias do Player Agent nao foram instaladas." "AVISO"
+        return
+    }
+
+    Invoke-AcaoSegura "Instalar dependencias do Player Agent com npm.cmd" {
+        Push-Location $AgentRoot
+        try {
+            & $NpmCmd install
+        }
+        finally {
+            Pop-Location
+        }
+    }
+}
+
+
 # ---------------------------------------------------------
 # TESTA URL JSON
 # ---------------------------------------------------------
@@ -498,7 +593,9 @@ function Test-ConfigPlayerAgent {
     }
 
     try {
-        $AgentJson = Get-Content $ConfigAgentPath -Raw | ConvertFrom-Json
+        Repair-JsonUtf8SemBom $ConfigAgentPath
+        $AgentJsonTexto = (Get-Content $ConfigAgentPath -Raw) -replace "^\uFEFF", ""
+        $AgentJson = $AgentJsonTexto | ConvertFrom-Json
         $ServerBaseUrl = [string]$AgentJson.serverBaseUrl
         $ExpectedUrl = [string]$AgentConfig.expectedServerBaseUrl
 
@@ -555,6 +652,12 @@ function Set-PlayerAgent {
     }
 
     Test-ConfigPlayerAgent
+
+    $ConfigAgentPath = Resolve-CaminhoKit $AgentConfig.relativeConfigPath
+    $AgentRoot = if ($ConfigAgentPath) { Split-Path -Parent $ConfigAgentPath } else { $null }
+    $AgentJsPath = if ($AgentRoot) { Join-Path $AgentRoot "agent.js" } else { $null }
+
+    Install-DependenciasPlayerAgent $AgentRoot
 
     $TaskName = if ($Config.agentTaskName) { $Config.agentTaskName } else { "PainelRibasPlayerAgent" }
     $InstallScriptPath = Resolve-CaminhoKit $AgentConfig.relativeInstallScript
@@ -627,7 +730,29 @@ function Set-PlayerAgent {
     }
     else {
         Add-Log "Player Agent ainda nao respondeu apos tentativa de inicializacao. Erro: $($Health.Erro)" "AVISO"
-        Set-StatusFinal "AgentHealthOk" $false
+
+        $AgentProc = Find-PlayerAgentProcess $AgentJsPath
+
+        if ($AgentProc) {
+            Add-Log "Processo node do Player Agent encontrado mesmo com a tarefa em estado Ready. PID=$($AgentProc.ProcessId)" "OK"
+            Add-Log "Aguardando mais 8 segundos e testando health novamente..."
+            Start-Sleep -Seconds 8
+
+            $HealthRetry = Test-HttpJson $HealthUrl $Timeout
+
+            if ($HealthRetry.Ok) {
+                Add-Log "Player Agent respondeu apos segunda tentativa: $HealthUrl" "OK"
+                Set-StatusFinal "AgentHealthOk" $true
+            }
+            else {
+                Add-Log "Processo do Agent existe, mas health ainda nao respondeu: $($HealthRetry.Erro)" "AVISO"
+                Set-StatusFinal "AgentHealthOk" $false
+            }
+        }
+        else {
+            Add-Log "Nenhum processo node agent.js foi encontrado. O Agent pode ter falhado ao iniciar." "AVISO"
+            Set-StatusFinal "AgentHealthOk" $false
+        }
     }
 
     Add-Log "Rotina do Player Agent finalizada."
@@ -864,7 +989,12 @@ function Show-ResumoFinalPontoTv {
     Write-LinhaResumo "Nome do computador no padrao PAINEL-TV" $StatusFinal.NomePcPadrao
     Write-LinhaResumo "Node.js disponivel" $StatusFinal.NodeDisponivel
     Write-LinhaResumo "Google Chrome disponivel" $StatusFinal.ChromeDisponivel
-    Write-LinhaResumo "AnyDesk encontrado" $StatusFinal.AnyDeskEncontrado
+    if ($StatusFinal.AnyDeskEncontrado) {
+        Write-LinhaResumo "AnyDesk encontrado" $true
+    }
+    else {
+        Write-LinhaResumo "AnyDesk nao encontrado/configuracao pendente" $false
+    }
     Write-LinhaResumo "config.agent.json apontando para producao" $StatusFinal.AgentConfigOk
     Write-LinhaResumo "Tarefa do Player Agent encontrada/criada" $StatusFinal.AgentTaskOk
     Write-LinhaResumo "Player Agent respondendo em localhost" $StatusFinal.AgentHealthOk
@@ -1059,7 +1189,29 @@ if ($Health.Ok) {
 }
 else {
     Add-Log "Player Agent nao respondeu em $HealthUrl. Erro: $($Health.Erro)" "AVISO"
-    Set-StatusFinal "AgentHealthOk" $false
+
+    $AgentConfigFinal = $Config.agent
+    $ConfigAgentPathFinal = if ($AgentConfigFinal) { Resolve-CaminhoKit $AgentConfigFinal.relativeConfigPath } else { $null }
+    $AgentJsPathFinal = if ($ConfigAgentPathFinal) { Join-Path (Split-Path -Parent $ConfigAgentPathFinal) "agent.js" } else { $null }
+    $AgentProcFinal = Find-PlayerAgentProcess $AgentJsPathFinal
+
+    if ($AgentProcFinal) {
+        Add-Log "Processo node do Player Agent encontrado. PID=$($AgentProcFinal.ProcessId). A tarefa pode aparecer como Ready mesmo com o Agent ativo." "OK"
+        Start-Sleep -Seconds 5
+        $HealthRetryFinal = Test-HttpJson $HealthUrl 5
+
+        if ($HealthRetryFinal.Ok) {
+            Add-Log "Player Agent respondeu apos nova tentativa: $HealthUrl" "OK"
+            Set-StatusFinal "AgentHealthOk" $true
+        }
+        else {
+            Add-Log "Agent esta em processo, mas health nao respondeu: $($HealthRetryFinal.Erro)" "AVISO"
+            Set-StatusFinal "AgentHealthOk" $false
+        }
+    }
+    else {
+        Set-StatusFinal "AgentHealthOk" $false
+    }
 }
 
 # Energia diagnóstico

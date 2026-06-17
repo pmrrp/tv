@@ -31,6 +31,19 @@ $ZipPath = Join-Path $DistDir "PainelRibas-PontoTV.zip"
 $ServerProducao = "https://painelribas.com.br"
 $PlayerUrlProducao = "https://painelribas.com.br/"
 
+function Save-JsonUtf8SemBom {
+    param(
+        [Parameter(Mandatory = $true)]$Objeto,
+        [Parameter(Mandatory = $true)][string]$Caminho,
+        [int]$Depth = 20
+    )
+
+    $Json = $Objeto | ConvertTo-Json -Depth $Depth
+    $Utf8SemBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Caminho, $Json, $Utf8SemBom)
+}
+
+
 Write-Host ""
 Write-Host "========================================================"
 Write-Host "       PAINEL RIBAS - GERADOR DO PACOTE PONTO TV"
@@ -113,9 +126,7 @@ if (Test-Path $AgentConfigPath) {
     $AgentConfig = Get-Content $AgentConfigPath -Raw | ConvertFrom-Json
     $AgentConfig.serverBaseUrl = $ServerProducao
 
-    $AgentConfig |
-    ConvertTo-Json -Depth 20 |
-    Out-File -FilePath $AgentConfigPath -Encoding UTF8
+    Save-JsonUtf8SemBom -Objeto $AgentConfig -Caminho $AgentConfigPath -Depth 20
 }
 else {
     Write-Host "[AVISO] config.agent.json nao encontrado no pacote." -ForegroundColor Yellow
@@ -151,9 +162,7 @@ if (Test-Path $PontoConfigPath) {
         $PontoConfig.agent.expectedServerBaseUrl = $ServerProducao
     }
 
-    $PontoConfig |
-    ConvertTo-Json -Depth 30 |
-    Out-File -FilePath $PontoConfigPath -Encoding UTF8
+    Save-JsonUtf8SemBom -Objeto $PontoConfig -Caminho $PontoConfigPath -Depth 30
 }
 else {
     Write-Host "[AVISO] config-ponto-tv.json nao encontrado no pacote." -ForegroundColor Yellow

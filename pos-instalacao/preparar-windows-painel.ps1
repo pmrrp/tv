@@ -9,15 +9,16 @@
 # - reduzir penduricalhos do Windows;
 # - desativar sugestoes/notificacoes;
 # - aplicar energia basica;
-# - instalar Chrome e Node.js via winget;
+# - instalar Chrome, Node.js e AnyDesk via winget;
+# - configurar login automatico do usuario Painel;
 # - preparar estrutura base C:\PainelRibas;
 # - gerar relatorio da preparacao.
 #
 # IMPORTANTE:
 # - Execute como Administrador.
 # - Nao configura BIOS.
-# - Nao configura login automatico.
-# - Nao configura AnyDesk nao supervisionado.
+# - Configura login automatico local quando habilitado.
+# - Instala AnyDesk quando habilitado, mas nao grava senha de acesso nao supervisionado no codigo.
 # =========================================================
 
 $ErrorActionPreference = "Continue"
@@ -36,9 +37,12 @@ $ReportDir = Join-Path $BaseDir "relatorios-preparacao"
 
 $InstallChrome = $true
 $InstallNode = $true
+$InstallAnyDesk = $true
+$ConfigureAutoLogin = $true
 
 $ChromeWingetId = "Google.Chrome"
 $NodeWingetId = "OpenJS.NodeJS.LTS"
+$AnyDeskWingetId = "AnyDeskSoftwareGmbH.AnyDesk"
 
 $RemoveBloatware = $true
 $ApplyPrivacyTweaks = $true
@@ -53,16 +57,33 @@ $BloatwarePackages = @(
     "*Solitaire*",
     "*BingNews*",
     "*BingWeather*",
+    "*BingSearch*",
+    "*Microsoft.Bing*",
     "*GetHelp*",
     "*Getstarted*",
+    "*QuickAssist*",
     "*MicrosoftOfficeHub*",
+    "*Microsoft.OutlookForWindows*",
+    "*OutlookForWindows*",
     "*MicrosoftStickyNotes*",
     "*MicrosoftTodos*",
+    "*Microsoft.ToDo*",
     "*PowerAutomateDesktop*",
     "*WindowsFeedbackHub*",
     "*ZuneMusic*",
     "*ZuneVideo*",
-    "*LinkedIn*"
+    "*LinkedIn*",
+    "*Xbox*",
+    "*GamingApp*",
+    "*XboxGamingOverlay*",
+    "*XboxIdentityProvider*",
+    "*Microsoft.OneDriveSync*",
+    "*Microsoft.WindowsCamera*",
+    "*Microsoft.WindowsSoundRecorder*",
+    "*Microsoft.WindowsAlarms*",
+    "*Microsoft.Windows.Photos*",
+    "*Microsoft.Paint*",
+    "*Microsoft.People*"
 )
 
 # ---------------------------------------------------------
@@ -134,6 +155,156 @@ function Get-Comando {
     }
     catch {
         return $null
+    }
+}
+
+function Update-PathDaSessao {
+    try {
+        $MachinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+        $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
+        $env:Path = "$MachinePath;$UserPath"
+        Add-Log "PATH da sessao atualizado a partir do Registro."
+    }
+    catch {
+        Add-Log "Nao foi possivel atualizar PATH da sessao: $($_.Exception.Message)" "AVISO"
+    }
+}
+
+function Find-Node {
+    $Possiveis = @(
+        "C:\Program Files\nodejs\node.exe",
+        "C:\Program Files (x86)\nodejs\node.exe"
+    )
+
+    foreach ($Caminho in $Possiveis) {
+        if (Test-Path $Caminho) {
+            return $Caminho
+        }
+    }
+
+    $Cmd = Get-Comando "node.exe"
+    if ($Cmd) {
+        return $Cmd.Source
+    }
+
+    return $null
+}
+
+function Find-AnyDesk {
+    $Possiveis = @(
+        "C:\Program Files (x86)\AnyDesk\AnyDesk.exe",
+        "C:\Program Files\AnyDesk\AnyDesk.exe",
+        "$env:LocalAppData\Programs\AnyDesk\AnyDesk.exe",
+        "$env:ProgramData\AnyDesk\AnyDesk.exe"
+    )
+
+    foreach ($Caminho in $Possiveis) {
+        if ($Caminho -and (Test-Path $Caminho)) {
+            return $Caminho
+        }
+    }
+
+    $Cmd = Get-Comando "AnyDesk.exe"
+    if ($Cmd) {
+        return $Cmd.Source
+    }
+
+    return $null
+}
+
+function Disable-OneDrive {
+    Add-Log "Aplicando bloqueios/remocao do OneDrive..."
+
+    Invoke-AcaoSegura "Encerrar processo do OneDrive, se estiver aberto" {
+        Stop-Process -Name "OneDrive" -Force -ErrorAction SilentlyContinue
+    } | Out-Null
+
+    Invoke-AcaoSegura "Remover OneDrive da inicializacao do usuario" {
+        Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "OneDrive" -ErrorAction SilentlyContinue
+    } | Out-Null
+
+    Invoke-AcaoSegura "Desativar OneDrive por politica local" {
+        New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows\OneDrive" -Force | Out-Null
+        Set-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\Windows\OneDrive" -Name "DisableFileSyncNGSC" -Type DWord -Value 1
+    } | Out-Null
+
+    $OneDriveSetupPossiveis = @(
+        "$env:SystemRoot\System32\OneDriveSetup.exe",
+        "$env:SystemRoot\SysWOW64\OneDriveSetup.exe"
+    )
+
+    foreach ($Setup in $OneDriveSetupPossiveis) {
+        if (Test-Path $Setup) {
+            Invoke-AcaoSegura "Desinstalar OneDrive via $Setup" {
+                Start-Process -FilePath $Setup -ArgumentList "/uninstall" -Wait -WindowStyle Hidden
+            } | Out-Null
+        }
+    }
+}
+
+function Set-NotificacoesDesativadas {
+    Add-Log "Desativando notificacoes gerais/toasts do Windows..."
+
+    Invoke-AcaoSegura "Desativar notificacoes Toast do usuario atual" {
+        New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\PushNotifications" -Force | Out-Null
+        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "ToastEnabled" -Type DWord -Value 0
+    } | Out-Null
+
+    Invoke-AcaoSegura "Desativar notificacoes globais do usuario atual" {
+        New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings" -Force | Out-Null
+        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings" -Name "NOC_GLOBAL_SETTING_TOASTS_ENABLED" -Type DWord -Value 0
+        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings" -Name "NOC_GLOBAL_SETTING_ALLOW_NOTIFICATION_SOUND" -Type DWord -Value 0
+    } | Out-Null
+
+    Invoke-AcaoSegura "Desativar experiencias de consumidor e conteudo sugerido" {
+        New-Item -Path "HKLM:\Software\Policies\Microsoft\Windows\CloudContent" -Force | Out-Null
+        Set-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsConsumerFeatures" -Type DWord -Value 1
+        Set-ItemProperty -Path "HKLM:\Software\Policies\Microsoft\Windows\CloudContent" -Name "DisableSoftLanding" -Type DWord -Value 1
+    } | Out-Null
+}
+
+function Set-LoginAutomaticoPainel {
+    if ($ConfigureAutoLogin -ne $true) {
+        Add-Log "Configuracao de login automatico desativada por configuracao." "AVISO"
+        return
+    }
+
+    Add-Log "Preparando login automatico do Windows para o usuario $ExpectedUser..."
+
+    if ($UsuarioAtual -ine $ExpectedUser) {
+        Add-Log "Usuario atual nao e $ExpectedUser. Login automatico nao sera configurado automaticamente." "AVISO"
+        return
+    }
+
+    if ($DryRun) {
+        Add-Log "[DRYRUN] Configuraria AutoAdminLogon para $NomePc\$ExpectedUser." "AVISO"
+        return
+    }
+
+    $SenhaSegura = Read-Host "Digite a senha do usuario $ExpectedUser. Se nao tiver senha, apenas aperte Enter" -AsSecureString
+    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SenhaSegura)
+
+    try {
+        $Senha = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+
+        $RegPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+
+        Set-ItemProperty -Path $RegPath -Name "AutoAdminLogon" -Value "1" -Type String
+        Set-ItemProperty -Path $RegPath -Name "DefaultUserName" -Value $ExpectedUser -Type String
+        Set-ItemProperty -Path $RegPath -Name "DefaultDomainName" -Value $NomePc -Type String
+        Set-ItemProperty -Path $RegPath -Name "DefaultPassword" -Value $Senha -Type String
+
+        Remove-ItemProperty -Path $RegPath -Name "AutoLogonCount" -ErrorAction SilentlyContinue
+
+        Add-Log "Login automatico configurado para $NomePc\$ExpectedUser." "OK"
+    }
+    catch {
+        Add-Log "Falha ao configurar login automatico: $($_.Exception.Message)" "ERRO"
+    }
+    finally {
+        if ($BSTR -ne [IntPtr]::Zero) {
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+        }
     }
 }
 
@@ -252,7 +423,10 @@ if ($ApplyPrivacyTweaks) {
         Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon" -Name "RestartApps" -Type DWord -Value 0
     } | Out-Null
 
-    Add-Log "Ajustes de privacidade/sugestoes finalizados." "OK"
+    Set-NotificacoesDesativadas
+    Disable-OneDrive
+
+    Add-Log "Ajustes de privacidade/sugestoes/notificacoes finalizados." "OK"
 }
 else {
     Add-Log "Ajustes de privacidade desativados por configuracao." "AVISO"
@@ -342,34 +516,36 @@ else {
 # INSTALACAO DO NODE.JS
 # ---------------------------------------------------------
 
-$NodeCmd = Get-Comando "node.exe"
+$NodePath = Find-Node
 
-if ($NodeCmd) {
+if ($NodePath) {
     try {
-        $NodeVersion = & node -v
-        Add-Log "Node.js encontrado: $NodeVersion em $($NodeCmd.Source)" "OK"
+        $NodeVersion = & $NodePath -v
+        Add-Log "Node.js encontrado: $NodeVersion em $NodePath" "OK"
     }
     catch {
-        Add-Log "Node.js encontrado, mas nao foi possivel obter versao." "AVISO"
+        Add-Log "Node.js encontrado em $NodePath, mas nao foi possivel obter versao." "AVISO"
     }
 }
 else {
-    Add-Log "Node.js nao encontrado no PATH." "AVISO"
+    Add-Log "Node.js nao encontrado no PATH/caminhos padrao." "AVISO"
 
     if ($InstallNode -and $Winget) {
         Invoke-AcaoSegura "Instalar Node.js LTS via winget ($NodeWingetId)" {
             winget install --id $NodeWingetId --exact --silent --accept-source-agreements --accept-package-agreements
         } | Out-Null
 
-        $NodeCmd = Get-Comando "node.exe"
+        Update-PathDaSessao
 
-        if ($NodeCmd) {
+        $NodePath = Find-Node
+
+        if ($NodePath) {
             try {
-                $NodeVersion = & node -v
-                Add-Log "Node.js encontrado apos instalacao: $NodeVersion em $($NodeCmd.Source)" "OK"
+                $NodeVersion = & $NodePath -v
+                Add-Log "Node.js encontrado apos instalacao: $NodeVersion em $NodePath" "OK"
             }
             catch {
-                Add-Log "Node.js encontrado apos instalacao, mas nao foi possivel obter versao." "AVISO"
+                Add-Log "Node.js encontrado apos instalacao em $NodePath, mas nao foi possivel obter versao." "AVISO"
             }
         }
         else {
@@ -379,6 +555,40 @@ else {
     }
     else {
         Add-Log "Instalacao automatica do Node.js nao executada." "AVISO"
+    }
+}
+
+# ---------------------------------------------------------
+# INSTALACAO DO ANYDESK
+# ---------------------------------------------------------
+
+$AnyDeskPath = Find-AnyDesk
+
+if ($AnyDeskPath) {
+    Add-Log "AnyDesk encontrado em: $AnyDeskPath" "OK"
+}
+else {
+    Add-Log "AnyDesk nao encontrado." "AVISO"
+
+    if ($InstallAnyDesk -and $Winget) {
+        Invoke-AcaoSegura "Instalar AnyDesk via winget ($AnyDeskWingetId)" {
+            winget install --id $AnyDeskWingetId --exact --silent --accept-source-agreements --accept-package-agreements
+        } | Out-Null
+
+        Update-PathDaSessao
+
+        $AnyDeskPath = Find-AnyDesk
+
+        if ($AnyDeskPath) {
+            Add-Log "AnyDesk encontrado apos instalacao: $AnyDeskPath" "OK"
+            Add-Log "Configure manualmente o acesso nao supervisionado e registre a senha apenas no controle interno da TI." "AVISO"
+        }
+        else {
+            Add-Log "AnyDesk ainda nao foi encontrado apos instalacao. Pode ser necessario reiniciar ou instalar manualmente." "AVISO"
+        }
+    }
+    else {
+        Add-Log "Instalacao automatica do AnyDesk nao executada." "AVISO"
     }
 }
 
@@ -404,6 +614,12 @@ foreach ($Pasta in $PastasBase) {
         } | Out-Null
     }
 }
+
+# ---------------------------------------------------------
+# LOGIN AUTOMATICO
+# ---------------------------------------------------------
+
+Set-LoginAutomaticoPainel
 
 # ---------------------------------------------------------
 # RESUMO FINAL
@@ -442,11 +658,18 @@ else {
     Add-Log "Google Chrome indisponivel" "AVISO"
 }
 
-if (Get-Comando "node.exe") {
+if (Find-Node) {
     Add-Log "Node.js disponivel" "OK"
 }
 else {
-    Add-Log "Node.js indisponivel no PATH atual" "AVISO"
+    Add-Log "Node.js indisponivel no PATH/caminhos padrao" "AVISO"
+}
+
+if (Find-AnyDesk) {
+    Add-Log "AnyDesk disponivel" "OK"
+}
+else {
+    Add-Log "AnyDesk indisponivel" "AVISO"
 }
 
 Add-Log "Estrutura base C:\PainelRibas preparada" "OK"
