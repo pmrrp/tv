@@ -433,6 +433,48 @@ else {
 }
 
 # ---------------------------------------------------------
+# POLITICAS DO CHROME PARA ACESSO LOCAL
+# ---------------------------------------------------------
+
+Add-Log "Configurando politicas do Chrome para permitir acesso local do painel..."
+
+Invoke-AcaoSegura "Permitir Local Network Access para painelribas.com.br" {
+    $ChromePolicyBase = "HKLM:\SOFTWARE\Policies\Google\Chrome"
+    $LocalNetworkPolicy = Join-Path $ChromePolicyBase "LocalNetworkAccessAllowedForUrls"
+    $PrivateNetworkPolicy = Join-Path $ChromePolicyBase "InsecurePrivateNetworkRequestsAllowedForUrls"
+
+    New-Item -Path $LocalNetworkPolicy -Force | Out-Null
+    New-ItemProperty -Path $LocalNetworkPolicy -Name "1" -Value "https://painelribas.com.br" -PropertyType String -Force | Out-Null
+
+    # Politica antiga/de compatibilidade para Chromium/Chrome em algumas versoes.
+    New-Item -Path $PrivateNetworkPolicy -Force | Out-Null
+    New-ItemProperty -Path $PrivateNetworkPolicy -Name "1" -Value "https://painelribas.com.br" -PropertyType String -Force | Out-Null
+} | Out-Null
+
+Add-Log "Politicas do Chrome para acesso local configuradas." "OK"
+
+# ---------------------------------------------------------
+# FUSO HORARIO E SINCRONIZACAO DE HORA
+# ---------------------------------------------------------
+
+Add-Log "Configurando fuso horario e sincronizacao de hora..."
+
+Invoke-AcaoSegura "Definir fuso horario para Cuiaba/Campo Grande" {
+    tzutil /s "Central Brazilian Standard Time"
+} | Out-Null
+
+Invoke-AcaoSegura "Garantir servico de horario automatico" {
+    Set-Service W32Time -StartupType Automatic
+    Start-Service W32Time -ErrorAction SilentlyContinue
+} | Out-Null
+
+Invoke-AcaoSegura "Forcar sincronizacao de horario" {
+    w32tm /resync /force
+} | Out-Null
+
+Add-Log "Fuso horario e sincronizacao de hora configurados." "OK"
+
+# ---------------------------------------------------------
 # ENERGIA BASICA
 # ---------------------------------------------------------
 
@@ -666,6 +708,28 @@ foreach ($Pasta in $PastasBase) {
         } | Out-Null
     }
 }
+
+# ---------------------------------------------------------
+# WALLPAPER INSTITUCIONAL
+# ---------------------------------------------------------
+
+Add-Log "Configurando wallpaper institucional..."
+
+Invoke-AcaoSegura "Aplicar wallpaper institucional, se existir" {
+    $WallpaperOrigem = "C:\PainelRibas\assets\wallpaper.jpg"
+    $WallpaperDestino = "C:\PainelRibas\assets\wallpaper.jpg"
+
+    if (Test-Path $WallpaperOrigem) {
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name Wallpaper -Value $WallpaperDestino
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name WallpaperStyle -Value "10"
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name TileWallpaper -Value "0"
+
+        rundll32.exe user32.dll, UpdatePerUserSystemParameters
+    }
+    else {
+        Add-Log "Wallpaper institucional nao encontrado em: $WallpaperOrigem" "AVISO"
+    }
+} | Out-Null
 
 # ---------------------------------------------------------
 # LOGIN AUTOMATICO
