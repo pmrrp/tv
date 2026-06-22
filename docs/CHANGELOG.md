@@ -785,6 +785,49 @@ Em caso de queda temporária de rede ou indisponibilidade do servidor principal,
 Essa evolução reduz a necessidade de intervenção manual e prepara o projeto para uma implantação mais profissional dos pontos de exibição.
 
 
+# 2026-06 — Watchdog do player, fallback local e kit de instalação dos pontos de TV
+
+## Implementado
+
+- Adicionado watchdog operacional ao player.
+- Criado registro persistente de eventos recentes do player em `localStorage`.
+- Integrado o histórico persistido ao modo de diagnóstico `?debug=1`.
+- Adicionada detecção de transição presa, vídeo sem progresso, vídeo pausado indevidamente, imagem sem timer e ausência de atividade geral.
+- Adicionado reload automático controlado quando o player entra em estado travado.
+- Ajustado volume de logs de `timeupdate` para evitar excesso de escrita no navegador.
+- Publicada atualização do player na VM de produção.
+- Validado retorno HTTP 200 após deploy.
+- Mantido PAINEL-TV-02 em observação prolongada para validação real.
+
+## Fallback local / ponto de TV
+
+- Criado Player Agent local em Node.js para os PCs das TVs.
+- Criada sincronização local de playlist e mídias.
+- Criado fallback do player para `localhost` quando o servidor principal estiver indisponível.
+- Mantido fallback adicional via última playlist válida salva no navegador.
+- Criado pacote `PainelRibas-PontoTV.zip`.
+- Criado instalador assistido `instalacao-kit-painel.bat`.
+- Melhorados scripts de preparação do Windows para ponto de TV.
+- Adicionada tentativa automática de instalação do AnyDesk via `winget` e instalador oficial.
+- Adicionada configuração de fuso horário para `Central Brazilian Standard Time`.
+- Adicionada política do Chrome para permitir acesso local do painel.
+- Adicionado wallpaper institucional ao ponto de TV.
+- Ajustado gerador do pacote para copiar apenas assets essenciais.
+
+## Impacto
+
+O player passa a ter recuperação automática contra travamentos silenciosos, maior capacidade de diagnóstico após reload e mais resiliência para uso contínuo em mini PCs conectados às TVs.
+
+O kit de instalação dos pontos de TV passa a concentrar preparação do Windows, instalação do agente local, configuração do quiosque e assets institucionais em um fluxo mais próximo de instalador operacional.
+
+## Status
+
+```
+Implementado, publicado em produção e em validação prolongada no PAINEL-TV-02.
+```
+
+---
+
 # Próximos registros esperados
 
 Próximas entradas deste changelog deverão registrar:

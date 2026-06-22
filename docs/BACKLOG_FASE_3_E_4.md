@@ -301,31 +301,42 @@ Importante, mas preferencialmente tratado como documentação simples, não como
 
 ---
 
-## 8. Melhorias no player — pendente para fechamento da Fase 3
+## 8. Melhorias no player — implementado / em validação prolongada
 
 ### Objetivo
 
-Tornar o player mais resiliente em uso contínuo.
+Tornar o player mais resiliente em uso contínuo, evitando tela preta, splash presa ou travamentos silenciosos em operação real.
 
-### Itens essenciais para fechar Fase 3
+### Itens implementados
 
-- [ ] Exibir mensagem amigável quando não houver playlist.
-- [ ] Exibir mensagem amigável quando não houver mídia válida.
-- [ ] Melhorar fallback visual quando uma mídia falhar.
-- [ ] Melhorar tratamento de vídeo indisponível.
-- [ ] Criar tentativa automática simples de recarregar a playlist.
-- [ ] Criar modo “sem conexão” informativo básico.
+- [x] Exibir fallback visual quando não houver playlist.
+- [x] Exibir fallback visual quando não houver mídia válida.
+- [x] Exibir fallback visual quando uma mídia falhar.
+- [x] Tratar falha de vídeo, imagem indisponível e erro de reprodução.
+- [x] Criar tentativa automática de recarregar conteúdo após falha operacional.
+- [x] Criar indicador visual de conexão/fallback.
+- [x] Manter última playlist válida no `localStorage`.
+- [x] Registrar eventos recentes do player no `localStorage`.
+- [x] Exibir eventos persistidos no modo `?debug=1`.
+- [x] Criar watchdog operacional do player.
+- [x] Detectar vídeo sem progresso, vídeo pausado indevidamente, transição presa, imagem sem timer e ausência de atividade geral.
+- [x] Recarregar automaticamente a página quando o player entrar em estado travado.
+- [x] Limitar quantidade de reloads automáticos para evitar loop infinito.
+- [x] Validar localmente o registro persistente de eventos.
+- [x] Publicar atualização em produção/VM e validar HTTP 200.
 
-### Itens futuros
+### Em validação
 
-- [ ] Registrar falhas de reprodução no backend.
-- [ ] Criar reconexão avançada.
-- [ ] Criar painel de debug do player.
-- [ ] Criar status online/offline das telas.
+- [ ] Manter o PAINEL-TV-02 rodando por 24h ou mais sem intervenção manual.
+- [ ] Verificar se o watchdog recupera automaticamente eventual travamento.
+- [ ] Consultar `?debug=1` em caso de falha para analisar os eventos persistidos.
+- [ ] Confirmar ausência de erro crítico no console após teste prolongado.
 
-### Prioridade
+### Status
 
-Alta para fechamento da Fase 3.
+```
+Implementado e publicado. Em validação prolongada no PAINEL-TV-02.
+```
 
 ---
 
@@ -359,38 +370,54 @@ Nos PCs das TVs, um pequeno agente local em Node.js roda em segundo plano e mant
 
 Quando o servidor principal estiver acessível, o player usa o fluxo normal.
 
-Quando houver falha de rede, o player pode usar o conteúdo local/cacheado.
+Quando houver falha de rede, o player tenta usar o conteúdo local/cacheado servido por `localhost`.
 
-### Escopo inicial
+### Itens implementados
 
-- [ ] Criar agente local Node.js para rodar no PC da TV.
-- [ ] Criar pasta local de cache do player.
-- [ ] Sincronizar `playlist.json` do servidor principal para o PC local.
-- [ ] Baixar mídias referenciadas pela playlist para o cache local.
-- [ ] Evitar baixar novamente arquivos já existentes e válidos.
-- [ ] Remover mídias antigas que não fazem mais parte da playlist.
-- [ ] Expor arquivos locais via `localhost`.
-- [ ] Permitir que o player use origem local quando o servidor principal falhar.
-- [ ] Criar logs locais simples do agente.
-- [ ] Criar configuração simples do endereço do servidor principal.
-- [ ] Documentar instalação do agente local no mini PC.
-- [ ] Documentar como iniciar o agente junto com o Windows.
-- [ ] Testar queda de rede controlada.
-- [ ] Testar retorno de rede e ressincronização.
-- [ ] Garantir que o agente local não substitui o servidor principal.
+- [x] Criar agente local Node.js para rodar no PC da TV.
+- [x] Criar configuração local do agente em `config.agent.json`.
+- [x] Criar pasta local de cache do player.
+- [x] Sincronizar `playlist.json` do servidor principal para o PC local.
+- [x] Baixar mídias referenciadas pela playlist para o cache local.
+- [x] Evitar baixar novamente arquivos já existentes.
+- [x] Servir playlist e mídias locais via `localhost`.
+- [x] Integrar o player com o agente local.
+- [x] Permitir fallback para o agente local quando o servidor principal falhar.
+- [x] Manter fallback adicional por `localStorage` quando agente e servidor estiverem indisponíveis.
+- [x] Criar logs locais simples do agente.
+- [x] Criar scripts de preparação do ponto de TV.
+- [x] Criar pacote `PainelRibas-PontoTV.zip`.
+- [x] Criar `instalacao-kit-painel.bat` para instalação assistida em Windows limpo.
+- [x] Adicionar assets essenciais ao pacote sem copiar a pasta `assets` inteira.
+- [x] Configurar política do Chrome para tentativa de evitar prompt de acesso local.
+- [x] Configurar fuso horário do Windows para `Central Brazilian Standard Time`.
+- [x] Configurar wallpaper institucional no ponto de TV.
+- [x] Preparar instalação automática do AnyDesk via `winget` e fallback por instalador oficial.
+- [x] Validar instalação e funcionamento inicial no PAINEL-TV-02.
+
+### Em validação
+
+- [ ] Testar o kit completo após formatação limpa do PAINEL-TV-02.
+- [ ] Validar se o `instalacao-kit-painel.bat` executa o fluxo inteiro sem intervenção.
+- [ ] Validar instalação automática do AnyDesk em Windows limpo.
+- [ ] Validar política do Chrome contra pop-up de acesso local.
+- [ ] Validar funcionamento do player após reboot completo.
+- [ ] Testar queda e retorno de rede de forma controlada.
 
 ### Fora do escopo inicial
 
-- [ ] Multiempresa.
 - [ ] Painel central de status das TVs.
 - [ ] Autoatualização do agente.
 - [ ] Métricas avançadas.
 - [ ] Sincronização bidirecional.
 - [ ] Controle remoto das TVs.
+- [ ] Multiempresa.
 
-### Prioridade
+### Status
 
-Alta como fechamento premium da Fase 3.
+```
+Implementado tecnicamente e em validação operacional.
+```
 
 ---
 
@@ -458,19 +485,21 @@ Aumentar a segurança operacional dos dados e configurações.
 - [x] Exibir backups JSON e SQLite no painel admin.
 - [x] Criar botão para backup manual do banco SQLite.
 
-### Item essencial para fechamento
+### Item reclassificado para Fase 3.5
 
 - [ ] Criar opção para baixar backup pela dashboard.
 
-### Itens futuros
+### Decisão
 
-- [ ] Criar restauração manual controlada.
-- [ ] Registrar restauração de backup em log.
-- [ ] Criar filtros por tipo na listagem de backups.
+O download de backups pela dashboard foi reclassificado para Fase 3.5.
 
-### Prioridade
+Na Fase 3, o sistema já conta com backups automáticos JSON, backup manual/auditado do banco SQLite, listagem administrativa de backups e auditoria dos eventos relacionados.
 
-Alta.
+A ausência do botão de download pela interface não bloqueia a operação inicial, pois o acesso direto à VM permanece restrito à TI e pode ser usado em caso de necessidade administrativa.
+
+### Status
+
+Suficiente para fechamento da Fase 3, com melhoria reclassificada para Fase 3.5.
 
 ---
 
@@ -1262,19 +1291,21 @@ Estes itens continuam válidos, mas não devem impedir o fechamento da Fase 3:
 
 ---
 
-# 39. Regra de fechamento da Fase 3
+# Regra prática de fechamento da Fase 3
 
-A Fase 3 deve ser considerada concluída quando:
+A Fase 3 pode ser considerada concluída quando:
 
-- [ ] download de backups estiver disponível ou formalmente reclassificado;
-- [ ] player tiver fallback básico para ausência/falha de conteúdo;
-- [ ] agente local/fallback local estiver implementado ou formalmente separado como versão 3.5;
-- [ ] documentação essencial estiver atualizada;
-- [ ] deploy final estiver validado;
-- [ ] operação em TV/mini PC estiver validada;
+- [x] download de backups estiver disponível ou formalmente reclassificado;
+- [x] player tiver fallback básico para ausência/falha de conteúdo;
+- [x] agente local/fallback local estiver implementado;
+- [x] watchdog do player estiver implementado e publicado;
+- [x] documentação essencial estiver atualizada;
+- [x] deploy final estiver validado na VM;
+- [ ] operação em TV/mini PC estiver validada após observação prolongada;
+- [ ] kit de instalação estiver validado em Windows limpo;
 - [ ] pendências externas, como SMTP institucional, estiverem documentadas;
-- [ ] não houver erro vermelho no console nos fluxos principais;
-- [ ] não houver erro crítico no terminal/PM2;
+- [ ] não houver erro vermelho crítico no console nos fluxos principais;
+- [ ] não houver erro crítico no terminal/serviço Node;
 - [ ] `git status` estiver limpo;
 - [ ] commits e push finais tiverem sido realizados.
 
