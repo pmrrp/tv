@@ -137,7 +137,78 @@ let tentativaRecuperacaoPlayerEmAndamento = false;
  * Escreve uma linha no painel de diagnóstico.
  * Só aparece quando a página é aberta com ?debug=1.
  */
+const PLAYER_EVENT_LOG_KEY = "painelRibasPlayerEventosRecentes";
+const PLAYER_EVENT_LOG_LIMIT = 180;
+
+/**
+ * Salva eventos recentes do player no localStorage.
+ *
+ * Isso permite consultar o que aconteceu antes de um F5/reload,
+ * inclusive depois de um fim de semana rodando.
+ */
+function registrarEventoPersistentePlayer(mensagem, dados = null) {
+  try {
+    const eventosAtuais = JSON.parse(localStorage.getItem(PLAYER_EVENT_LOG_KEY) || "[]");
+
+    const evento = {
+      data: new Date().toISOString(),
+      mensagem: String(mensagem || ""),
+      dados
+    };
+
+    eventosAtuais.push(evento);
+
+    while (eventosAtuais.length > PLAYER_EVENT_LOG_LIMIT) {
+      eventosAtuais.shift();
+    }
+
+    localStorage.setItem(PLAYER_EVENT_LOG_KEY, JSON.stringify(eventosAtuais));
+  } catch (erro) {
+    console.warn("Falha ao salvar log persistente do player:", erro);
+  }
+}
+
+/**
+ * Carrega os eventos persistidos no painel de debug.
+ */
+function carregarEventosPersistentesNoDebug() {
+  if (!modoDebugAtivo || !debugLog) return;
+
+  try {
+    const eventos = JSON.parse(localStorage.getItem(PLAYER_EVENT_LOG_KEY) || "[]");
+
+    if (!eventos.length) return;
+
+    debugLog.textContent += "===== EVENTOS PERSISTIDOS DO PLAYER =====\n";
+
+    eventos.slice(-80).forEach((evento) => {
+      const hora = new Date(evento.data).toLocaleString("pt-BR", {
+        hour12: false
+      });
+
+      debugLog.textContent += `[${hora}] ${evento.mensagem}`;
+
+      if (evento.dados) {
+        debugLog.textContent += ` | ${JSON.stringify(evento.dados)}`;
+      }
+
+      debugLog.textContent += "\n";
+    });
+
+    debugLog.textContent += "===== FIM DOS EVENTOS PERSISTIDOS =====\n\n";
+    debugLog.scrollTop = debugLog.scrollHeight;
+  } catch (erro) {
+    console.warn("Falha ao carregar logs persistidos do player:", erro);
+  }
+}
+
+/**
+ * Escreve uma linha no painel de diagnóstico.
+ * Também salva a linha no localStorage para análise após reload.
+ */
 function debugMensagem(mensagem) {
+  registrarEventoPersistentePlayer(mensagem);
+
   if (!modoDebugAtivo || !debugLog) return;
 
   const agora = new Date().toLocaleTimeString("pt-BR", {
@@ -147,6 +218,8 @@ function debugMensagem(mensagem) {
   debugLog.textContent += `[${agora}] ${mensagem}\n`;
   debugLog.scrollTop = debugLog.scrollHeight;
 }
+
+carregarEventosPersistentesNoDebug();
 
 /**
  * Registra o estado atual do player de vídeo.
@@ -174,6 +247,285 @@ function debugEstadoVideo(contexto = "Estado do vídeo") {
   }
 
   debugMensagem("==========================================");
+}
+
+/* =========================================================
+   WATCHDOG OPERACIONAL DO PLAYER
+   =========================================================
+   Evita que o painel fique congelado por muitas horas.
+
+   Estratégia:
+   - registra batimentos de atividade do player;
+   - monitora vídeo parado, imagem sem timer e transição presa;
+   - tenta recuperação leve;
+   - se não recuperar, recarrega a página automaticamente.
+   ========================================================= */
+
+const WATCHDOG_INTERVALO_MS = 30000;
+const WATCHDOG_MAX_TRANSICAO_MS = 120000;
+const WATCHDOG_MAX_VIDEO_SEM_PROGRESSO_MS = 180000;
+const WATCHDOG_MAX_ATIVIDADE_GERAL_MS = 300000;
+const WATCHDOG_MAX_RELOADS_JANELA = 4;
+const WATCHDOG_JANELA_RELOAD_MS = 60 * 60 * 1000;
+
+const WATCHDOG_RELOAD_KEY = "painelRibasWatchdogReloads";
+
+let timerWatchdogPlayer = null;
+let watchdogUltimaAtividadeEm = Date.now();
+let watchdogUltimaTrocaMidiaEm = Date.now();
+let watchdogInicioTransicaoEm = null;
+let watchdogUltimoTempoVideo = 0;
+let watchdogUltimoProgressoVideoEm = Date.now();
+let watchdogUltimaAcaoRecuperacaoEm = 0;
+
+/**
+ * Registra atividade operacional do player.
+ */
+function registrarAtividadePlayer(motivo = "atividade", dados = null) {
+  const agora = Date.now();
+
+  watchdogUltimaAtividadeEm = agora;
+
+  registrarEventoPersistentePlayer(`atividade: ${motivo}`, dados);
+
+  if (modoDebugAtivo) {
+    debugMensagem(`WATCHDOG atividade: ${motivo}`);
+  }
+}
+
+/**
+ * Registra que uma nova mídia começou/trocou.
+ */
+function registrarTrocaMidiaWatchdog(motivo = "troca de mídia") {
+  const agora = Date.now();
+
+  watchdogUltimaTrocaMidiaEm = agora;
+  watchdogUltimaAtividadeEm = agora;
+  watchdogInicioTransicaoEm = null;
+  watchdogUltimoTempoVideo = Number(videoPlayer && videoPlayer.currentTime) || 0;
+  watchdogUltimoProgressoVideoEm = agora;
+
+  registrarEventoPersistentePlayer(`midia: ${motivo}`, {
+    indiceAtual,
+    tipoAtual,
+    origemPlaylistAtual,
+    totalPlaylist: Array.isArray(playlist) ? playlist.length : 0
+  });
+}
+
+/**
+ * Controla reloads para evitar loop infinito.
+ */
+function podeRecarregarPorWatchdog() {
+  try {
+    const agora = Date.now();
+    const registros = JSON.parse(localStorage.getItem(WATCHDOG_RELOAD_KEY) || "[]")
+      .filter((timestamp) => agora - Number(timestamp) < WATCHDOG_JANELA_RELOAD_MS);
+
+    if (registros.length >= WATCHDOG_MAX_RELOADS_JANELA) {
+      registrarEventoPersistentePlayer("watchdog: limite de reloads atingido", {
+        registrosNaJanela: registros.length
+      });
+
+      return false;
+    }
+
+    registros.push(agora);
+    localStorage.setItem(WATCHDOG_RELOAD_KEY, JSON.stringify(registros));
+
+    return true;
+  } catch (erro) {
+    console.warn("Falha ao controlar reloads do watchdog:", erro);
+    return true;
+  }
+}
+
+/**
+ * Recarrega a página por travamento operacional.
+ */
+function recarregarPlayerPorWatchdog(motivo, dados = null) {
+  registrarEventoPersistentePlayer(`watchdog reload: ${motivo}`, dados);
+
+  if (!podeRecarregarPorWatchdog()) {
+    atualizarStatus("Watchdog detectou travamento, mas evitou reload em loop.");
+    return;
+  }
+
+  atualizarStatus("Recuperando player automaticamente...");
+
+  setTimeout(() => {
+    window.location.reload();
+  }, 1200);
+}
+
+/**
+ * Tenta recuperar sem reload.
+ */
+function tentarRecuperacaoLeveWatchdog(motivo) {
+  const agora = Date.now();
+
+  if (agora - watchdogUltimaAcaoRecuperacaoEm < 60000) {
+    return false;
+  }
+
+  watchdogUltimaAcaoRecuperacaoEm = agora;
+
+  registrarEventoPersistentePlayer(`watchdog recuperação leve: ${motivo}`, {
+    indiceAtual,
+    tipoAtual,
+    paused: videoPlayer ? videoPlayer.paused : null,
+    currentTime: videoPlayer ? videoPlayer.currentTime : null,
+    readyState: videoPlayer ? videoPlayer.readyState : null
+  });
+
+  if (tipoAtual === "video" && videoPlayer) {
+    try {
+      videoPlayer.play().catch(() => {
+        proximoItem();
+      });
+
+      return true;
+    } catch (erro) {
+      console.warn("Falha na recuperação leve do vídeo:", erro);
+    }
+  }
+
+  if (Array.isArray(playlist) && playlist.length) {
+    proximoItem();
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Verifica se o player está travado.
+ */
+function verificarWatchdogPlayer() {
+  const agora = Date.now();
+
+  if (!primeiraInicializacaoConcluida) {
+    return;
+  }
+
+  if (!Array.isArray(playlist) || !playlist.length) {
+    return;
+  }
+
+  /*
+    1. Transição presa.
+  */
+  if (emTransicao) {
+    if (!watchdogInicioTransicaoEm) {
+      watchdogInicioTransicaoEm = agora;
+    }
+
+    if (agora - watchdogInicioTransicaoEm > WATCHDOG_MAX_TRANSICAO_MS) {
+      recarregarPlayerPorWatchdog("transição presa por tempo excessivo", {
+        emTransicao,
+        indiceAtual,
+        tipoAtual
+      });
+    }
+
+    return;
+  }
+
+  watchdogInicioTransicaoEm = null;
+
+  /*
+    2. Vídeo sem progresso por tempo excessivo.
+  */
+  if (tipoAtual === "video" && videoPlayer) {
+    const tempoAtualVideo = Number(videoPlayer.currentTime) || 0;
+    const videoTemDuracao = Number.isFinite(videoPlayer.duration) && videoPlayer.duration > 0;
+    const videoAindaNaoAcabou = !videoTemDuracao || tempoAtualVideo < videoPlayer.duration - 2;
+
+    if (Math.abs(tempoAtualVideo - watchdogUltimoTempoVideo) > 0.25) {
+      watchdogUltimoTempoVideo = tempoAtualVideo;
+      watchdogUltimoProgressoVideoEm = agora;
+      watchdogUltimaAtividadeEm = agora;
+      return;
+    }
+
+    if (
+      videoAindaNaoAcabou &&
+      !videoPlayer.paused &&
+      agora - watchdogUltimoProgressoVideoEm > WATCHDOG_MAX_VIDEO_SEM_PROGRESSO_MS
+    ) {
+      const recuperou = tentarRecuperacaoLeveWatchdog("vídeo sem progresso");
+
+      if (!recuperou) {
+        recarregarPlayerPorWatchdog("vídeo sem progresso", {
+          currentTime: videoPlayer.currentTime,
+          duration: videoPlayer.duration,
+          readyState: videoPlayer.readyState,
+          networkState: videoPlayer.networkState
+        });
+      }
+
+      return;
+    }
+
+    if (
+      videoAindaNaoAcabou &&
+      videoPlayer.paused &&
+      agora - watchdogUltimoProgressoVideoEm > WATCHDOG_MAX_VIDEO_SEM_PROGRESSO_MS
+    ) {
+      const recuperou = tentarRecuperacaoLeveWatchdog("vídeo pausado indevidamente");
+
+      if (!recuperou) {
+        recarregarPlayerPorWatchdog("vídeo pausado indevidamente", {
+          currentTime: videoPlayer.currentTime,
+          duration: videoPlayer.duration
+        });
+      }
+
+      return;
+    }
+  }
+
+  /*
+    3. Imagem sem timer ativo.
+  */
+  if (tipoAtual === "imagem" && !timerImagem) {
+    const tempoSemTroca = agora - watchdogUltimaTrocaMidiaEm;
+
+    if (tempoSemTroca > WATCHDOG_MAX_ATIVIDADE_GERAL_MS) {
+      recarregarPlayerPorWatchdog("imagem sem timer ativo", {
+        indiceAtual,
+        tempoSemTroca
+      });
+    }
+
+    return;
+  }
+
+  /*
+    4. Sem atividade geral por muito tempo.
+  */
+  if (agora - watchdogUltimaAtividadeEm > WATCHDOG_MAX_ATIVIDADE_GERAL_MS) {
+    recarregarPlayerPorWatchdog("sem atividade geral do player", {
+      indiceAtual,
+      tipoAtual,
+      tempoSemAtividade: agora - watchdogUltimaAtividadeEm
+    });
+  }
+}
+
+/**
+ * Inicia watchdog contínuo.
+ */
+function iniciarWatchdogPlayer() {
+  if (timerWatchdogPlayer) {
+    clearInterval(timerWatchdogPlayer);
+  }
+
+  registrarEventoPersistentePlayer("watchdog iniciado");
+
+  timerWatchdogPlayer = setInterval(() => {
+    verificarWatchdogPlayer();
+  }, WATCHDOG_INTERVALO_MS);
 }
 
 /* =========================================================
@@ -1453,6 +1805,8 @@ function registrarMidiaExecutadaComSucesso() {
   falhasSequenciaisDeMidia = 0;
   esconderFallbackOperacionalPlayer();
 
+  registrarTrocaMidiaWatchdog("mídia executada com sucesso");
+
   if (timerRetryFallbackPlayer) {
     clearTimeout(timerRetryFallbackPlayer);
     timerRetryFallbackPlayer = null;
@@ -1588,6 +1942,12 @@ async function tocarItemAtual() {
   if (!playlist.length || emTransicao) return;
 
   emTransicao = true;
+
+  watchdogInicioTransicaoEm = Date.now();
+  registrarAtividadePlayer("início de transição", {
+    indiceAtual,
+    totalPlaylist: Array.isArray(playlist) ? playlist.length : 0
+  });
 
   const item = playlist[indiceAtual];
 
@@ -1832,6 +2192,10 @@ async function tocarItemAtual() {
 async function proximoItem() {
   if (!playlist.length || emTransicao) return;
 
+  registrarAtividadePlayer("próximo item solicitado", {
+    indiceAnterior: indiceAtual
+  });
+
   indiceAtual = (indiceAtual + 1) % playlist.length;
   tocarItemAtual();
 }
@@ -1841,6 +2205,10 @@ async function proximoItem() {
  */
 function itemAnterior() {
   if (!playlist.length || emTransicao) return;
+
+  registrarAtividadePlayer("item anterior solicitado", {
+    indiceAnterior: indiceAtual
+  });
 
   indiceAtual = (indiceAtual - 1 + playlist.length) % playlist.length;
   tocarItemAtual();
@@ -2134,6 +2502,7 @@ async function iniciarSistema() {
     splashScreen.classList.add("hidden");
 
     iniciarMonitoramentoServidorPrincipal();
+    iniciarWatchdogPlayer();
 
     atualizarModoResponsivo();
     resetarInterface();
@@ -2179,7 +2548,10 @@ async function iniciarSistema() {
    EVENTOS DO PLAYER
    ========================================================= */
 
-videoPlayer.addEventListener("ended", proximoItem);
+videoPlayer.addEventListener("ended", () => {
+  registrarAtividadePlayer("vídeo terminou");
+  proximoItem();
+});
 
 videoPlayer.addEventListener("error", () => {
   /*
@@ -2212,6 +2584,28 @@ videoPlayer.addEventListener("playing", () => {
 
 videoPlayer.addEventListener("pause", () => {
   atualizarTextoBotaoPlayPause();
+});
+
+videoPlayer.addEventListener("timeupdate", () => {
+  registrarAtividadePlayer("vídeo timeupdate", {
+    currentTime: videoPlayer.currentTime
+  });
+});
+
+videoPlayer.addEventListener("seeking", () => {
+  registrarAtividadePlayer("vídeo seeking");
+});
+
+videoPlayer.addEventListener("seeked", () => {
+  registrarAtividadePlayer("vídeo seeked");
+});
+
+videoPlayer.addEventListener("loadeddata", () => {
+  registrarAtividadePlayer("vídeo loadeddata");
+});
+
+videoPlayer.addEventListener("canplay", () => {
+  registrarAtividadePlayer("vídeo canplay");
 });
 
 /* =========================================================
@@ -2256,6 +2650,39 @@ videoPlayer.addEventListener("pause", () => {
     atualizarTextoBotaoPlayPause();
     atualizarBotaoSom();
   });
+});
+
+/* =========================================================
+   ERROS GLOBAIS DO PLAYER
+   ========================================================= */
+
+window.addEventListener("error", (evento) => {
+  registrarEventoPersistentePlayer("erro global JS", {
+    message: evento.message,
+    source: evento.filename,
+    line: evento.lineno,
+    column: evento.colno
+  });
+});
+
+window.addEventListener("unhandledrejection", (evento) => {
+  registrarEventoPersistentePlayer("promise rejeitada sem tratamento", {
+    reason: evento.reason && evento.reason.message
+      ? evento.reason.message
+      : String(evento.reason || "")
+  });
+});
+
+document.addEventListener("visibilitychange", () => {
+  registrarAtividadePlayer(`visibilitychange: ${document.visibilityState}`);
+});
+
+window.addEventListener("online", () => {
+  registrarAtividadePlayer("browser online");
+});
+
+window.addEventListener("offline", () => {
+  registrarAtividadePlayer("browser offline");
 });
 
 /* =========================================================
