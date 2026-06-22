@@ -23,6 +23,7 @@ $RootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 $PlayerAgentOrigem = Join-Path $RootDir "player-agent"
 $PontoTvOrigem = Join-Path $RootDir "ponto-tv"
+$AssetsOrigem = Join-Path $RootDir "assets"
 
 $DistDir = Join-Path $RootDir "dist"
 $StageDir = Join-Path $DistDir "PainelRibas"
@@ -89,6 +90,45 @@ Copy-Item $PlayerAgentOrigem -Destination (Join-Path $StageDir "player-agent") -
 
 Write-Host "[INFO] Copiando ponto-tv..."
 Copy-Item $PontoTvOrigem -Destination (Join-Path $StageDir "ponto-tv") -Recurse -Force
+
+if (Test-Path $AssetsOrigem) {
+    Write-Host "[INFO] Copiando assets essenciais do ponto TV..."
+
+    $AssetsDestino = Join-Path $StageDir "assets"
+
+    New-Item -ItemType Directory -Path $AssetsDestino -Force | Out-Null
+
+    $AssetsEssenciais = @(
+        "wallpaper.jpg",
+        "brasao.jpg",
+        "favicon.svg",
+        "logo-prefeitura.svg",
+        "watermark-prefeitura.svg"
+    )
+
+    foreach ($Asset in $AssetsEssenciais) {
+        $OrigemAsset = Join-Path $AssetsOrigem $Asset
+        $DestinoAsset = Join-Path $AssetsDestino $Asset
+
+        if (Test-Path $OrigemAsset) {
+            Copy-Item $OrigemAsset -Destination $DestinoAsset -Force
+            Write-Host "[OK] Asset copiado: assets\$Asset"
+        }
+        else {
+            Write-Host "[AVISO] Asset essencial nao encontrado: assets\$Asset" -ForegroundColor Yellow
+        }
+    }
+
+    $FontsOrigem = Join-Path $AssetsOrigem "fonts"
+
+    if (Test-Path $FontsOrigem) {
+        Write-Host "[INFO] Copiando fontes essenciais..."
+        Copy-Item $FontsOrigem -Destination (Join-Path $AssetsDestino "fonts") -Recurse -Force
+    }
+}
+else {
+    Write-Host "[AVISO] Pasta assets nao encontrada. Assets institucionais nao irao no pacote." -ForegroundColor Yellow
+}
 
 # ---------------------------------------------------------
 # REMOVE COISAS LOCAIS QUE NAO DEVEM IR NO PACOTE
