@@ -286,10 +286,10 @@ function registrarAtividadePlayer(motivo = "atividade", dados = null) {
 
   watchdogUltimaAtividadeEm = agora;
 
-  registrarEventoPersistentePlayer(`atividade: ${motivo}`, dados);
-
   if (modoDebugAtivo) {
     debugMensagem(`WATCHDOG atividade: ${motivo}`);
+  } else {
+    registrarEventoPersistentePlayer(`atividade: ${motivo}`, dados);
   }
 }
 
@@ -2586,10 +2586,30 @@ videoPlayer.addEventListener("pause", () => {
   atualizarTextoBotaoPlayPause();
 });
 
+let ultimoLogTimeupdateVideoEm = 0;
+
 videoPlayer.addEventListener("timeupdate", () => {
-  registrarAtividadePlayer("vídeo timeupdate", {
-    currentTime: videoPlayer.currentTime
-  });
+  const agora = Date.now();
+
+  watchdogUltimaAtividadeEm = agora;
+  watchdogUltimoTempoVideo = Number(videoPlayer.currentTime) || 0;
+  watchdogUltimoProgressoVideoEm = agora;
+
+  /*
+    O evento timeupdate dispara muitas vezes.
+    Para não poluir localStorage, registramos no log só a cada 30 segundos.
+  */
+  if (agora - ultimoLogTimeupdateVideoEm > 30000) {
+    ultimoLogTimeupdateVideoEm = agora;
+
+    registrarEventoPersistentePlayer("atividade: vídeo timeupdate", {
+      currentTime: videoPlayer.currentTime
+    });
+
+    if (modoDebugAtivo) {
+      debugMensagem("WATCHDOG atividade: vídeo timeupdate");
+    }
+  }
 });
 
 videoPlayer.addEventListener("seeking", () => {
