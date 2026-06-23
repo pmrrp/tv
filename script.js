@@ -261,9 +261,22 @@ function debugEstadoVideo(contexto = "Estado do vídeo") {
    - se não recuperar, recarrega a página automaticamente.
    ========================================================= */
 
-const WATCHDOG_INTERVALO_MS = 30000;
+const WATCHDOG_INTERVALO_MS = 15000;
 const WATCHDOG_MAX_TRANSICAO_MS = 120000;
-const WATCHDOG_MAX_VIDEO_SEM_PROGRESSO_MS = 180000;
+
+/*
+  Se o vídeo ficar sem avançar por 60 segundos,
+  consideramos que ele entrou em "limbo".
+
+  O log noturno mostrou exatamente esse caso:
+  - paused=false
+  - ended=false
+  - erroVideo=null
+  - currentTime parado
+  - readyState baixo/intermediário
+*/
+const WATCHDOG_MAX_VIDEO_SEM_PROGRESSO_MS = 60000;
+
 const WATCHDOG_MAX_ATIVIDADE_GERAL_MS = 300000;
 const WATCHDOG_MAX_RELOADS_JANELA = 4;
 const WATCHDOG_JANELA_RELOAD_MS = 60 * 60 * 1000;
@@ -359,38 +372,79 @@ function recarregarPlayerPorWatchdog(motivo, dados = null) {
 }
 
 /**
- * Tenta recuperar sem reload.
+ * Recupera o player quando uma mídia entra em limbo.
+ *
+ * Importante:
+ * Antes, o watchdog tentava apenas videoPlayer.play().
+ * Isso não resolve quando o Chrome fica preso em um frame/buffer:
+ * o play() pode até "aceitar", mas o currentTime continua parado.
+ *
+ * Como o operador consegue resolver manualmente clicando em "Próximo",
+ * a recuperação automática mais segura é fazer exatamente isso:
+ * registrar o problema e avançar para a próxima mídia.
  */
 function tentarRecuperacaoLeveWatchdog(motivo) {
   const agora = Date.now();
 
-  if (agora - watchdogUltimaAcaoRecuperacaoEm < 60000) {
+  /*
+    Evita disparar recuperação várias vezes em sequência
+    no mesmo segundo, especialmente em máquinas lentas.
+  */
+  if (agora - watchdogUltimaAcaoRecuperacaoEm < 15000) {
     return false;
   }
 
   watchdogUltimaAcaoRecuperacaoEm = agora;
 
-  registrarEventoPersistentePlayer(`watchdog recuperação leve: ${motivo}`, {
+  const dadosVideo = videoPlayer
+    ? {
+      src: videoPlayer.currentSrc || videoPlayer.src || null,
+      paused: videoPlayer.paused,
+      ended: videoPlayer.ended,
+      currentTime: videoPlayer.currentTime,
+      duration: videoPlayer.duration,
+      readyState: videoPlayer.readyState,
+      networkState: videoPlayer.networkState,
+      erroVideo: videoPlayer.error
+        ? {
+          code: videoPlayer.error.code,
+          message: videoPlayer.error.message || null
+        }
+        : null
+    }
+    : null;
+
+  registrarEventoPersistentePlayer(`watchdog: mídia travada, avançando automaticamente | ${motivo}`, {
     indiceAtual,
     tipoAtual,
-    paused: videoPlayer ? videoPlayer.paused : null,
-    currentTime: videoPlayer ? videoPlayer.currentTime : null,
-    readyState: videoPlayer ? videoPlayer.readyState : null
+    origemPlaylistAtual,
+    dadosVideo
   });
 
+  debugMensagem(`WATCHDOG: mídia travada detectada. Motivo: ${motivo}`);
+  debugMensagem("WATCHDOG: avançando automaticamente para a próxima mídia.");
+
+  atualizarStatus("Mídia travada detectada. Avançando automaticamente...");
+
+  /*
+    Libera o vídeo atual para evitar que o Chrome continue preso
+    no mesmo recurso/buffer.
+  */
   if (tipoAtual === "video" && videoPlayer) {
     try {
-      videoPlayer.play().catch(() => {
-        proximoItem();
-      });
-
-      return true;
+      videoPlayer.pause();
+      videoPlayer.removeAttribute("src");
+      videoPlayer.load();
     } catch (erro) {
-      console.warn("Falha na recuperação leve do vídeo:", erro);
+      console.warn("Falha ao limpar vídeo travado:", erro);
     }
   }
 
   if (Array.isArray(playlist) && playlist.length) {
+    /*
+      O próprio proximoItem() chama tocarItemAtual().
+      Assim reaproveitamos o fluxo normal do player.
+    */
     proximoItem();
     return true;
   }
@@ -453,10 +507,19 @@ function verificarWatchdogPlayer() {
       !videoPlayer.paused &&
       agora - watchdogUltimoProgressoVideoEm > WATCHDOG_MAX_VIDEO_SEM_PROGRESSO_MS
     ) {
+      /*
+        Caso real observado:
+        - o vídeo não estava pausado;
+        - não tinha terminado;
+        - não havia erro explícito;
+        - mas o currentTime ficou parado.
+    
+        Em vez de recarregar a página inteira, pulamos a mídia.
+      */
       const recuperou = tentarRecuperacaoLeveWatchdog("vídeo sem progresso");
 
       if (!recuperou) {
-        recarregarPlayerPorWatchdog("vídeo sem progresso", {
+        recarregarPlayerPorWatchdog("vídeo sem progresso e sem próxima mídia disponível", {
           currentTime: videoPlayer.currentTime,
           duration: videoPlayer.duration,
           readyState: videoPlayer.readyState,
@@ -472,10 +535,14 @@ function verificarWatchdogPlayer() {
       videoPlayer.paused &&
       agora - watchdogUltimoProgressoVideoEm > WATCHDOG_MAX_VIDEO_SEM_PROGRESSO_MS
     ) {
+      /*
+        Se o vídeo ficou pausado sozinho por tempo demais,
+        também seguimos para a próxima mídia.
+      */
       const recuperou = tentarRecuperacaoLeveWatchdog("vídeo pausado indevidamente");
 
       if (!recuperou) {
-        recarregarPlayerPorWatchdog("vídeo pausado indevidamente", {
+        recarregarPlayerPorWatchdog("vídeo pausado indevidamente e sem próxima mídia disponível", {
           currentTime: videoPlayer.currentTime,
           duration: videoPlayer.duration
         });
@@ -2562,6 +2629,36 @@ videoPlayer.addEventListener("error", () => {
   if (emTransicao) return;
 
   tratarFalhaMidiaAtual("Falha inesperada ao carregar vídeo.");
+});
+
+/*
+  Eventos auxiliares de diagnóstico do vídeo.
+
+  Eles não avançam a mídia sozinhos.
+  Quem decide avançar é o watchdog, depois de confirmar
+  que o currentTime realmente ficou parado.
+
+  Isso evita pular vídeo por uma oscilação pequena de rede.
+*/
+["waiting", "stalled", "suspend", "abort", "emptied"].forEach((nomeEvento) => {
+  videoPlayer.addEventListener(nomeEvento, () => {
+    registrarEventoPersistentePlayer(`video evento: ${nomeEvento}`, {
+      indiceAtual,
+      tipoAtual,
+      src: videoPlayer.currentSrc || videoPlayer.src || null,
+      currentTime: videoPlayer.currentTime,
+      duration: videoPlayer.duration,
+      paused: videoPlayer.paused,
+      ended: videoPlayer.ended,
+      readyState: videoPlayer.readyState,
+      networkState: videoPlayer.networkState
+    });
+
+    if (modoDebugAtivo) {
+      debugMensagem(`Evento do vídeo: ${nomeEvento}`);
+      debugEstadoVideo(`Estado após evento ${nomeEvento}`);
+    }
+  });
 });
 
 videoPlayer.addEventListener("stalled", () => {
