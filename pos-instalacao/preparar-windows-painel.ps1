@@ -73,7 +73,6 @@ $BloatwarePackages = @(
     "*ZuneMusic*",
     "*ZuneVideo*",
     "*LinkedIn*",
-    "*Xbox*",
     "*GamingApp*",
     "*XboxGamingOverlay*",
     "*XboxIdentityProvider*",
@@ -84,6 +83,12 @@ $BloatwarePackages = @(
     "*Microsoft.Windows.Photos*",
     "*Microsoft.Paint*",
     "*Microsoft.People*"
+)
+
+# Componentes que podem aparecer como Xbox, mas sao protegidos pelo Windows.
+# Nao tratamos como erro fatal, apenas como aviso operacional.
+$AppxProtegidosParaIgnorar = @(
+    "Microsoft.XboxGameCallableUI"
 )
 
 # ---------------------------------------------------------
@@ -116,6 +121,180 @@ function Add-Log {
     }
 
     Add-Content -Path $ReportPath -Value $Linha -Encoding UTF8
+}
+
+# ---------------------------------------------------------
+# STATUS FINAL / RESUMO INTELIGENTE
+# ---------------------------------------------------------
+# Este bloco centraliza os status finais da preparação.
+# Assim evitamos erro de função inexistente e conseguimos
+# gerar um relatório final mais inteligente.
+
+$StatusFinal = [ordered]@{
+    Administrador              = $false
+    UsuarioPadrao              = $false
+    NomePcPadrao               = $false
+    ChromeDisponivel           = $false
+    NodeDisponivel             = $false
+    AnyDeskEncontrado          = $false
+    LoginAutomaticoConfigurado = $false
+    EstruturaBaseOk            = $false
+    WallpaperAplicado          = $false
+    PrecisaReiniciar           = $false
+}
+
+function Set-StatusFinal {
+    param(
+        [string]$Nome,
+        [bool]$Valor
+    )
+
+    if ($StatusFinal.Contains($Nome)) {
+        $StatusFinal[$Nome] = $Valor
+        return
+    }
+
+    Add-Log "StatusFinal desconhecido ignorado: $Nome" "AVISO"
+}
+
+function Set-ReinicioPendente {
+    param(
+        [string]$Motivo
+    )
+
+    Set-StatusFinal "PrecisaReiniciar" $true
+
+    if (![string]::IsNullOrWhiteSpace($Motivo)) {
+        Add-Log "Reinicio pendente: $Motivo" "AVISO"
+    }
+}
+
+function Initialize-ChaveRegistro {
+    param(
+        [string]$Caminho
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Caminho)) {
+        return $false
+    }
+
+    if (!(Test-Path $Caminho)) {
+        New-Item -Path $Caminho -Force -ErrorAction Stop | Out-Null
+    }
+
+    return $true
+}
+
+function Test-AppxProtegidoPainel {
+    param(
+        [string]$Nome
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Nome)) {
+        return $false
+    }
+
+    return $AppxProtegidosParaIgnorar -contains $Nome
+}
+
+function Remove-AppxPainelControlado {
+    param(
+        [string]$PackagePattern
+    )
+
+    # Remove pacotes instalados para usuarios.
+    $PacotesInstalados = Get-AppxPackage -Name $PackagePattern -AllUsers -ErrorAction SilentlyContinue
+
+    foreach ($Pacote in $PacotesInstalados) {
+        if (Test-AppxProtegidoPainel $Pacote.Name) {
+            Add-Log "Componente protegido do Windows nao removido: $($Pacote.Name)" "AVISO"
+            continue
+        }
+
+        try {
+            Remove-AppxPackage -Package $Pacote.PackageFullName -AllUsers -ErrorAction Stop
+            Add-Log "App removido: $($Pacote.Name)" "OK"
+        }
+        catch {
+            $MensagemErro = $_.Exception.Message
+
+            if ($Pacote.Name -like "*Xbox*" -or $MensagemErro -like "*protegido*" -or $MensagemErro -like "*protected*") {
+                Add-Log "App nao removido por protecao do Windows: $($Pacote.Name)" "AVISO"
+                Add-Log "Detalhe: $MensagemErro" "AVISO"
+                continue
+            }
+
+            throw
+        }
+    }
+
+    # Remove pacotes provisionados para novos usuarios.
+    $PacotesProvisionados = Get-AppxProvisionedPackage -Online |
+    Where-Object { $_.DisplayName -like $PackagePattern }
+
+    foreach ($PacoteProvisionado in $PacotesProvisionados) {
+        if (Test-AppxProtegidoPainel $PacoteProvisionado.DisplayName) {
+            Add-Log "Componente provisionado protegido nao removido: $($PacoteProvisionado.DisplayName)" "AVISO"
+            continue
+        }
+
+        try {
+            Remove-AppxProvisionedPackage `
+                -Online `
+                -PackageName $PacoteProvisionado.PackageName `
+                -ErrorAction Stop | Out-Null
+
+            Add-Log "App provisionado removido: $($PacoteProvisionado.DisplayName)" "OK"
+        }
+        catch {
+            $MensagemErro = $_.Exception.Message
+
+            if ($PacoteProvisionado.DisplayName -like "*Xbox*" -or $MensagemErro -like "*protegido*" -or $MensagemErro -like "*protected*") {
+                Add-Log "App provisionado nao removido por protecao do Windows: $($PacoteProvisionado.DisplayName)" "AVISO"
+                Add-Log "Detalhe: $MensagemErro" "AVISO"
+                continue
+            }
+
+            throw
+        }
+    }
+}
+
+function Add-StatusResumo {
+    param(
+        [bool]$Ok,
+        [string]$MensagemOk,
+        [string]$MensagemAviso
+    )
+
+    if ($Ok) {
+        Add-Log $MensagemOk "OK"
+    }
+    else {
+        Add-Log $MensagemAviso "AVISO"
+    }
+}
+
+function Add-PendenciaManualSe {
+    param(
+        [bool]$Condicao,
+        [string]$Mensagem
+    )
+
+    if ($Condicao) {
+        Add-Log "[MANUAL] $Mensagem" "INFO"
+    }
+}
+
+function Add-ProximoPassoKitSe {
+    param(
+        [bool]$Condicao,
+        [string]$Mensagem
+    )
+
+    if ($Condicao) {
+        Add-Log "[KIT] $Mensagem" "INFO"
+    }
 }
 
 function Invoke-AcaoSegura {
@@ -246,8 +425,16 @@ function Set-NotificacoesDesativadas {
     Add-Log "Desativando notificacoes gerais/toasts do Windows..."
 
     Invoke-AcaoSegura "Desativar notificacoes Toast do usuario atual" {
-        New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\PushNotifications" -Force | Out-Null
-        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\PushNotifications" -Name "ToastEnabled" -Type DWord -Value 0
+        $PushNotificationsPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\PushNotifications"
+
+        Initialize-ChaveRegistro $PushNotificationsPath | Out-Null
+
+        New-ItemProperty `
+            -Path $PushNotificationsPath `
+            -Name "ToastEnabled" `
+            -PropertyType DWord `
+            -Value 0 `
+            -Force | Out-Null
     } | Out-Null
 
     Invoke-AcaoSegura "Desativar notificacoes globais do usuario atual" {
@@ -266,6 +453,7 @@ function Set-NotificacoesDesativadas {
 function Set-LoginAutomaticoPainel {
     if ($ConfigureAutoLogin -ne $true) {
         Add-Log "Configuracao de login automatico desativada por configuracao." "AVISO"
+        Set-StatusFinal "LoginAutomaticoConfigurado" $false
         return
     }
 
@@ -273,6 +461,7 @@ function Set-LoginAutomaticoPainel {
 
     if ($UsuarioAtual -ine $ExpectedUser) {
         Add-Log "Usuario atual nao e $ExpectedUser. Login automatico nao sera configurado automaticamente." "AVISO"
+        Set-StatusFinal "LoginAutomaticoConfigurado" $false
         return
     }
 
@@ -297,9 +486,11 @@ function Set-LoginAutomaticoPainel {
         Remove-ItemProperty -Path $RegPath -Name "AutoLogonCount" -ErrorAction SilentlyContinue
 
         Add-Log "Login automatico configurado para $NomePc\$ExpectedUser." "OK"
+        Set-StatusFinal "LoginAutomaticoConfigurado" $true
     }
     catch {
         Add-Log "Falha ao configurar login automatico: $($_.Exception.Message)" "ERRO"
+        Set-StatusFinal "LoginAutomaticoConfigurado" $false
     }
     finally {
         if ($BSTR -ne [IntPtr]::Zero) {
@@ -330,10 +521,12 @@ Add-Log "Relatorio: $ReportPath"
 
 if (Test-Administrador) {
     Add-Log "Executando com permissao de Administrador." "OK"
+    Set-StatusFinal "Administrador" $true
 }
 else {
     Add-Log "Execute este script como Administrador." "ERRO"
     Add-Log "Encerrando preparacao." "ERRO"
+    Set-StatusFinal "Administrador" $false
     exit 1
 }
 
@@ -345,17 +538,21 @@ Add-Log "Nome do computador: $NomePc"
 
 if ($UsuarioAtual -ieq $ExpectedUser) {
     Add-Log "Usuario atual esta no padrao esperado: $ExpectedUser" "OK"
+    Set-StatusFinal "UsuarioPadrao" $true
 }
 else {
     Add-Log "Usuario atual diferente do esperado. Esperado: $ExpectedUser | Atual: $UsuarioAtual" "AVISO"
     Add-Log "Recomendado executar a preparacao e o Kit logado no usuario Painel." "AVISO"
+    Set-StatusFinal "UsuarioPadrao" $false
 }
 
 if ($NomePc -like "$ExpectedComputerNamePattern*") {
     Add-Log "Nome do computador segue o padrao esperado: $ExpectedComputerNamePattern*" "OK"
+    Set-StatusFinal "NomePcPadrao" $true
 }
 else {
     Add-Log "Nome do computador fora do padrao. Recomenda-se usar PAINEL-TV-XX." "AVISO"
+    Set-StatusFinal "NomePcPadrao" $false
 }
 
 # ---------------------------------------------------------
@@ -381,12 +578,7 @@ if ($RemoveBloatware) {
 
     foreach ($PackagePattern in $BloatwarePackages) {
         Invoke-AcaoSegura "Remover app instalado/provisionado: $PackagePattern" {
-            Get-AppxPackage -Name $PackagePattern -AllUsers -ErrorAction SilentlyContinue |
-            Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
-
-            Get-AppxProvisionedPackage -Online |
-            Where-Object { $_.DisplayName -like $PackagePattern } |
-            Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue | Out-Null
+            Remove-AppxPainelControlado $PackagePattern
         } | Out-Null
     }
 
@@ -530,6 +722,7 @@ $ChromePath = Find-Chrome
 
 if ($ChromePath) {
     Add-Log "Google Chrome encontrado em: $ChromePath" "OK"
+    Set-StatusFinal "ChromeDisponivel" $true
 }
 else {
     Add-Log "Google Chrome nao encontrado." "AVISO"
@@ -543,14 +736,17 @@ else {
 
         if ($ChromePath) {
             Add-Log "Google Chrome encontrado apos instalacao: $ChromePath" "OK"
+            Set-StatusFinal "ChromeDisponivel" $true
         }
         else {
             Add-Log "Google Chrome ainda nao foi encontrado apos instalacao." "AVISO"
             Add-Log "Pode ser necessario reiniciar o Windows ou instalar manualmente." "AVISO"
+            Set-StatusFinal "ChromeDisponivel" $false
         }
     }
     else {
         Add-Log "Instalacao automatica do Chrome nao executada." "AVISO"
+        Set-StatusFinal "ChromeDisponivel" $false
     }
 }
 
@@ -564,9 +760,11 @@ if ($NodePath) {
     try {
         $NodeVersion = & $NodePath -v
         Add-Log "Node.js encontrado: $NodeVersion em $NodePath" "OK"
+        Set-StatusFinal "NodeDisponivel" $true
     }
     catch {
         Add-Log "Node.js encontrado em $NodePath, mas nao foi possivel obter versao." "AVISO"
+        Set-StatusFinal "NodeDisponivel" $true
     }
 }
 else {
@@ -585,18 +783,23 @@ else {
             try {
                 $NodeVersion = & $NodePath -v
                 Add-Log "Node.js encontrado apos instalacao: $NodeVersion em $NodePath" "OK"
+                Set-StatusFinal "NodeDisponivel" $true
             }
             catch {
                 Add-Log "Node.js encontrado apos instalacao em $NodePath, mas nao foi possivel obter versao." "AVISO"
+                Set-StatusFinal "NodeDisponivel" $true
             }
         }
         else {
             Add-Log "Node.js ainda nao foi encontrado apos instalacao." "AVISO"
             Add-Log "Pode ser necessario reiniciar/logoff para atualizar o PATH." "AVISO"
+            Set-StatusFinal "NodeDisponivel" $false
+            Set-ReinicioPendente "Node.js foi instalado ou solicitado, mas ainda nao ficou disponivel nesta sessao."
         }
     }
     else {
         Add-Log "Instalacao automatica do Node.js nao executada." "AVISO"
+        Set-StatusFinal "NodeDisponivel" $false
     }
 }
 
@@ -698,16 +901,24 @@ $PastasBase = @(
     "C:\PainelRibas\relatorios-preparacao"
 )
 
+$EstruturaBaseOk = $true
+
 foreach ($Pasta in $PastasBase) {
     if (Test-Path $Pasta) {
         Add-Log "Pasta ja existe: $Pasta" "OK"
     }
     else {
-        Invoke-AcaoSegura "Criar pasta: $Pasta" {
+        $CriouPasta = Invoke-AcaoSegura "Criar pasta: $Pasta" {
             New-Item -ItemType Directory -Path $Pasta -Force | Out-Null
-        } | Out-Null
+        }
+
+        if (-not $CriouPasta) {
+            $EstruturaBaseOk = $false
+        }
     }
 }
+
+Set-StatusFinal "EstruturaBaseOk" $EstruturaBaseOk
 
 # ---------------------------------------------------------
 # WALLPAPER INSTITUCIONAL
@@ -715,21 +926,28 @@ foreach ($Pasta in $PastasBase) {
 
 Add-Log "Configurando wallpaper institucional..."
 
-Invoke-AcaoSegura "Aplicar wallpaper institucional, se existir" {
-    $WallpaperOrigem = "C:\PainelRibas\assets\wallpaper.jpg"
-    $WallpaperDestino = "C:\PainelRibas\assets\wallpaper.jpg"
+$WallpaperOrigem = "C:\PainelRibas\assets\wallpaper.jpg"
+$WallpaperDestino = "C:\PainelRibas\assets\wallpaper.jpg"
 
-    if (Test-Path $WallpaperOrigem) {
+if (Test-Path $WallpaperOrigem) {
+    $WallpaperAplicado = Invoke-AcaoSegura "Aplicar wallpaper institucional" {
         Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name Wallpaper -Value $WallpaperDestino
         Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name WallpaperStyle -Value "10"
         Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name TileWallpaper -Value "0"
 
         rundll32.exe user32.dll, UpdatePerUserSystemParameters
+
+        Add-Log "Wallpaper institucional aplicado: $WallpaperDestino" "OK"
     }
-    else {
-        Add-Log "Wallpaper institucional nao encontrado em: $WallpaperOrigem" "AVISO"
-    }
-} | Out-Null
+
+    Set-StatusFinal "WallpaperAplicado" $WallpaperAplicado
+}
+else {
+    Add-Log "Wallpaper institucional ainda nao encontrado em: $WallpaperOrigem" "AVISO"
+    Add-Log "Isso e esperado antes da extracao do pacote. O kit final deve aplicar novamente depois." "INFO"
+
+    Set-StatusFinal "WallpaperAplicado" $false
+}
 
 # ---------------------------------------------------------
 # LOGIN AUTOMATICO
@@ -738,7 +956,7 @@ Invoke-AcaoSegura "Aplicar wallpaper institucional, se existir" {
 Set-LoginAutomaticoPainel
 
 # ---------------------------------------------------------
-# RESUMO FINAL
+# RESUMO FINAL INTELIGENTE
 # ---------------------------------------------------------
 
 Add-Log ""
@@ -746,62 +964,114 @@ Add-Log "========================================================"
 Add-Log "              RESUMO FINAL DA PREPARACAO"
 Add-Log "========================================================"
 
-if (Test-Administrador) {
-    Add-Log "Executado como Administrador" "OK"
+Add-StatusResumo `
+    $StatusFinal["Administrador"] `
+    "Executado como Administrador" `
+    "Nao foi executado como Administrador"
+
+Add-StatusResumo `
+    $StatusFinal["UsuarioPadrao"] `
+    "Usuario atual no padrao $ExpectedUser" `
+    "Usuario atual fora do padrao $ExpectedUser"
+
+Add-StatusResumo `
+    $StatusFinal["NomePcPadrao"] `
+    "Nome do computador no padrao $ExpectedComputerNamePattern" `
+    "Nome do computador fora do padrao $ExpectedComputerNamePattern"
+
+Add-StatusResumo `
+    $StatusFinal["ChromeDisponivel"] `
+    "Google Chrome disponivel" `
+    "Google Chrome nao confirmado"
+
+Add-StatusResumo `
+    $StatusFinal["NodeDisponivel"] `
+    "Node.js disponivel" `
+    "Node.js nao confirmado"
+
+Add-StatusResumo `
+    $StatusFinal["AnyDeskEncontrado"] `
+    "AnyDesk disponivel" `
+    "AnyDesk nao encontrado"
+
+Add-StatusResumo `
+    $StatusFinal["EstruturaBaseOk"] `
+    "Estrutura base C:\PainelRibas preparada" `
+    "Estrutura base C:\PainelRibas nao foi totalmente preparada"
+
+Add-StatusResumo `
+    $StatusFinal["LoginAutomaticoConfigurado"] `
+    "Login automatico do Windows configurado" `
+    "Login automatico do Windows nao confirmado"
+
+if ($StatusFinal["WallpaperAplicado"]) {
+    Add-Log "Wallpaper institucional aplicado" "OK"
 }
 else {
-    Add-Log "Executado sem Administrador" "ERRO"
+    Add-Log "Wallpaper institucional ainda nao aplicado nesta etapa" "AVISO"
+    Add-Log "O wallpaper sera aplicado novamente apos a extracao do pacote, quando os assets existirem em C:\PainelRibas." "INFO"
 }
 
-if ($UsuarioAtual -ieq $ExpectedUser) {
-    Add-Log "Usuario atual no padrao Painel" "OK"
+if ($StatusFinal["PrecisaReiniciar"]) {
+    Add-Log "Reinicio/logoff recomendado apos esta etapa" "AVISO"
 }
 else {
-    Add-Log "Usuario atual diferente de Painel: $UsuarioAtual" "AVISO"
+    Add-Log "Nenhum reinicio obrigatorio detectado nesta etapa" "OK"
 }
-
-if ($NomePc -like "$ExpectedComputerNamePattern*") {
-    Add-Log "Nome do computador no padrao PAINEL-TV" "OK"
-}
-else {
-    Add-Log "Nome do computador fora do padrao PAINEL-TV" "AVISO"
-}
-
-if (Find-Chrome) {
-    Add-Log "Google Chrome disponivel" "OK"
-}
-else {
-    Add-Log "Google Chrome indisponivel" "AVISO"
-}
-
-if (Find-Node) {
-    Add-Log "Node.js disponivel" "OK"
-}
-else {
-    Add-Log "Node.js indisponivel no PATH/caminhos padrao" "AVISO"
-}
-
-if (Find-AnyDesk) {
-    Add-Log "AnyDesk disponivel" "OK"
-}
-else {
-    Add-Log "AnyDesk indisponivel" "AVISO"
-}
-
-Add-Log "Estrutura base C:\PainelRibas preparada" "OK"
 
 Add-Log ""
 Add-Log "========================================================"
 Add-Log "              PROXIMOS PASSOS"
 Add-Log "========================================================"
-Add-Log "[MANUAL] Entrar/confirmar usuario local Painel."
-Add-Log "[MANUAL] Confirmar nome PAINEL-TV-XX."
-Add-Log "[MANUAL] Configurar BIOS/UEFI para ligar apos queda de energia."
-Add-Log "[MANUAL] Configurar BIOS/UEFI para nao travar sem teclado/mouse."
-Add-Log "[MANUAL] Instalar/configurar AnyDesk com acesso nao supervisionado."
-Add-Log "[MANUAL] Configurar login automatico do Windows."
-Add-Log "[KIT] Extrair pacote PainelRibas-PontoTV.zip em C:\."
-Add-Log "[KIT] Rodar C:\PainelRibas\ponto-tv\instalar-ponto-tv.bat como Administrador."
+
+# Pendencias que agora dependem do status real.
+Add-PendenciaManualSe `
+(-not $StatusFinal["UsuarioPadrao"]) `
+    "Entrar/confirmar usuario local $ExpectedUser."
+
+Add-PendenciaManualSe `
+(-not $StatusFinal["NomePcPadrao"]) `
+    "Confirmar nome do computador no padrao $ExpectedComputerNamePattern-XX."
+
+Add-PendenciaManualSe `
+(-not $StatusFinal["ChromeDisponivel"]) `
+    "Instalar ou confirmar Google Chrome."
+
+Add-PendenciaManualSe `
+(-not $StatusFinal["NodeDisponivel"]) `
+    "Instalar ou confirmar Node.js LTS."
+
+Add-PendenciaManualSe `
+(-not $StatusFinal["LoginAutomaticoConfigurado"]) `
+    "Configurar login automatico do Windows para o usuario $ExpectedUser."
+
+# AnyDesk encontrado nao significa que o acesso nao supervisionado esteja pronto.
+if ($StatusFinal["AnyDeskEncontrado"]) {
+    Add-Log "[MANUAL] Conferir senha/acesso nao supervisionado do AnyDesk e registrar em controle interno da TI." "INFO"
+}
+else {
+    Add-Log "[MANUAL] Instalar/configurar AnyDesk com acesso nao supervisionado." "INFO"
+}
+
+# Pendencias fisicas/BIOS continuam manuais mesmo com kit profissional.
+Add-Log "[MANUAL] Configurar BIOS/UEFI para ligar apos queda de energia." "INFO"
+Add-Log "[MANUAL] Configurar BIOS/UEFI para nao travar sem teclado/mouse." "INFO"
+Add-Log "[MANUAL] Testar HDMI, resolucao, escala e audio na TV real." "INFO"
+Add-Log "[MANUAL] Testar conexao de rede, preferencialmente via cabo." "INFO"
+
+$InstaladorPontoTv = "C:\PainelRibas\ponto-tv\instalar-ponto-tv.bat"
+
+if (Test-Path $InstaladorPontoTv) {
+    Add-ProximoPassoKitSe $true "Rodar $InstaladorPontoTv como Administrador."
+}
+else {
+    Add-ProximoPassoKitSe $true "Extrair pacote PainelRibas-PontoTV.zip em C:\."
+    Add-ProximoPassoKitSe $true "Depois rodar C:\PainelRibas\ponto-tv\instalar-ponto-tv.bat como Administrador."
+}
+
+if ($StatusFinal["PrecisaReiniciar"]) {
+    Add-Log "[INFO] Reinicie ou faca logoff/login apos concluir as etapas pendentes, especialmente se Node.js ou Chrome foram instalados agora." "INFO"
+}
 
 Add-Log "========================================================"
 Add-Log "PREPARACAO CONCLUIDA"

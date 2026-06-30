@@ -191,7 +191,13 @@ if (Test-Path $PontoConfigPath) {
     $PontoConfig.enableAgentSetup = $true
     $PontoConfig.enablePowerTweaks = $true
     $PontoConfig.enableKioskTask = $true
-    $PontoConfig.enableCleanup = $false
+    # Mantemos a limpeza ativa no pacote final porque ela torna a instalação idempotente:
+    # - remove tarefas antigas;
+    # - fecha Chrome antigo;
+    # - limpa perfil isolado do Chrome;
+    # - evita quiosque duplicado;
+    # - permite reinstalar o kit por cima com segurança.
+    $PontoConfig.enableCleanup = $true
     $PontoConfig.enableAnyDeskCheck = $true
 
     # Node assistido fica ligado no pacote final.
@@ -241,7 +247,7 @@ C:\PainelRibas\ponto-tv\instalar-ponto-tv.bat
 
 - configurar BIOS para ligar apos queda de energia;
 - configurar BIOS para nao travar sem teclado/mouse;
-- configurar login automatico do Windows;
+- conferir no relatorio se o login automatico do Windows foi configurado;
 - configurar AnyDesk com acesso nao supervisionado;
 - testar HDMI, audio e resolucao na TV real;
 - testar queda e retorno de energia;
