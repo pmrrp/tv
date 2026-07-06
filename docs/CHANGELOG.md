@@ -828,6 +828,45 @@ Implementado, publicado em produção e em validação prolongada no PAINEL-TV-0
 
 ---
 
+# 2026-06 — Fechamento operacional do Kit Ponto TV e fallback local
+
+## Implementado / validado
+
+- Kit Ponto TV validado em PC formatado com Windows limpo.
+- `instalacao-kit-painel.bat` validado como instalador mestre.
+- `preparar-windows-painel.ps1` validado com preparação do Windows, ajustes de energia, privacidade, Chrome, Node.js, AnyDesk, wallpaper institucional e login automático.
+- `preparar-ponto-tv.ps1` validado com limpeza/reinstalação segura, recriação de tarefas agendadas, Player Agent local e Chrome em modo quiosque.
+- Limpeza/reinstalação por cima validada, removendo tarefas antigas do Player Agent e do Chrome Quiosque antes de recriar o ambiente.
+- Launcher anti-duplicidade do Chrome Quiosque validado, evitando abertura duplicada do navegador.
+- Player Agent local validado em `http://localhost:3579/health`.
+- Playlist local validada em `http://localhost:3579/playlist.json`.
+- Cache local de mídias validado.
+- Reprodução em modo quiosque validada em PC dedicado.
+- Ausência de pop-ups do Chrome validada no fluxo operacional.
+- Pull realizado na VM de produção e reinício do servidor Node validado sem quebra do site/admin/player.
+
+## Resultado
+
+O Kit Ponto TV passa a ser considerado fechado operacionalmente para a Fase 3.
+
+A solução já cobre:
+
+- preparação automatizada do Windows;
+- instalação/validação do Player Agent local;
+- cache local de playlist e mídias;
+- fallback operacional do player;
+- modo quiosque do Chrome;
+- limpeza de reinstalações anteriores;
+- relatório final inteligente com pendências reais.
+
+## Pendências futuras não bloqueantes
+
+- Aplicar avatar/imagem de perfil institucional no usuário local `Painel`.
+- Refinar documentação visual do procedimento de implantação.
+- Avaliar futuramente, na Fase 4, painel central de status/heartbeat dos pontos de TV.
+
+---
+
 # Próximos registros esperados
 
 Próximas entradas deste changelog deverão registrar:

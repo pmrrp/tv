@@ -179,7 +179,7 @@ Padronizar o processo de instalação e configuração dos computadores conectad
 
 Suficiente para fechamento da Fase 3.
 
-## Implantação automatizada dos pontos de TV — em andamento
+## Implantação automatizada dos pontos de TV — concluída operacionalmente
 
 ### Objetivo
 
@@ -229,7 +229,24 @@ Algumas etapas não devem ser automatizadas completamente por segurança ou por 
 
 ### Status
 
-Planejado para execução após a conclusão inicial do Player Agent local e dos scripts de inicialização automática no Windows.
+Concluído operacionalmente para a Fase 3.
+
+O Kit Ponto TV foi validado com:
+
+- preparação do Windows;
+- instalação em PC formatado;
+- reinstalação por cima;
+- limpeza de tarefas antigas;
+- Player Agent local;
+- playlist local;
+- cache local de mídias;
+- Chrome em modo quiosque;
+- launcher anti-duplicidade;
+- relatório final inteligente.
+
+Pendência futura não bloqueante:
+
+- aplicar avatar/imagem de perfil institucional no usuário local `Painel`.
 
 ---
 
@@ -395,14 +412,19 @@ Quando houver falha de rede, o player tenta usar o conteúdo local/cacheado serv
 - [x] Preparar instalação automática do AnyDesk via `winget` e fallback por instalador oficial.
 - [x] Validar instalação e funcionamento inicial no PAINEL-TV-02.
 
-### Em validação
+### Validação operacional concluída
 
-- [ ] Testar o kit completo após formatação limpa do PAINEL-TV-02.
-- [ ] Validar se o `instalacao-kit-painel.bat` executa o fluxo inteiro sem intervenção.
-- [ ] Validar instalação automática do AnyDesk em Windows limpo.
-- [ ] Validar política do Chrome contra pop-up de acesso local.
-- [ ] Validar funcionamento do player após reboot completo.
-- [ ] Testar queda e retorno de rede de forma controlada.
+- [x] Testar o kit completo após formatação limpa do ponto de TV.
+- [x] Validar se o `instalacao-kit-painel.bat` executa o fluxo inteiro.
+- [x] Validar instalação automática do AnyDesk em Windows limpo.
+- [x] Validar política do Chrome contra pop-up de acesso local.
+- [x] Validar funcionamento do player após reboot completo.
+- [x] Validar limpeza/reinstalação por cima.
+- [x] Validar recriação das tarefas agendadas do Player Agent e Chrome Quiosque.
+- [x] Validar endpoint local `http://localhost:3579/health`.
+- [x] Validar playlist local `http://localhost:3579/playlist.json`.
+- [x] Validar cache local de mídias.
+- [x] Testar queda e retorno de rede de forma controlada.
 
 ### Fora do escopo inicial
 
@@ -416,7 +438,7 @@ Quando houver falha de rede, o player tenta usar o conteúdo local/cacheado serv
 ### Status
 
 ```
-Implementado tecnicamente e em validação operacional.
+Concluído operacionalmente para a Fase 3.
 ```
 
 ---
