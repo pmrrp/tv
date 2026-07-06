@@ -1366,3 +1366,17 @@ Antes de transformar uma ideia em desenvolvimento, classificar:
 5. É ideia futura?
 
 A partir deste ponto, qualquer item que não ajude a fechar a Fase 3 ou preparar diretamente a versão comercial deve ser mantido no backlog futuro, sem travar a entrega.
+
+### Player Agent local / fallback local do quiosque — concluído
+
+Status: concluído e validado em campo.
+
+Resultado:
+
+- Agent local instalado no PC da TV;
+- servidor local ativo em `http://localhost:3579`;
+- playlist local sincronizada dinamicamente;
+- mídias da playlist baixadas para cache local;
+- player capaz de usar cache local em caso de falha de rede;
+- suporte a `HEAD` e `Range`/`206 Partial Content` no servidor local;
+- teste offline real aprovado com execução completa dos 6 vídeos da playlist.

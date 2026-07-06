@@ -867,6 +867,15 @@ A solução já cobre:
 
 ---
 
+### Player Agent local / playlist local dinâmica
+
+- Validada em campo a sincronização dinâmica da playlist local pelo Player Agent.
+- Confirmado que o Agent baixa e mantém `cache/playlist.json` atualizado no PC da TV.
+- Confirmado cache local das 6 mídias ativas da playlist.
+- Adicionado suporte a requisições `HEAD` no servidor local do Agent.
+- Adicionado suporte a `Range`/`206 Partial Content` para reprodução otimizada de vídeos locais.
+- Teste offline real aprovado: os 6 vídeos da playlist rodaram localmente, sem engasgos ou falhas.
+
 # Próximos registros esperados
 
 Próximas entradas deste changelog deverão registrar:
