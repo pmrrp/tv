@@ -15,6 +15,32 @@ Este checklist serve para execução rápida, conferência em bancada, instalaç
 
 ---
 
+## 1.1 Fluxo operacional atual recomendado
+
+A implantação atual do ponto de TV deve priorizar o uso do Kit Ponto TV.
+
+O fluxo recomendado é:
+
+- instalar ou restaurar o Windows;
+- criar usuário local `Painel`;
+- renomear o computador no padrão `PAINEL-TV-XX`;
+- reiniciar o equipamento;
+- conferir internet, vídeo, áudio HDMI e data/hora;
+- executar `instalacao-kit-painel.bat` como Administrador;
+- validar o relatório de preparação do Windows;
+- validar o relatório do Kit Ponto TV;
+- confirmar abertura automática do Chrome em modo quiosque;
+- confirmar funcionamento do Player Agent local;
+- confirmar playlist local;
+- confirmar cache local de mídias;
+- configurar AnyDesk com acesso não supervisionado;
+- conferir BIOS/UEFI para ligar após queda de energia;
+- fazer teste final no local definitivo.
+
+As seções manuais deste checklist continuam úteis como referência, diagnóstico ou fallback, mas o procedimento padrão deve ser feito pelo Kit Ponto TV sempre que possível.
+
+---
+
 ## 2. Identificação do ponto
 
 Preencher antes ou durante a implantação.
@@ -369,40 +395,90 @@ Informar ao responsável local:
 
 ## Player Agent local
 
-- [ ] Pasta do Player Agent presente no computador.
-- [ ] `config.agent.json` conferido.
-- [ ] Servidor principal configurado corretamente no agente.
-- [ ] Tarefa agendada do Player Agent criada.
-- [ ] Player Agent inicia automaticamente com o Windows.
-- [ ] Endpoint local `http://localhost:3579/health` responde.
-- [ ] Playlist local `http://localhost:3579/playlist.json` responde.
-- [ ] Pasta local de mídias em cache criada.
-- [ ] Mídias da playlist foram baixadas para cache local.
-- [ ] Limpeza de mídias antigas configurada.
-- [ ] Logs do agente gerados corretamente.
+O Player Agent local é o serviço instalado no próprio PC da TV para manter uma cópia local da playlist e das mídias.
 
-## Teste de fallback local
+Endereços locais esperados:
 
-- [ ] Player abre normalmente usando o servidor principal.
-- [ ] Servidor principal/rede foi simulado como indisponível.
-- [ ] Player alternou automaticamente para o agente local.
-- [ ] Mídias tocaram via `localhost:3579`.
-- [ ] Servidor principal/rede foi restabelecido.
-- [ ] Player voltou automaticamente para a playlist remota.
-- [ ] Agente local voltou a sincronizar atualizações.
-- [ ] Teste realizado sem necessidade de atualizar manualmente a página.
+- `http://localhost:3579/health`
+- `http://localhost:3579/playlist.json`
+- `http://localhost:3579/midia/NOME_DO_ARQUIVO`
+
+O objetivo é permitir que o ponto de TV continue operando com conteúdo local/cacheado mesmo em caso de lentidão ou falha temporária de rede.
 
 ## Kit Ponto TV
 
-- [ ] Script de preparação executado como administrador.
-- [ ] Relatório de preparação gerado.
-- [ ] Node.js validado.
-- [ ] Google Chrome validado.
-- [ ] Player Agent validado.
-- [ ] Tarefa do agente validada.
-- [ ] Configurações de energia aplicadas ou conferidas.
-- [ ] Modo quiosque criado ou conferido.
-- [ ] Pendências manuais listadas para o técnico.
+O Kit Ponto TV é composto, no fluxo operacional atual, por:
+
+- `instalacao-kit-painel.bat`;
+- `preparar-windows-painel.ps1`;
+- `PainelRibas-PontoTV.zip`.
+
+O instalador mestre deve ser executado como Administrador.
+
+Ele executa o fluxo principal de preparação:
+
+- ajustes do Windows;
+- instalação/validação de dependências;
+- configuração de energia;
+- preparação da estrutura `C:\PainelRibas`;
+- extração do pacote do ponto de TV;
+- configuração do Player Agent local;
+- criação/recriação das tarefas agendadas;
+- configuração do Chrome em modo quiosque;
+- geração dos relatórios finais.
+
+## Validação esperada do Kit
+
+Após a execução do Kit, conferir nos relatórios:
+
+- [ ] Preparação do Windows concluída sem erro crítico.
+- [ ] Usuário local `Painel` validado.
+- [ ] Nome do computador no padrão `PAINEL-TV-XX`.
+- [ ] Google Chrome disponível.
+- [ ] Node.js disponível.
+- [ ] AnyDesk encontrado ou instalado.
+- [ ] Estrutura `C:\PainelRibas` criada.
+- [ ] Login automático configurado.
+- [ ] Wallpaper institucional aplicado, quando disponível.
+- [ ] Player Agent local configurado.
+- [ ] Tarefa agendada do Player Agent criada.
+- [ ] Tarefa agendada do Chrome Quiosque criada.
+- [ ] Launcher anti-duplicidade do Chrome Quiosque criado.
+- [ ] Endpoint `http://localhost:3579/health` respondendo.
+- [ ] Endpoint `http://localhost:3579/playlist.json` respondendo.
+- [ ] Cache local de mídias confirmado.
+- [ ] Chrome abrindo em modo quiosque.
+- [ ] Ausência de pop-ups do Chrome no fluxo operacional.
+
+## Teste de fallback local
+
+Com o ponto de TV funcionando:
+
+- [ ] Confirmar que o player carrega normalmente pelo domínio principal.
+- [ ] Confirmar que o Player Agent local responde em `http://localhost:3579/health`.
+- [ ] Confirmar que a playlist local responde em `http://localhost:3579/playlist.json`.
+- [ ] Confirmar que pelo menos uma mídia abre pelo endereço local `http://localhost:3579/midia/NOME_DO_ARQUIVO`.
+- [ ] Simular queda temporária de rede, quando possível.
+- [ ] Confirmar que o player continua operando com conteúdo cacheado.
+- [ ] Reconectar a rede.
+- [ ] Confirmar que o player volta ao funcionamento normal.
+
+## Pendências manuais após o Kit
+
+Mesmo com o Kit Ponto TV, algumas etapas continuam manuais:
+
+- configurar senha/acesso não supervisionado do AnyDesk;
+- registrar o ID do AnyDesk;
+- conferir BIOS/UEFI para ligar após queda de energia;
+- conferir se a BIOS/UEFI não trava sem teclado/mouse;
+- confirmar resolução da TV;
+- confirmar áudio HDMI;
+- confirmar cabo de rede ou Wi-Fi;
+- fazer teste final no local definitivo.
+
+## Pendência futura não bloqueante
+
+- Aplicar avatar/imagem de perfil institucional no usuário local `Painel`.
 
 ---
 

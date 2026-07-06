@@ -38,68 +38,89 @@ Ao final da configuração, o PC deve:
 
 ---
 
-## Kit Ponto TV — preparação semi-automatizada
+## Kit Ponto TV — fluxo operacional atual
 
-Além do procedimento manual documentado neste guia, o projeto passa a prever a criação de um **Kit Ponto TV**, com scripts de preparação para reduzir etapas manuais na configuração dos computadores conectados às TVs.
+O fluxo atual de preparação dos PCs de TV deve priorizar o Kit Ponto TV.
 
-O objetivo do kit é permitir que, após uma preparação inicial mínima do Windows, a equipe técnica execute um instalador local para aplicar ou validar automaticamente grande parte das configurações necessárias para operação do Painel Ribas.
+O objetivo do Kit é reduzir etapas manuais, padronizar a implantação e evitar diferenças entre os computadores instalados em cada ponto.
 
-### O que o Kit Ponto TV deve automatizar
+## O que o Kit Ponto TV automatiza
 
-Sempre que possível, o instalador deve:
+O Kit Ponto TV executa, valida ou prepara:
 
-- verificar se está sendo executado com permissão de administrador;
-- verificar se o Node.js está instalado;
-- verificar se o Google Chrome está instalado;
-- validar a presença do Player Agent local;
-- instalar ou atualizar a tarefa agendada do Player Agent;
-- iniciar o Player Agent automaticamente;
-- testar o endpoint local `http://localhost:3579/health`;
-- preparar configurações de energia para impedir suspensão;
-- auxiliar na criação do modo quiosque do Chrome;
-- gerar relatório de preparação do ponto;
-- orientar o técnico sobre pendências manuais.
+- estrutura base em `C:\PainelRibas`;
+- ajustes operacionais do Windows;
+- configurações de energia do Windows;
+- instalação/validação do Google Chrome;
+- instalação/validação do Node.js;
+- instalação/validação do AnyDesk, quando possível;
+- aplicação do wallpaper institucional, quando disponível;
+- configuração do login automático;
+- extração dos arquivos do ponto de TV;
+- configuração do Player Agent local;
+- criação da tarefa agendada do Player Agent;
+- criação da tarefa agendada do Chrome em modo quiosque;
+- criação do launcher anti-duplicidade do Chrome;
+- limpeza segura em caso de reinstalação por cima;
+- geração dos relatórios finais.
 
-### Player Agent local
+## Player Agent local
 
-O Player Agent local é um componente instalado no computador conectado à TV.
+O Player Agent local roda no próprio PC da TV.
 
-Ele tem como objetivo manter uma cópia local da playlist e das mídias publicadas pelo servidor principal, permitindo que o player continue funcionando temporariamente mesmo em caso de queda de rede ou indisponibilidade do servidor.
+Endereços principais:
 
-Endereço local padrão do agente:
+- `http://localhost:3579/health`;
+- `http://localhost:3579/playlist.json`;
+- `http://localhost:3579/midia/NOME_DO_ARQUIVO`.
 
-```txt
-http://localhost:3579
-```
+Ele mantém uma cópia local/cacheada da playlist e das mídias, permitindo maior robustez em caso de lentidão ou falha temporária de rede.
 
-Rotas principais:
+## Funcionamento esperado
 
-```txt
-http://localhost:3579/health
-http://localhost:3579/playlist.json
-http://localhost:3579/midia/NOME_DO_ARQUIVO
-```
+Após a implantação correta:
 
-### Funcionamento esperado
+- o Windows entra automaticamente no usuário `Painel`;
+- o Chrome abre sozinho em modo quiosque;
+- o player carrega o conteúdo do Painel Ribas;
+- o Player Agent local sincroniza playlist e mídias;
+- o cache local fica disponível para fallback;
+- o ponto de TV opera sem teclado e mouse;
+- o AnyDesk permite suporte remoto.
 
-Quando o servidor principal estiver disponível, o player deve usar normalmente o conteúdo remoto.
+## Etapas que continuam manuais
 
-Quando o servidor principal cair, o player deve alternar automaticamente para o cache local servido pelo Player Agent.
+Mesmo com o Kit, algumas etapas continuam dependendo de conferência humana:
 
-Quando o servidor principal voltar, o player deve retornar automaticamente para a playlist remota oficial.
+- criar ou confirmar o usuário local `Painel`;
+- renomear o computador no padrão `PAINEL-TV-XX`;
+- reiniciar após renomear o PC;
+- conferir internet, cabo de rede ou Wi-Fi;
+- conferir resolução da TV;
+- conferir áudio HDMI;
+- configurar AnyDesk com acesso não supervisionado;
+- registrar o ID do AnyDesk;
+- configurar BIOS/UEFI para ligar após queda de energia;
+- configurar BIOS/UEFI para não travar sem teclado/mouse;
+- fazer teste final no local definitivo.
 
-### Etapas que continuam manuais
+## Fluxo resumido recomendado
 
-Mesmo com o Kit Ponto TV, algumas etapas ainda exigem validação humana:
-
-- configuração da BIOS para ligar após queda de energia;
-- configuração de senha segura da conta local;
-- configuração do acesso não supervisionado do AnyDesk;
-- conexão física HDMI e energia;
-- teste de áudio na TV;
-- teste real de rede;
-- teste prolongado de funcionamento;
-- preenchimento da ficha interna do ponto.
+1. Instalar ou restaurar o Windows.
+2. Criar usuário local `Painel`.
+3. Renomear o computador para `PAINEL-TV-XX`.
+4. Reiniciar.
+5. Conferir internet, vídeo, áudio e data/hora.
+6. Executar `instalacao-kit-painel.bat` como Administrador.
+7. Validar o relatório de preparação do Windows.
+8. Validar o relatório do Kit Ponto TV.
+9. Confirmar Chrome em modo quiosque.
+10. Confirmar Player Agent local.
+11. Confirmar playlist local.
+12. Confirmar cache local de mídias.
+13. Configurar AnyDesk não supervisionado.
+14. Conferir BIOS/UEFI.
+15. Fazer teste final no ponto definitivo.
 
 ---
 
@@ -1474,33 +1495,35 @@ A ficha com senhas deve ficar sob controle restrito da TI.
 
 ## 38. Resumo rápido para técnicos
 
-```txt
-1. Restaurar ou limpar Windows.
-2. Nomear PC como PAINEL-TV-XX.
-3. Criar conta local Painel.
-4. Desativar permissões de privacidade desnecessárias.
-5. Rodar Windows Update até finalizar.
-6. Remover apps inúteis e antivírus trial.
-7. Desativar notificações e sugestões do Windows.
-8. Desativar apps desnecessários da inicialização.
-9. Configurar energia para nunca suspender.
-10. Desativar hibernação.
-11. Configurar BIOS para ligar após queda de energia.
-12. Configurar BIOS para não travar sem teclado/mouse.
-13. Instalar Chrome.
-14. Criar atalho quiosque com flags anti-pop-up.
-15. Colocar atalho em shell:startup.
-16. Configurar login automático.
-17. Instalar e configurar AnyDesk.
-18. Configurar áudio HDMI.
-19. Testar player.
-20. Testar reinício.
-21. Testar sem teclado/mouse.
-22. Testar queda de energia.
-23. Testar AnyDesk.
-24. Deixar rodando para verificar pop-ups/travamentos.
-25. Preencher ficha interna.
-```
+Fluxo recomendado atual:
+
+1. Instalar/restaurar Windows.
+2. Criar usuário local `Painel`.
+3. Renomear PC para `PAINEL-TV-XX`.
+4. Reiniciar.
+5. Conferir internet, vídeo, áudio HDMI e data/hora.
+6. Colocar na mesma pasta:
+   - `instalacao-kit-painel.bat`;
+   - `preparar-windows-painel.ps1`;
+   - `PainelRibas-PontoTV.zip`.
+7. Executar `instalacao-kit-painel.bat` como Administrador.
+8. Conferir relatório de preparação do Windows.
+9. Conferir relatório do Kit Ponto TV.
+10. Confirmar que o Chrome abre em modo quiosque.
+11. Confirmar que o player reproduz os vídeos.
+12. Confirmar Player Agent local:
+    - `http://localhost:3579/health`;
+    - `http://localhost:3579/playlist.json`.
+13. Configurar AnyDesk com acesso não supervisionado.
+14. Registrar ID do AnyDesk.
+15. Conferir BIOS/UEFI:
+    - ligar após queda de energia;
+    - não travar sem teclado/mouse.
+16. Testar no local definitivo.
+
+O Chrome, o Node.js, as tarefas agendadas, o Player Agent local e o quiosque devem ser preparados pelo Kit sempre que possível.
+
+As instruções manuais deste guia permanecem como referência para diagnóstico, manutenção ou fallback.
 
 ---
 
