@@ -478,7 +478,21 @@ function obterContentType(caminhoArquivo) {
 /**
  * Envia JSON na resposta HTTP.
  */
-function responderJson(res, statusCode, dados) {
+/**
+ * Verifica se a requisição não deve receber corpo.
+ *
+ * HEAD é usado por navegadores, players de vídeo e ferramentas
+ * de diagnóstico para consultar metadados do arquivo sem baixar
+ * o conteúdo inteiro.
+ */
+function requisicaoSemCorpo(req) {
+    return req && req.method === "HEAD";
+}
+
+/**
+ * Envia JSON na resposta HTTP.
+ */
+function responderJson(req, res, statusCode, dados) {
     const corpo = JSON.stringify(dados, null, 2);
 
     res.writeHead(statusCode, {
@@ -488,42 +502,203 @@ function responderJson(res, statusCode, dados) {
         "Cache-Control": "no-store"
     });
 
+    if (requisicaoSemCorpo(req)) {
+        return res.end();
+    }
+
     res.end(corpo);
 }
 
 /**
  * Envia resposta de erro em texto simples.
  */
-function responderTexto(res, statusCode, texto) {
+function responderTexto(req, res, statusCode, texto, headersExtras = {}) {
+    const corpo = String(texto || "");
+
     res.writeHead(statusCode, {
         "Content-Type": "text/plain; charset=utf-8",
+        "Content-Length": Buffer.byteLength(corpo),
         "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-store",
+        ...headersExtras
+    });
+
+    if (requisicaoSemCorpo(req)) {
+        return res.end();
+    }
+
+    res.end(corpo);
+}
+
+/**
+ * Responde preflight CORS.
+ *
+ * Mesmo sendo um servidor local, manter OPTIONS ajuda em cenários
+ * onde o navegador decide consultar permissões antes de acessar
+ * mídia com cabeçalhos como Range.
+ */
+function responderOptions(res) {
+    res.writeHead(204, {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+        "Access-Control-Allow-Headers": "Range, Content-Type",
+        "Access-Control-Max-Age": "86400",
         "Cache-Control": "no-store"
     });
 
-    res.end(texto);
+    res.end();
+}
+
+/**
+ * Interpreta o cabeçalho Range de forma segura.
+ *
+ * Suporta:
+ * - bytes=0-1023
+ * - bytes=1000-
+ * - bytes=-1024
+ */
+function interpretarRange(rangeHeader, tamanhoArquivo) {
+    if (!rangeHeader) return null;
+
+    const texto = String(rangeHeader).trim();
+    const match = texto.match(/^bytes=(\d*)-(\d*)$/);
+
+    if (!match) {
+        return {
+            invalido: true
+        };
+    }
+
+    const inicioTexto = match[1];
+    const fimTexto = match[2];
+
+    let inicio;
+    let fim;
+
+    /*
+      Sufixo: bytes=-1024
+      Significa: últimos 1024 bytes do arquivo.
+    */
+    if (!inicioTexto && fimTexto) {
+        const quantidadeFinal = Number(fimTexto);
+
+        if (!Number.isFinite(quantidadeFinal) || quantidadeFinal <= 0) {
+            return { invalido: true };
+        }
+
+        inicio = Math.max(tamanhoArquivo - quantidadeFinal, 0);
+        fim = tamanhoArquivo - 1;
+    } else {
+        inicio = Number(inicioTexto);
+        fim = fimTexto ? Number(fimTexto) : tamanhoArquivo - 1;
+    }
+
+    if (
+        !Number.isFinite(inicio) ||
+        !Number.isFinite(fim) ||
+        inicio < 0 ||
+        fim < inicio ||
+        inicio >= tamanhoArquivo
+    ) {
+        return {
+            invalido: true
+        };
+    }
+
+    fim = Math.min(fim, tamanhoArquivo - 1);
+
+    return {
+        inicio,
+        fim,
+        tamanho: fim - inicio + 1
+    };
 }
 
 /**
  * Envia arquivo físico com validação básica.
+ *
+ * Suporta:
+ * - GET normal;
+ * - HEAD;
+ * - Range bytes para vídeos e mídias grandes.
+ *
+ * Isso evita que o navegador precise baixar o arquivo inteiro quando
+ * ele só quer metadados ou pequenos trechos do vídeo.
  */
-function enviarArquivo(res, caminhoArquivo) {
+function enviarArquivo(req, res, caminhoArquivo) {
     if (!fs.existsSync(caminhoArquivo)) {
-        return responderTexto(res, 404, "Arquivo não encontrado.");
+        return responderTexto(req, res, 404, "Arquivo não encontrado.");
     }
 
     const stats = fs.statSync(caminhoArquivo);
 
     if (!stats.isFile()) {
-        return responderTexto(res, 400, "O caminho solicitado não é um arquivo.");
+        return responderTexto(req, res, 400, "O caminho solicitado não é um arquivo.");
     }
 
-    res.writeHead(200, {
-        "Content-Type": obterContentType(caminhoArquivo),
-        "Content-Length": stats.size,
+    const tamanhoArquivo = stats.size;
+    const contentType = obterContentType(caminhoArquivo);
+
+    const headersBase = {
+        "Content-Type": contentType,
         "Access-Control-Allow-Origin": "*",
-        "Cache-Control": "no-store"
+        "Cache-Control": "no-store",
+        "Accept-Ranges": "bytes",
+        "Last-Modified": stats.mtime.toUTCString()
+    };
+
+    const range = interpretarRange(req.headers.range, tamanhoArquivo);
+
+    if (range && range.invalido) {
+        return responderTexto(
+            req,
+            res,
+            416,
+            "Range inválido ou não satisfatório.",
+            {
+                "Content-Range": `bytes */${tamanhoArquivo}`,
+                "Accept-Ranges": "bytes"
+            }
+        );
+    }
+
+    /*
+      Resposta parcial: o navegador pediu só um pedaço do arquivo.
+      Para MP4 isso é importante, pois o player costuma pedir ranges
+      para carregar metadados e controlar reprodução.
+    */
+    if (range) {
+        res.writeHead(206, {
+            ...headersBase,
+            "Content-Length": range.tamanho,
+            "Content-Range": `bytes ${range.inicio}-${range.fim}/${tamanhoArquivo}`
+        });
+
+        if (requisicaoSemCorpo(req)) {
+            return res.end();
+        }
+
+        return fs
+            .createReadStream(caminhoArquivo, {
+                start: range.inicio,
+                end: range.fim
+            })
+            .pipe(res);
+    }
+
+    /*
+      Resposta completa.
+      Usada para arquivos pequenos, playlist.json ou clientes que
+      não enviam cabeçalho Range.
+    */
+    res.writeHead(200, {
+        ...headersBase,
+        "Content-Length": tamanhoArquivo
     });
+
+    if (requisicaoSemCorpo(req)) {
+        return res.end();
+    }
 
     fs.createReadStream(caminhoArquivo).pipe(res);
 }
@@ -571,6 +746,7 @@ function obterResumoCacheLocal() {
     };
 }
 
+
 /**
  * Trata requisições HTTP do servidor local.
  */
@@ -579,19 +755,23 @@ function tratarRequisicaoLocal(req, res) {
         const url = new URL(req.url, `http://localhost:${config.localServerPort}`);
         const pathname = decodeURIComponent(url.pathname);
 
-        if (req.method !== "GET") {
-            return responderJson(res, 405, {
+        if (req.method === "OPTIONS") {
+            return responderOptions(res);
+        }
+
+        if (req.method !== "GET" && req.method !== "HEAD") {
+            return responderJson(req, res, 405, {
                 erro: true,
                 mensagem: "Método não permitido."
             });
         }
 
         if (pathname === "/" || pathname === "/health") {
-            return responderJson(res, 200, obterResumoCacheLocal());
+            return responderJson(req, res, 200, obterResumoCacheLocal());
         }
 
         if (pathname === "/playlist.json") {
-            return enviarArquivo(res, playlistCacheFile);
+            return enviarArquivo(req, res, playlistCacheFile);
         }
 
         if (pathname.startsWith("/midia/")) {
@@ -599,20 +779,20 @@ function tratarRequisicaoLocal(req, res) {
             const caminhoMidia = resolverMidiaLocal(nomeArquivo);
 
             if (!caminhoMidia) {
-                return responderTexto(res, 400, "Nome de mídia inválido.");
+                return responderTexto(req, res, 400, "Nome de mídia inválido.");
             }
 
-            return enviarArquivo(res, caminhoMidia);
+            return enviarArquivo(req, res, caminhoMidia);
         }
 
-        return responderJson(res, 404, {
+        return responderJson(req, res, 404, {
             erro: true,
             mensagem: "Rota não encontrada."
         });
     } catch (erro) {
         log(`Erro no servidor local: ${erro.message || erro}`, "ERRO");
 
-        return responderJson(res, 500, {
+        return responderJson(req, res, 500, {
             erro: true,
             mensagem: "Erro interno no servidor local."
         });
