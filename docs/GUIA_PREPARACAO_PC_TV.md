@@ -44,7 +44,7 @@ O fluxo atual de preparação dos PCs de TV deve priorizar o Kit Ponto TV.
 
 O objetivo do Kit é reduzir etapas manuais, padronizar a implantação e evitar diferenças entre os computadores instalados em cada ponto.
 
-## O que o Kit Ponto TV automatiza
+### O que o Kit Ponto TV automatiza
 
 O Kit Ponto TV executa, valida ou prepara:
 
@@ -64,7 +64,7 @@ O Kit Ponto TV executa, valida ou prepara:
 - limpeza segura em caso de reinstalação por cima;
 - geração dos relatórios finais.
 
-## Player Agent local
+### Player Agent local
 
 O Player Agent local roda no próprio PC da TV.
 
@@ -76,7 +76,7 @@ Endereços principais:
 
 Ele mantém uma cópia local/cacheada da playlist e das mídias, permitindo maior robustez em caso de lentidão ou falha temporária de rede.
 
-## Funcionamento esperado
+### Funcionamento esperado
 
 Após a implantação correta:
 
@@ -88,7 +88,7 @@ Após a implantação correta:
 - o ponto de TV opera sem teclado e mouse;
 - o AnyDesk permite suporte remoto.
 
-## Etapas que continuam manuais
+### Etapas que continuam manuais
 
 Mesmo com o Kit, algumas etapas continuam dependendo de conferência humana:
 
@@ -104,7 +104,7 @@ Mesmo com o Kit, algumas etapas continuam dependendo de conferência humana:
 - configurar BIOS/UEFI para não travar sem teclado/mouse;
 - fazer teste final no local definitivo.
 
-## Fluxo resumido recomendado
+### Fluxo resumido recomendado
 
 1. Instalar ou restaurar o Windows.
 2. Criar usuário local `Painel`.
