@@ -3297,10 +3297,28 @@ function criarTransporterEmail() {
     const smtpSecure = String(process.env.SMTP_SECURE || "false")
         .toLowerCase() === "true";
 
+    /*
+    Opções SMTP/TLS avançadas.
+
+    Elas são opcionais e ajudam em provedores institucionais
+    que usam STARTTLS, certificados compartilhados ou exigem
+    um nome específico de servidor no certificado.
+    */
+    const smtpRequireTls = String(process.env.SMTP_REQUIRE_TLS || "false")
+        .toLowerCase() === "true";
+
+    const smtpTlsServername =
+        process.env.SMTP_TLS_SERVERNAME || process.env.SMTP_HOST;
+
+    const smtpTlsRejectUnauthorized =
+        String(process.env.SMTP_TLS_REJECT_UNAUTHORIZED || "true")
+            .toLowerCase() !== "false";
+
     return nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: Number(process.env.SMTP_PORT || 587),
         secure: smtpSecure,
+        requireTLS: smtpRequireTls,
 
         auth: {
             user: process.env.SMTP_USER,
@@ -3311,7 +3329,20 @@ function criarTransporterEmail() {
           Alguns servidores Zimbra/SMTP aceitam melhor AUTH LOGIN
           do que AUTH PLAIN. Deixamos configurável por .env.
         */
-        authMethod: process.env.SMTP_AUTH_METHOD || undefined
+        authMethod: process.env.SMTP_AUTH_METHOD || undefined,
+
+        /*
+          Configurações TLS opcionais para provedores institucionais.
+    
+          Exemplo real de uso:
+          - domínio aponta para smtp.ribasdoriopardo.ms.gov.br;
+          - certificado apresentado pertence a smtp.email-ssl.com.br;
+          - SMTP_TLS_SERVERNAME permite validar o nome correto do certificado.
+        */
+        tls: {
+            servername: smtpTlsServername,
+            rejectUnauthorized: smtpTlsRejectUnauthorized
+        }
     });
 }
 
